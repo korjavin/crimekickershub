@@ -9,6 +9,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Prompt versioning and composition engine
 - Cloudflare R2 integration for image storage
 - YouTube integration for video links
+- Google OAuth authentication with admin whitelist
 
 ## Constraints/Assumptions:
 - Go 1.25.5, module: crimekickershub
@@ -22,9 +23,10 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Prompts are never overwritten - version increment on update
 - Media assets link to prompt_version_id for traceability
 - Stories contain ordered StoryItems (images/video links)
+- Auth uses secure cookies with base64 encoding
 
 ## State:
-4 tasks completed out of 7
+5 tasks completed out of 7
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -48,17 +50,24 @@ Build Crime Kickers Hub - a Go-based web application with:
   - YouTube URL parsing (ExtractYouTubeID, IsYouTubeURL)
   - Helper functions for embeds and thumbnails
 
+- Task 5: Authentication (Google OAuth)
+  - GoogleOAuth2 with oauth2.Config
+  - Admin whitelist from ADMIN_EMAILS env var
+  - Session cookie management (Set/Get/ClearSessionCookie)
+  - RequireAdmin middleware for route protection
+  - Context-based user info retrieval
+
 ## Now:
-Task 4 completed. Ready to move to Task 5.
+Task 5 completed. Ready to move to Task 6.
 
 ## Next:
-Task 5: Story & StoryItems API (likely)
+Task 6: HTTP Handlers & Routing (likely)
 
 ## Open questions (UNCONFIRMED if needed):
-- Need to clarify API design for Story builder
+- Need to clarify HTTP handler structure
 
 ## Working set (files/ids/commands):
+- internal/auth/google.go
 - internal/service/media/media.go
-- internal/storage/r2.go
 - go build ./...
-- go test ./...
+- git commit -m "feat: ..."
