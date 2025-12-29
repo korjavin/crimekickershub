@@ -7,6 +7,8 @@ Build Crime Kickers Hub - a Go-based web application with:
 - SQLite database with WAL mode
 - Type-safe data access via sqlc
 - Prompt versioning and composition engine
+- Cloudflare R2 integration for image storage
+- YouTube integration for video links
 
 ## Constraints/Assumptions:
 - Go 1.25.5, module: crimekickershub
@@ -22,7 +24,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Stories contain ordered StoryItems (images/video links)
 
 ## State:
-3 tasks completed out of 7
+4 tasks completed out of 7
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -40,17 +42,23 @@ Build Crime Kickers Hub - a Go-based web application with:
   - Unit tests for version increment logic
   - go-diff library for text comparison
 
+- Task 4: Media Service & Cloudflare R2
+  - R2Client with UploadImage and UploadImageFromPath
+  - MediaService with RegisterAsset for image/video assets
+  - YouTube URL parsing (ExtractYouTubeID, IsYouTubeURL)
+  - Helper functions for embeds and thumbnails
+
 ## Now:
-Review task4.md requirements and implement next task
+Task 4 completed. Ready to move to Task 5.
 
 ## Next:
-Task 4: R2 & Media Storage Integration (likely)
+Task 5: Story & StoryItems API (likely)
 
 ## Open questions (UNCONFIRMED if needed):
-- Need to clarify R2 configuration requirements
+- Need to clarify API design for Story builder
 
 ## Working set (files/ids/commands):
-- internal/service/prompts/service.go
-- internal/service/prompts/service_test.go
-- internal/repository/*.go
-- go test ./internal/service/prompts/...
+- internal/service/media/media.go
+- internal/storage/r2.go
+- go build ./...
+- go test ./...
