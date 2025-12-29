@@ -16,9 +16,14 @@ import (
 	"crimekickershub/internal/db"
 	"crimekickershub/internal/repository"
 	"crimekickershub/internal/storage"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file if it exists (ignore error if not found)
+	_ = godotenv.Load()
+
 	log.Println("Starting Crime Kickers Hub...")
 
 	// Determine database path from environment or use default

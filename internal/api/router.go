@@ -155,7 +155,7 @@ func (r *Router) handleListHeroes(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Failed to list heroes: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, entities)
+	respondJSON(w, toEntityDTOs(entities))
 }
 
 // handleListEntities returns all entities
@@ -165,7 +165,7 @@ func (r *Router) handleListEntities(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Failed to list entities: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, entities)
+	respondJSON(w, toEntityDTOs(entities))
 }
 
 // handleListStories returns all published stories
@@ -425,7 +425,7 @@ func (r *Router) handleUploadMedia(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondJSON(w, asset)
+	respondJSON(w, r.toMediaAssetDTO(*asset))
 }
 
 // handleRegisterAsset registers a media asset in the database
@@ -498,7 +498,11 @@ func (r *Router) handleListMedia(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Failed to list media assets: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, assets)
+	// Ensure we always return an array, not null
+	if assets == nil {
+		assets = []repository.MediaAsset{}
+	}
+	respondJSON(w, r.toMediaAssetDTOs(assets))
 }
 
 // handleListStoriesAdmin returns all stories (for admin)
@@ -697,7 +701,7 @@ func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Failed to create entity: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, entity)
+	respondJSON(w, toEntityDTO(entity))
 }
 
 // handleUpdateEntity updates an existing entity
@@ -759,7 +763,7 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Failed to update entity: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, entity)
+	respondJSON(w, toEntityDTO(entity))
 }
 
 // handleDeleteEntity deletes an entity
@@ -876,6 +880,105 @@ type UpdatePromptTypeInput struct {
 	Slug         *string `json:"slug,omitempty"`
 	Description  *string `json:"description,omitempty"`
 	TemplateText *string `json:"template_text,omitempty"`
+}
+
+// EntityDTO is a Data Transfer Object for Entity with proper JSON serialization
+type EntityDTO struct {
+	ID          int64   `json:"id"`
+	Slug        string  `json:"slug"`
+	Name        string  `json:"name"`
+	Type        string  `json:"type"`
+	Description *string `json:"description"`
+	AvatarURL   *string `json:"avatar_url"`
+	CreatedAt   *string `json:"created_at"`
+}
+
+// toEntityDTO converts a repository.Entity to EntityDTO with proper null handling
+func toEntityDTO(e repository.Entity) EntityDTO {
+	dto := EntityDTO{
+		ID:   e.ID,
+		Slug: e.Slug,
+		Name: e.Name,
+		Type: e.Type,
+	}
+	if e.Description.Valid {
+		dto.Description = &e.Description.String
+	}
+	if e.AvatarUrl.Valid {
+		dto.AvatarURL = &e.AvatarUrl.String
+	}
+	if e.CreatedAt.Valid {
+		timeStr := e.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		dto.CreatedAt = &timeStr
+	}
+	return dto
+}
+
+// toEntityDTOs converts a slice of entities to DTOs
+func toEntityDTOs(entities []repository.Entity) []EntityDTO {
+	dtos := make([]EntityDTO, len(entities))
+	for i, e := range entities {
+		dtos[i] = toEntityDTO(e)
+	}
+	return dtos
+}
+
+// MediaAssetDTO is a Data Transfer Object for MediaAsset with computed URL fields
+type MediaAssetDTO struct {
+	ID                    int64   `json:"id"`
+	Type                  string  `json:"type"`
+	R2Key                 *string `json:"r2_key"`
+	YoutubeID             *string `json:"youtube_id"`
+	SourcePromptVersionID *int64  `json:"source_prompt_version_id"`
+	CreatedAt             *string `json:"created_at"`
+	// Computed fields
+	URL          *string `json:"url"`
+	ThumbnailURL *string `json:"thumbnail_url"`
+}
+
+// toMediaAssetDTO converts a repository.MediaAsset to MediaAssetDTO
+func (r *Router) toMediaAssetDTO(asset repository.MediaAsset) MediaAssetDTO {
+	dto := MediaAssetDTO{
+		ID:   asset.ID,
+		Type: asset.Type,
+	}
+
+	// Handle nullable fields
+	if asset.R2Key.Valid {
+		dto.R2Key = &asset.R2Key.String
+		// Compute URL from R2 key
+		if r.r2 != nil {
+			url := r.r2.GetPublicURL(asset.R2Key.String)
+			dto.URL = &url
+			dto.ThumbnailURL = &url // For images, URL and thumbnail are the same
+		}
+	}
+	if asset.YoutubeID.Valid {
+		dto.YoutubeID = &asset.YoutubeID.String
+		// Compute YouTube URLs
+		embedURL := fmt.Sprintf("https://www.youtube.com/embed/%s", asset.YoutubeID.String)
+		thumbnailURL := fmt.Sprintf("https://img.youtube.com/vi/%s/mqdefault.jpg", asset.YoutubeID.String)
+		dto.URL = &embedURL
+		dto.ThumbnailURL = &thumbnailURL
+	}
+	if asset.SourcePromptVersionID.Valid {
+		dto.SourcePromptVersionID = &asset.SourcePromptVersionID.Int64
+	}
+	if asset.CreatedAt.Valid {
+		timeStr := asset.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		dto.CreatedAt = &timeStr
+	}
+
+	return dto
+}
+
+// toMediaAssetDTOs converts a slice of media assets to DTOs
+func (r *Router) toMediaAssetDTOs(assets []repository.MediaAsset) []MediaAssetDTO {
+	dtos := make([]MediaAssetDTO, len(assets))
+	for i, asset := range assets {
+		dtos[i] = r.toMediaAssetDTO(asset)
+	}
+	return dtos
 }
 
 // Helper functions

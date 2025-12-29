@@ -157,13 +157,184 @@ All audit fixes completed - 8 of 10 findings resolved
   - Fixed LOW R2 Client Warnings (internal/storage/r2.go, cmd/server/main.go) - Added R2 state tracking and improved logging
 
 ## Now:
-Completed audit fix session with all 8 findings resolved
+Manual testing session - fixing bugs found during user testing
 
 ## Next:
-Address remaining findings: Frontend Build Path (LOW) - Deferred to future session
+Continue manual testing and fixing issues as they arise
 
-## Open questions (UNCONFIRMED if needed):
-None - session complete
+## Manual Testing Session (2025-12-29):
+
+### Issue #1: MediaPage null reference error (FIXED)
+**Found:** MediaPage (/admin/media) shows empty page with console error: "Cannot read properties of null (reading 'filter')"
+
+**Root Cause:** Backend API returns `null` instead of empty array `[]` when no media assets exist in database
+
+**Fix Applied:**
+1. Frontend ([MediaPage.tsx:62-64](frontend/src/pages/admin/MediaPage.tsx#L62-L64)): Added null coalescing to ensure state always has arrays
+   ```typescript
+   setMediaAssets(mediaData || []);
+   setRecentVersions(versionsData || []);
+   setEntities(entitiesData || []);
+   ```
+
+2. Backend ([router.go:501-504](internal/api/router.go#L501-L504)): Added null check in `handleListMedia`
+   ```go
+   if assets == nil {
+       assets = []repository.MediaAsset{}
+   }
+   ```
+
+3. Test ([router_test.go:434-476](internal/api/router_test.go#L434-L476)): Created `TestListMediaEndpoint` to prevent regression
+   - Verifies endpoint returns empty array, not null
+   - Tests with authenticated admin user
+   - All API tests passing ✓
+
+**Verified:** Page now loads correctly with empty state message
+
+### Issue #2: Image upload fails with 500 error (FIXED)
+**Found:** Uploading avatar in EntitiesPage returns "Upload Error: 500 Internal Server Error"
+
+**Root Cause:** Application wasn't loading `.env` file, so R2 credentials weren't being read from environment
+
+**Fix Applied:**
+1. Added godotenv package ([main.go:20,24-25](cmd/server/main.go#L20,L24-L25))
+   ```go
+   import "github.com/joho/godotenv"
+
+   // Load .env file if it exists (ignore error if not found)
+   _ = godotenv.Load()
+   ```
+
+2. Created [.env.example](.env.example) with R2 credential placeholders and setup instructions
+
+3. Installed dependency: `go get github.com/joho/godotenv`
+
+**Next Steps for User:**
+1. Fill in R2 credentials in `.env` file:
+   - Get credentials from https://dash.cloudflare.com/ -> R2
+   - Create a bucket and API token
+   - Set up custom domain for public access
+   - Update these variables in `.env`:
+     - `R2_ACCESS_KEY_ID`
+     - `R2_SECRET_ACCESS_KEY`
+     - `R2_ACCOUNT_ID`
+     - `R2_BUCKET_NAME`
+     - `R2_PUBLIC_DOMAIN`
+2. Restart the server to load credentials
+
+**Note:** Server will run in "degraded mode" without R2 credentials (uploads disabled but everything else works)
+
+**Verified:** R2 uploads now working, credentials loaded successfully
+
+### Issue #3: WikiPage crashes with "Objects are not valid as React child" (FIXED)
+**Found:** Public wiki page (/wiki) shows empty page with React error about rendering object with `{String, Valid}` keys
+
+**Root Cause:** Backend was returning `sql.NullString` objects directly in JSON instead of serializing them properly to `string | null`
+
+**Fix Applied:**
+1. Created DTOs for proper JSON serialization ([router.go:885-982](internal/api/router.go#L885-L982)):
+   - `EntityDTO` with proper null handling for description, avatar_url, created_at
+   - `MediaAssetDTO` with computed url and thumbnail_url fields
+   - Helper functions: `toEntityDTO`, `toEntityDTOs`, `toMediaAssetDTO`, `toMediaAssetDTOs`
+
+2. Updated all entity endpoints to use DTOs:
+   - `handleListHeroes` ([router.go:158](internal/api/router.go#L158))
+   - `handleListEntities` ([router.go:168](internal/api/router.go#L168))
+   - `handleCreateEntity` ([router.go:704](internal/api/router.go#L704))
+   - `handleUpdateEntity` ([router.go:766](internal/api/router.go#L766))
+
+3. Updated media endpoints to use DTOs with computed URLs:
+   - `handleUploadMedia` ([router.go:428](internal/api/router.go#L428))
+   - `handleListMedia` ([router.go:505](internal/api/router.go#L505))
+
+**Impact:**
+- WikiPage now renders correctly with proper string values
+- Avatar preview works in EntitiesPage after upload (url field now included)
+- All entity/media APIs return properly formatted JSON
+
+**Verified:** WikiPage loads, entities display with descriptions, avatars show after upload
+
+### Issue #4: Hero filter not working & avatar images not showing (FIXED)
+**Found:**
+1. WikiPage shows Windman in "All" category but not in "Hero" category despite type='Hero'
+2. Avatar images not displaying (broken image link)
+
+**Root Cause:**
+1. SQL query was case-sensitive: searching for type='hero' but entity has type='Hero'
+2. R2_PUBLIC_DOMAIN in .env was missing `https://` protocol prefix
+
+**Fix Applied:**
+1. Made entity type filter case-insensitive ([queries.sql:29](sql/queries/queries.sql#L29)):
+   ```sql
+   SELECT * FROM entities WHERE LOWER(type) = LOWER(?) ORDER BY name;
+   ```
+   Regenerated repository with `go generate ./...`
+
+2. Updated .env file to include `https://` in R2_PUBLIC_DOMAIN:
+   ```
+   R2_PUBLIC_DOMAIN=https://img.cc.wandergeek.org
+   ```
+
+3. Updated [.env.example](.env.example#L29-L30) with note about protocol requirement
+
+**Verified:**
+- Hero filter now shows entities with any case (Hero, hero, HERO) after regenerating sqlc code
+- Avatar images display correctly with proper HTTPS URLs
+- **Note:** Required running `sqlc generate` manually as `go generate` didn't regenerate repository code
+
+### Issue #5: Double URL prefix in avatar_url & missing Windman avatar (FIXED)
+**Found:**
+1. Pho-boman avatar_url has double prefix: `https://img.cc.wandergeek.org/https://img.cc.wandergeek.org/...`
+2. Windman has null avatar_url despite upload
+
+**Root Cause:**
+- Database was storing inconsistent data in avatar_url field:
+  - Pho-boman had doubled URL prefix from earlier incorrect DTO logic
+  - Windman's avatar was uploaded but never set on entity record
+- EntityDTO was already correct (just passes through avatar_url value)
+- Upload system stores media in media_assets table but doesn't auto-link to entities
+
+**Decision Made:**
+Option B - Store full URL in avatar_url field, no computation in EntityDTO
+
+**Fix Applied:**
+1. Verified EntityDTO ([router.go:907-909](internal/api/router.go#L907-L909)) already correct - just passes through stored value
+2. Fixed corrupted data in database:
+   ```sql
+   -- Fixed Pho-boman's double URL
+   UPDATE entities SET avatar_url = 'https://img.cc.wandergeek.org/ElevenLabs_image_gpt-image-1-5_Pho-boman __..._2025-12-29T17_24_39.png' WHERE id = 2;
+
+   -- Set Windman's avatar URL from media_assets
+   UPDATE entities SET avatar_url = 'https://img.cc.wandergeek.org/ElevenLabs_image_flux-2-pro_Windman_Over..._2025-12-29T17_32_38.png' WHERE id = 1;
+   ```
+
+**Verified:**
+- API endpoint `/api/heroes` returns both heroes with proper avatar URLs
+- API endpoint `/api/entities?type=Hero` returns both heroes (case-insensitive filter working)
+- Avatar URLs have proper `https://` prefix
+- No double URL prefix issue
+- EntityDTO correctly passes through stored URLs without computation
+
+### Issue #6: Location/Villain category filters not working (FIXED)
+**Found:** Created "Sky Isles" entity with type="Location", but it only shows in "All" category, not in "Locations" category
+
+**Root Cause:** Frontend WikiPage was doing case-sensitive comparison between filter button value (lowercase: `'location'`) and entity type (proper case: `'Location'`)
+
+**Fix Applied:**
+Changed WikiPage.tsx ([WikiPage.tsx:39](frontend/src/pages/public/WikiPage.tsx#L39)) to use case-insensitive comparison:
+```typescript
+: entities.filter(e => e.type.toLowerCase() === filter.toLowerCase());
+```
+
+**Impact:**
+- All category filters now work: All, Heroes, Villains, Locations
+- Frontend filter matches backend case-insensitive SQL query pattern
+- Consistent case-insensitive behavior across entire application
+
+**Verified:**
+- Location filter shows "Sky Isles" entity
+- Hero filter shows "Windman" and "Pho-boman" entities
+- Case-insensitive filtering works for all entity types
 
 ## Working set (files/ids/commands):
 - sql/queries/queries.sql

@@ -59,9 +59,9 @@ export function MediaPage() {
         listRecentPromptVersions(),
         getEntities(),
       ]);
-      setMediaAssets(mediaData);
-      setRecentVersions(versionsData);
-      setEntities(entitiesData);
+      setMediaAssets(mediaData || []);
+      setRecentVersions(versionsData || []);
+      setEntities(entitiesData || []);
     } catch (error) {
       console.error('Failed to load data:', error);
     }

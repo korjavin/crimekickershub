@@ -26,7 +26,7 @@ RETURNING *;
 DELETE FROM entities WHERE id = ?;
 
 -- name: ListEntitiesByType :many
-SELECT * FROM entities WHERE type = ? ORDER BY name;
+SELECT * FROM entities WHERE LOWER(type) = LOWER(?) ORDER BY name;
 
 -- name: CreatePromptType :one
 INSERT INTO prompt_types (slug, description, template_text)

@@ -284,6 +284,52 @@ func (q *Queries) GetLatestPromptVersion(ctx context.Context, arg GetLatestPromp
 	return i, err
 }
 
+const getLatestPromptVersionForMatrix = `-- name: GetLatestPromptVersionForMatrix :one
+SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+FROM prompt_versions pv
+JOIN entities e ON pv.entity_id = e.id
+JOIN prompt_types pt ON pv.type_id = pt.id
+WHERE pv.entity_id = ? AND pv.type_id = ?
+ORDER BY pv.version_number DESC
+LIMIT 1
+`
+
+type GetLatestPromptVersionForMatrixParams struct {
+	EntityID int64 `json:"entity_id"`
+	TypeID   int64 `json:"type_id"`
+}
+
+type GetLatestPromptVersionForMatrixRow struct {
+	ID                  int64          `json:"id"`
+	EntityID            int64          `json:"entity_id"`
+	TypeID              int64          `json:"type_id"`
+	VersionNumber       int64          `json:"version_number"`
+	PromptText          string         `json:"prompt_text"`
+	TechnicalParamsJson sql.NullString `json:"technical_params_json"`
+	CreatedAt           sql.NullTime   `json:"created_at"`
+	EntityName          string         `json:"entity_name"`
+	TypeSlug            string         `json:"type_slug"`
+	TypeDescription     sql.NullString `json:"type_description"`
+}
+
+func (q *Queries) GetLatestPromptVersionForMatrix(ctx context.Context, arg GetLatestPromptVersionForMatrixParams) (GetLatestPromptVersionForMatrixRow, error) {
+	row := q.db.QueryRowContext(ctx, getLatestPromptVersionForMatrix, arg.EntityID, arg.TypeID)
+	var i GetLatestPromptVersionForMatrixRow
+	err := row.Scan(
+		&i.ID,
+		&i.EntityID,
+		&i.TypeID,
+		&i.VersionNumber,
+		&i.PromptText,
+		&i.TechnicalParamsJson,
+		&i.CreatedAt,
+		&i.EntityName,
+		&i.TypeSlug,
+		&i.TypeDescription,
+	)
+	return i, err
+}
+
 const getMediaAsset = `-- name: GetMediaAsset :one
 SELECT id, type, r2_key, youtube_id, source_prompt_version_id, created_at FROM media_assets WHERE id = ?
 `
@@ -543,7 +589,7 @@ func (q *Queries) ListAllMediaAssets(ctx context.Context) ([]MediaAsset, error) 
 }
 
 const listAllPromptVersions = `-- name: ListAllPromptVersions :many
-SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions ORDER BY created_at DESC
+SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions ORDER BY created_at DESC LIMIT 10
 `
 
 func (q *Queries) ListAllPromptVersions(ctx context.Context) ([]PromptVersion, error) {
@@ -647,11 +693,11 @@ func (q *Queries) ListEntities(ctx context.Context) ([]Entity, error) {
 }
 
 const listEntitiesByType = `-- name: ListEntitiesByType :many
-SELECT id, slug, name, type, description, avatar_url, created_at FROM entities WHERE type = ? ORDER BY name
+SELECT id, slug, name, type, description, avatar_url, created_at FROM entities WHERE LOWER(type) = LOWER(?) ORDER BY name
 `
 
-func (q *Queries) ListEntitiesByType(ctx context.Context, type_ string) ([]Entity, error) {
-	rows, err := q.db.QueryContext(ctx, listEntitiesByType, type_)
+func (q *Queries) ListEntitiesByType(ctx context.Context, lower string) ([]Entity, error) {
+	rows, err := q.db.QueryContext(ctx, listEntitiesByType, lower)
 	if err != nil {
 		return nil, err
 	}
@@ -847,6 +893,61 @@ func (q *Queries) ListPublishedStories(ctx context.Context) ([]Story, error) {
 			&i.CoverImageUrl,
 			&i.Published,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecentPromptVersions = `-- name: ListRecentPromptVersions :many
+SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+FROM prompt_versions pv
+JOIN entities e ON pv.entity_id = e.id
+JOIN prompt_types pt ON pv.type_id = pt.id
+ORDER BY pv.created_at DESC LIMIT 10
+`
+
+type ListRecentPromptVersionsRow struct {
+	ID                  int64          `json:"id"`
+	EntityID            int64          `json:"entity_id"`
+	TypeID              int64          `json:"type_id"`
+	VersionNumber       int64          `json:"version_number"`
+	PromptText          string         `json:"prompt_text"`
+	TechnicalParamsJson sql.NullString `json:"technical_params_json"`
+	CreatedAt           sql.NullTime   `json:"created_at"`
+	EntityName          string         `json:"entity_name"`
+	TypeSlug            string         `json:"type_slug"`
+	TypeDescription     sql.NullString `json:"type_description"`
+}
+
+func (q *Queries) ListRecentPromptVersions(ctx context.Context) ([]ListRecentPromptVersionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRecentPromptVersions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRecentPromptVersionsRow
+	for rows.Next() {
+		var i ListRecentPromptVersionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntityID,
+			&i.TypeID,
+			&i.VersionNumber,
+			&i.PromptText,
+			&i.TechnicalParamsJson,
+			&i.CreatedAt,
+			&i.EntityName,
+			&i.TypeSlug,
+			&i.TypeDescription,
 		); err != nil {
 			return nil, err
 		}

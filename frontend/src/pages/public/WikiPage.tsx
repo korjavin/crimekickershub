@@ -32,11 +32,11 @@ export function WikiPage() {
     fetchData();
   }, []);
 
-  const allEntities = filter === 'all' 
-    ? entities 
-    : filter === 'hero' 
-      ? heroes 
-      : entities.filter(e => e.type === filter);
+  const allEntities = filter === 'all'
+    ? entities
+    : filter === 'hero'
+      ? heroes
+      : entities.filter(e => e.type.toLowerCase() === filter.toLowerCase());
 
   // Generate mock stats for heroes
   const getHeroStats = (_hero: Entity) => ({

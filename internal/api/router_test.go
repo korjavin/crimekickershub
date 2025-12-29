@@ -14,6 +14,7 @@ import (
 	"crimekickershub/internal/auth"
 	"crimekickershub/internal/db"
 	"crimekickershub/internal/repository"
+	"crimekickershub/internal/service/media"
 	"crimekickershub/internal/storage"
 )
 
@@ -55,7 +56,7 @@ func setupTestDB(t *testing.T) (*sql.DB, *repository.Queries, func()) {
 
 // createTestRouter creates a router with test dependencies
 func createTestRouter(t *testing.T) (*Router, func()) {
-	_, queries, cleanup := setupTestDB(t)
+	testDB, queries, cleanup := setupTestDB(t)
 
 	// Create mock auth (without credentials for development mode)
 	authClient := auth.NewGoogleOAuth2(auth.Config{
@@ -68,18 +69,18 @@ func createTestRouter(t *testing.T) (*Router, func()) {
 	// Create mock R2 client (nil is acceptable for development)
 	r2Client, _ := storage.NewR2Client(nil, storage.R2Config{})
 
+	// Create media service for tests that need it
+	mediaService := media.NewMediaService(testDB, r2Client)
+
 	// Create the router
 	router := &Router{
 		mux:          http.NewServeMux(),
 		prompts:      nil, // Not needed for basic route tests
-		media:        nil, // Not needed for basic route tests
+		media:        mediaService,
 		repo:         queries,
 		auth:         authClient,
 		frontendPath: "",
 	}
-
-	// Use r2Client to avoid unused variable warning
-	_ = r2Client
 
 	// Register routes
 	router.publicRoutes()
@@ -428,5 +429,49 @@ func TestRoutesNotFound(t *testing.T) {
 	// The key is it should not panic or return 500
 	if rr.Code == http.StatusInternalServerError {
 		t.Errorf("Expected not to return 500 for unknown route")
+	}
+}
+
+// TestListMediaEndpoint tests that the media list endpoint returns an empty array (not null) when no media exists
+func TestListMediaEndpoint(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	// Login first to access admin endpoint
+	loginReq := httptest.NewRequest("POST", "/api/auth/dev-login", nil)
+	loginRR := httptest.NewRecorder()
+	router.ServeHTTP(loginRR, loginReq)
+
+	// Get session cookie
+	cookies := loginRR.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("Expected session cookie to be set")
+	}
+
+	// Test media list endpoint
+	req := httptest.NewRequest("GET", "/api/admin/media", nil)
+	req.AddCookie(cookies[0])
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+
+	// Decode response
+	var mediaAssets []interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &mediaAssets); err != nil {
+		t.Errorf("Expected valid JSON array response, got error: %v. Body: %s", err, rr.Body.String())
+	}
+
+	// Verify it's an empty array, not null
+	if mediaAssets == nil {
+		t.Error("Expected empty array [], got null")
+	}
+
+	// Should be empty since we haven't added any media
+	if len(mediaAssets) != 0 {
+		t.Errorf("Expected empty media list, got %d items", len(mediaAssets))
 	}
 }
