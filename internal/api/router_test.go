@@ -98,22 +98,27 @@ func TestHealthEndpoint(t *testing.T) {
 		method         string
 		path           string
 		expectedStatus int
-		expectedBody   string
+		checkBody      func(t *testing.T, body string)
 		useServeHTTP   bool // Use ServeHTTP instead of mux for CORS tests
 	}{
 		{
-			name:           "GET /api/health returns OK",
+			name:           "GET /api/health returns JSON with status",
 			method:         "GET",
 			path:           "/api/health",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "OK",
+			checkBody: func(t *testing.T, body string) {
+				// Verify it's JSON and contains "status": "healthy"
+				if !strings.Contains(body, `"status":"healthy"`) && !strings.Contains(body, `"status": "healthy"`) {
+					t.Errorf("Expected body to contain healthy status, got %q", body)
+				}
+			},
 		},
 		{
 			name:           "OPTIONS /api/health returns OK (CORS preflight)",
 			method:         "OPTIONS",
 			path:           "/api/health",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "",
+			checkBody:      nil, // No body check for OPTIONS
 			useServeHTTP:   true, // Must use ServeHTTP for CORS middleware
 		},
 	}
@@ -133,8 +138,8 @@ func TestHealthEndpoint(t *testing.T) {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rr.Code)
 			}
 
-			if tt.expectedBody != "" && rr.Body.String() != tt.expectedBody {
-				t.Errorf("Expected body %q, got %q", tt.expectedBody, rr.Body.String())
+			if tt.checkBody != nil {
+				tt.checkBody(t, rr.Body.String())
 			}
 		})
 	}

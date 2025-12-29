@@ -210,9 +210,13 @@ func TestGetPromptDiff(t *testing.T) {
 		if diff == "" {
 			t.Error("Expected non-empty diff")
 		}
-		// Check that it contains markers for additions/deletions
-		if !contains(diff, "[-Original") && !contains(diff, "[+Modified") {
-			t.Errorf("Diff should contain change markers, got: %s", diff)
+		// Check that it contains markers for additions and deletions
+		if !contains(diff, "[-") || !contains(diff, "[+") {
+			t.Errorf("Diff should contain change markers ([-] and [+]), got: %s", diff)
+		}
+		// Verify it contains version info
+		if !contains(diff, "Diff between v1 and v2") {
+			t.Errorf("Diff should contain version info, got: %s", diff)
 		}
 	})
 }

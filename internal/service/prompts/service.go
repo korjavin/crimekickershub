@@ -89,14 +89,16 @@ func (s *PromptService) SaveNewVersion(ctx context.Context, entityID int, typeID
 		EntityID: int64(entityID),
 		TypeID:   int64(typeID),
 	})
-	if err != nil {
+
+	// Handle case where no versions exist yet (sql.ErrNoRows is expected for first version)
+	if err != nil && err != sql.ErrNoRows {
 		return repository.PromptVersion{}, fmt.Errorf("failed to get latest version: %w", err)
 	}
 
 	// Determine the next version number
 	newVersion := 1
-	// If latest has an ID > 0, it means we found a version
-	if latest.ID > 0 {
+	// If no error and latest has an ID > 0, it means we found a version
+	if err == nil && latest.ID > 0 {
 		newVersion = int(latest.VersionNumber) + 1
 	}
 
