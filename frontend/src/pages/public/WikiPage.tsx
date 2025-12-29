@@ -21,8 +21,8 @@ export function WikiPage() {
           getHeroes(),
           getEntities(),
         ]);
-        setHeroes(heroesData);
-        setEntities(entitiesData);
+        setHeroes(heroesData || []);
+        setEntities(entitiesData || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
