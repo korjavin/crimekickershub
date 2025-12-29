@@ -23,8 +23,8 @@ export function PromptMixer({ onPromptGenerated, isLoading }: PromptMixerProps) 
           getEntities(),
           getPromptTypes(),
         ]);
-        setEntities(entitiesData);
-        setPromptTypes(typesData);
+        setEntities(entitiesData || []);
+        setPromptTypes(typesData || []);
       } catch (err) {
         console.error('Failed to load data:', err);
       }

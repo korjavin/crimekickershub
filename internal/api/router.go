@@ -187,6 +187,9 @@ func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Failed to list stories: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if stories == nil {
+		stories = []repository.Story{}
+	}
 	respondJSON(w, stories)
 }
 
@@ -277,6 +280,9 @@ func (r *Router) handleListPromptTypes(w http.ResponseWriter, req *http.Request)
 	if err != nil {
 		http.Error(w, "Failed to list prompt types: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if promptTypes == nil {
+		promptTypes = []repository.PromptType{}
 	}
 	respondJSON(w, promptTypes)
 }
@@ -384,6 +390,9 @@ func (r *Router) handleListPromptVersions(w http.ResponseWriter, req *http.Reque
 		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if versions == nil {
+		versions = []repository.PromptVersion{}
+	}
 	respondJSON(w, versions)
 }
 
@@ -394,6 +403,9 @@ func (r *Router) handleListRecentPromptVersions(w http.ResponseWriter, req *http
 	if err != nil {
 		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if versions == nil {
+		versions = []repository.PromptVersion{}
 	}
 	// Return last 10 (they're already ordered by created_at DESC from the query)
 	if len(versions) > 10 {
@@ -523,6 +535,9 @@ func (r *Router) handleListStoriesAdmin(w http.ResponseWriter, req *http.Request
 	if err != nil {
 		http.Error(w, "Failed to list stories: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if stories == nil {
+		stories = []repository.Story{}
 	}
 	respondJSON(w, stories)
 }

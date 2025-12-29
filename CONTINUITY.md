@@ -392,6 +392,35 @@ Changed WikiPage.tsx ([WikiPage.tsx:39](frontend/src/pages/public/WikiPage.tsx#L
 - All avatar URLs are correct with single domain prefix
 - Roti villain avatar displays correctly in both admin and public pages
 
+### Issue #8: PromptStudioPage null reference error (FIXED)
+**Found:** Navigating to `/admin/prompts` shows error: "Cannot read properties of null (reading 'map')" in PromptMixer.tsx:118
+
+**Root Cause:** Same pattern as Issue #1 - backend API endpoints returning `null` instead of empty arrays `[]` when no data exists, and frontend not handling null responses
+
+**Fix Applied:**
+1. Frontend ([PromptMixer.tsx:26-27](frontend/src/components/prompts/PromptMixer.tsx#L26-L27)): Added null coalescing
+   ```typescript
+   setEntities(entitiesData || []);
+   setPromptTypes(typesData || []);
+   ```
+
+2. Backend: Added null checks to all list endpoints in router.go:
+   - `handleListPromptTypes` (lines 281-283)
+   - `handleListStories` (lines 190-192)
+   - `handleListPromptVersions` (lines 393-395)
+   - `handleListRecentPromptVersions` (lines 407-409)
+   - `handleListStoriesAdmin` (lines 539-541)
+
+**Impact:**
+- Consistent null safety across all API list endpoints
+- Frontend components handle null API responses gracefully
+- No more React rendering errors from null data
+
+**Verified:**
+- PromptStudioPage now loads correctly with empty state
+- All list endpoints return empty arrays instead of null
+- No console errors when navigating to admin pages with empty data
+
 ## Working set (files/ids/commands):
 - sql/queries/queries.sql
 - internal/repository/queries.sql.go
