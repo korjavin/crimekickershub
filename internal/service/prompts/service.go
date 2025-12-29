@@ -37,7 +37,10 @@ func (s *PromptService) ComposePrompt(ctx context.Context, entityIDs []int, type
 		return "", fmt.Errorf("failed to fetch prompt type: %w", err)
 	}
 
-	var entityNarratives []string
+	// Separate entities by type (characters vs locations)
+	var characterNarratives []string
+	var locationNarratives []string
+
 	for _, entityID := range entityIDs {
 		// Get the entity
 		entity, err := s.queries.GetEntityByID(ctx, int64(entityID))
@@ -47,38 +50,52 @@ func (s *PromptService) ComposePrompt(ctx context.Context, entityIDs []int, type
 
 		// Use the entity's description as the narrative
 		if entity.Description.Valid {
-			entityNarratives = append(entityNarratives, entity.Description.String)
+			if strings.ToLower(entity.Type) == "location" {
+				locationNarratives = append(locationNarratives, entity.Description.String)
+			} else {
+				characterNarratives = append(characterNarratives, entity.Description.String)
+			}
 		}
 	}
 
-	// Compose the final prompt: replace {{ENTITY}} placeholder in template with narratives
-	var sb strings.Builder
+	// Combine narratives
+	characterText := strings.Join(characterNarratives, " ")
+	locationText := strings.Join(locationNarratives, " ")
 
-	// Combine all entity narratives
-	narrative := strings.Join(entityNarratives, " ")
+	// Start with the template
+	result := promptType.TemplateText
 
-	// Replace {{ENTITY}} placeholder in template with the combined narrative
-	if promptType.TemplateText != "" {
-		if strings.Contains(promptType.TemplateText, "{{ENTITY}}") {
-			sb.WriteString(strings.Replace(promptType.TemplateText, "{{ENTITY}}", narrative, -1))
+	// Replace {{ENTITY}} placeholder with character narratives
+	if strings.Contains(result, "{{ENTITY}}") {
+		if characterText != "" {
+			result = strings.Replace(result, "{{ENTITY}}", characterText, -1)
 		} else {
-			// Fallback: append narrative to template
-			sb.WriteString(narrative)
-			sb.WriteString(" ")
-			sb.WriteString(promptType.TemplateText)
+			result = strings.Replace(result, "{{ENTITY}}", "", -1)
 		}
-	} else {
-		// No template, just use the narrative
-		 sb.WriteString(narrative)
+	}
+
+	// Replace {{LOCATION}} placeholder with location narratives
+	if strings.Contains(result, "{{LOCATION}}") {
+		if locationText != "" {
+			result = strings.Replace(result, "{{LOCATION}}", locationText, -1)
+		} else {
+			result = strings.Replace(result, "{{LOCATION}}", "", -1)
+		}
+	}
+
+	// If neither placeholder was found, prepend character text
+	if !strings.Contains(promptType.TemplateText, "{{ENTITY}}") && !strings.Contains(promptType.TemplateText, "{{LOCATION}}") {
+		if characterText != "" {
+			result = characterText + " " + result
+		}
 	}
 
 	// Add technical parameters if provided
 	if extraParamsJSON != "" {
-		sb.WriteString(" ")
-		sb.WriteString(extraParamsJSON)
+		result = result + " " + extraParamsJSON
 	}
 
-	return sb.String(), nil
+	return strings.TrimSpace(result), nil
 }
 
 // SaveNewVersion saves a new version of a prompt for an entity and type combination.

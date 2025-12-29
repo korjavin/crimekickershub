@@ -158,7 +158,7 @@ export async function getPromptTypes() {
 }
 
 export async function createPromptType(data: { slug: string; description: string; template_text: string }) {
-  const response = await fetch(`${API_BASE}/admin/prompt-types`, {
+  const response = await fetch(`${API_BASE}/admin/prompts/types`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -170,7 +170,7 @@ export async function createPromptType(data: { slug: string; description: string
 }
 
 export async function updatePromptType(id: string, data: { slug?: string; description?: string; template_text?: string }) {
-  const response = await fetch(`${API_BASE}/admin/prompt-types/${id}`, {
+  const response = await fetch(`${API_BASE}/admin/prompts/types/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -182,7 +182,7 @@ export async function updatePromptType(id: string, data: { slug?: string; descri
 }
 
 export async function deletePromptType(id: string) {
-  const response = await fetch(`${API_BASE}/admin/prompt-types/${id}`, {
+  const response = await fetch(`${API_BASE}/admin/prompts/types/${id}`, {
     method: 'DELETE',
   });
   if (!response.ok) {

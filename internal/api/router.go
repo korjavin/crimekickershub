@@ -284,7 +284,7 @@ func (r *Router) handleListPromptTypes(w http.ResponseWriter, req *http.Request)
 	if promptTypes == nil {
 		promptTypes = []repository.PromptType{}
 	}
-	respondJSON(w, promptTypes)
+	respondJSON(w, toPromptTypeDTOs(promptTypes))
 }
 
 // handleCreatePromptType creates a new prompt type
@@ -304,7 +304,7 @@ func (r *Router) handleCreatePromptType(w http.ResponseWriter, req *http.Request
 		http.Error(w, "Failed to create prompt type: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, promptType)
+	respondJSON(w, toPromptTypeDTO(promptType))
 }
 
 // handleUpdatePromptType updates an existing prompt type
@@ -363,7 +363,7 @@ func (r *Router) handleUpdatePromptType(w http.ResponseWriter, req *http.Request
 		http.Error(w, "Failed to fetch updated prompt type: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, updated)
+	respondJSON(w, toPromptTypeDTO(updated))
 }
 
 // handleDeletePromptType deletes a prompt type
@@ -1004,6 +1004,36 @@ func (r *Router) toMediaAssetDTOs(assets []repository.MediaAsset) []MediaAssetDT
 	dtos := make([]MediaAssetDTO, len(assets))
 	for i, asset := range assets {
 		dtos[i] = r.toMediaAssetDTO(asset)
+	}
+	return dtos
+}
+
+// PromptTypeDTO is a Data Transfer Object for PromptType with proper JSON serialization
+type PromptTypeDTO struct {
+	ID           int64   `json:"id"`
+	Slug         string  `json:"slug"`
+	Description  *string `json:"description"`
+	TemplateText string  `json:"template_text"`
+}
+
+// toPromptTypeDTO converts a repository.PromptType to PromptTypeDTO with proper null handling
+func toPromptTypeDTO(pt repository.PromptType) PromptTypeDTO {
+	dto := PromptTypeDTO{
+		ID:           pt.ID,
+		Slug:         pt.Slug,
+		TemplateText: pt.TemplateText,
+	}
+	if pt.Description.Valid {
+		dto.Description = &pt.Description.String
+	}
+	return dto
+}
+
+// toPromptTypeDTOs converts a slice of prompt types to DTOs
+func toPromptTypeDTOs(promptTypes []repository.PromptType) []PromptTypeDTO {
+	dtos := make([]PromptTypeDTO, len(promptTypes))
+	for i, pt := range promptTypes {
+		dtos[i] = toPromptTypeDTO(pt)
 	}
 	return dtos
 }

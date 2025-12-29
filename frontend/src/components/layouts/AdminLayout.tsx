@@ -8,6 +8,7 @@ const navItems = [
   { path: '/admin', label: 'Dashboard', icon: '📊' },
   { path: '/admin/matrix', label: 'Prompt Matrix', icon: '🔲' },
   { path: '/admin/prompts', label: 'Prompt Studio', icon: '🎨' },
+  { path: '/admin/types', label: 'Prompt Types', icon: '📝' },
   { path: '/admin/media', label: 'Media Assets', icon: '🖼️' },
   { path: '/admin/stories', label: 'Story Builder', icon: '📚' },
   { path: '/admin/entities', label: 'Entities', icon: '👤' },

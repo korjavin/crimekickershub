@@ -146,6 +146,11 @@ All audit fixes completed - 8 of 10 findings resolved
     - Hover overlay with eye icon on media cards
     - FormatTimeAgo helper for relative timestamps
 
+- Task 17: Prompt Types Sidebar Integration (COMPLETED)
+  - Added "Prompt Types" link to AdminLayout sidebar navigation
+  - Route /admin/types now accessible from admin sidebar
+  - Resolves final missing item from Task 17 requirements
+
 - Audit Fix Session (COMPLETED)
   - Fixed CRITICAL Admin API Routing Logic Error (internal/api/router.go) - Removed StripPrefix pattern, registered all handlers with full paths
   - Fixed CRITICAL Health Endpoint Unreachable (internal/api/router.go) - Changed /health to /api/health

@@ -45,7 +45,7 @@ function App() {
             <Route path="/admin/media" element={<MediaPage />} />
             <Route path="/admin/stories" element={<div className="p-4"><h1 className="text-2xl font-bold">Story Builder</h1></div>} />
             <Route path="/admin/entities" element={<EntitiesPage />} />
-            <Route path="/admin/prompt-types" element={<PromptTypesPage />} />
+            <Route path="/admin/types" element={<PromptTypesPage />} />
           </Route>
         </Routes>
       </AuthProvider>
