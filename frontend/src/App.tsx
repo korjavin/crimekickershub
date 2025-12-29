@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { PublicLayout } from './components/layouts/PublicLayout';
 import { AdminLayout } from './components/layouts/AdminLayout';
+import { HomePage } from './pages/public/HomePage';
+import { WikiPage } from './pages/public/WikiPage';
+import { ComicReaderPage, ComicListPage } from './pages/public/ComicReaderPage';
+import { CinemaPage } from './pages/public/CinemaPage';
 
 function App() {
   return (
@@ -8,9 +12,11 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<div className="p-4"><h1 className="text-2xl font-bold">Welcome to Crime Kickers Hub</h1></div>} />
-          <Route path="/wiki" element={<div className="p-4"><h1 className="text-2xl font-bold">Hero Wiki</h1></div>} />
-          <Route path="/comics" element={<div className="p-4"><h1 className="text-2xl font-bold">Comic Reader</h1></div>} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/wiki" element={<WikiPage />} />
+          <Route path="/comics" element={<ComicListPage />} />
+          <Route path="/comics/:slug" element={<ComicReaderPage />} />
+          <Route path="/cinema" element={<CinemaPage />} />
         </Route>
 
         {/* Admin Routes */}
