@@ -19,6 +19,41 @@ export async function getEntities() {
   return fetchApi<any[]>('/entities');
 }
 
+// Entity Admin APIs
+export async function createEntity(data: { name: string; slug: string; type: string; description?: string; avatar_url?: string }) {
+  const response = await fetch(`${API_BASE}/admin/entities`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updateEntity(id: string, data: { name?: string; slug?: string; type?: string; description?: string; avatar_url?: string }) {
+  const response = await fetch(`${API_BASE}/admin/entities/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteEntity(id: string) {
+  const response = await fetch(`${API_BASE}/admin/entities/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // Story/Comic APIs
 export async function getStories() {
   return fetchApi<any[]>('/comics');

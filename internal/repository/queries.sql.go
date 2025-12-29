@@ -192,6 +192,15 @@ func (q *Queries) CreateStory(ctx context.Context, arg CreateStoryParams) (Story
 	return i, err
 }
 
+const deleteEntity = `-- name: DeleteEntity :exec
+DELETE FROM entities WHERE id = ?
+`
+
+func (q *Queries) DeleteEntity(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteEntity, id)
+	return err
+}
+
 const deleteStoryItem = `-- name: DeleteStoryItem :exec
 DELETE FROM story_items WHERE id = ?
 `
@@ -858,6 +867,48 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateEntity = `-- name: UpdateEntity :one
+UPDATE entities
+SET slug = COALESCE(?, slug),
+    name = COALESCE(?, name),
+    type = COALESCE(?, type),
+    description = COALESCE(?, description),
+    avatar_url = COALESCE(?, avatar_url)
+WHERE id = ?
+RETURNING id, slug, name, type, description, avatar_url, created_at
+`
+
+type UpdateEntityParams struct {
+	Slug        string         `json:"slug"`
+	Name        string         `json:"name"`
+	Type        string         `json:"type"`
+	Description sql.NullString `json:"description"`
+	AvatarUrl   sql.NullString `json:"avatar_url"`
+	ID          int64          `json:"id"`
+}
+
+func (q *Queries) UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Entity, error) {
+	row := q.db.QueryRowContext(ctx, updateEntity,
+		arg.Slug,
+		arg.Name,
+		arg.Type,
+		arg.Description,
+		arg.AvatarUrl,
+		arg.ID,
+	)
+	var i Entity
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Type,
+		&i.Description,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const updateStoryItemSortOrder = `-- name: UpdateStoryItemSortOrder :exec

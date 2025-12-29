@@ -106,6 +106,11 @@ func (r *Router) adminRoutes() {
 	adminMux.HandleFunc("PUT /stories/{id}", r.handleUpdateStory)
 	adminMux.HandleFunc("POST /stories/{id}/items", r.handleAddStoryItem)
 
+	// Entity management (admin only)
+	adminMux.HandleFunc("POST /entities", r.handleCreateEntity)
+	adminMux.HandleFunc("PUT /entities/{id}", r.handleUpdateEntity)
+	adminMux.HandleFunc("DELETE /entities/{id}", r.handleDeleteEntity)
+
 	// Wrap admin mux with auth middleware
 	r.mux.Handle("/api/admin/prompts/", r.auth.RequireAdmin(http.StripPrefix("/api/admin/prompts", adminMux)))
 	r.mux.Handle("/api/admin/upload/", r.auth.RequireAdmin(http.StripPrefix("/api/admin/upload", adminMux)))
@@ -539,6 +544,107 @@ func (r *Router) handleDevLogin(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleCreateEntity creates a new entity
+func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
+	var input CreateEntityInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	entity, err := r.repo.CreateEntity(req.Context(), repository.CreateEntityParams{
+		Slug:        input.Slug,
+		Name:        input.Name,
+		Type:        input.Type,
+		Description: sql.NullString{String: input.Description, Valid: input.Description != ""},
+		AvatarUrl:   sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
+	})
+	if err != nil {
+		http.Error(w, "Failed to create entity: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, entity)
+}
+
+// handleUpdateEntity updates an existing entity
+func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
+	entityID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if entityID == 0 {
+		http.Error(w, "Entity ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input UpdateEntityInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get current entity to have values for COALESCE
+	current, err := r.repo.GetEntityByID(req.Context(), entityID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Entity not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to get entity: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Use current values if not provided in input
+	slug := input.Slug
+	if slug == nil {
+		slug = &current.Slug
+	}
+	name := input.Name
+	if name == nil {
+		name = &current.Name
+	}
+	typeStr := input.Type
+	if typeStr == nil {
+		typeStr = &current.Type
+	}
+	description := input.Description
+	if description == nil && current.Description.Valid {
+		description = &current.Description.String
+	}
+	avatarURL := input.AvatarURL
+	if avatarURL == nil && current.AvatarUrl.Valid {
+		avatarURL = &current.AvatarUrl.String
+	}
+
+	entity, err := r.repo.UpdateEntity(req.Context(), repository.UpdateEntityParams{
+		Slug:        *slug,
+		Name:        *name,
+		Type:        *typeStr,
+		Description: sql.NullString{String: *description, Valid: description != nil && *description != ""},
+		AvatarUrl:   sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
+		ID:          entityID,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update entity: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, entity)
+}
+
+// handleDeleteEntity deletes an entity
+func (r *Router) handleDeleteEntity(w http.ResponseWriter, req *http.Request) {
+	entityID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if entityID == 0 {
+		http.Error(w, "Entity ID is required", http.StatusBadRequest)
+		return
+	}
+
+	err := r.repo.DeleteEntity(req.Context(), entityID)
+	if err != nil {
+		http.Error(w, "Failed to delete entity: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]bool{"success": true})
+}
+
 // Helper types for request/response
 
 // CreateStoryInput is the input for creating a story
@@ -558,6 +664,24 @@ type AddStoryItemInput struct {
 // UpdateStoryInput is the input for updating story item order
 type UpdateStoryInput struct {
 	ItemIDs []int64 `json:"itemIds"`
+}
+
+// CreateEntityInput is the input for creating an entity
+type CreateEntityInput struct {
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Type        string `json:"type"`
+	Description string `json:"description,omitempty"`
+	AvatarURL   string `json:"avatar_url,omitempty"`
+}
+
+// UpdateEntityInput is the input for updating an entity
+type UpdateEntityInput struct {
+	Name        *string `json:"name,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
+	Type        *string `json:"type,omitempty"`
+	Description *string `json:"description,omitempty"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
 }
 
 // Helper functions

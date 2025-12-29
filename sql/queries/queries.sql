@@ -12,6 +12,19 @@ SELECT * FROM entities WHERE id = ?;
 -- name: ListEntities :many
 SELECT * FROM entities ORDER BY name;
 
+-- name: UpdateEntity :one
+UPDATE entities
+SET slug = COALESCE(?, slug),
+    name = COALESCE(?, name),
+    type = COALESCE(?, type),
+    description = COALESCE(?, description),
+    avatar_url = COALESCE(?, avatar_url)
+WHERE id = ?
+RETURNING *;
+
+-- name: DeleteEntity :exec
+DELETE FROM entities WHERE id = ?;
+
 -- name: ListEntitiesByType :many
 SELECT * FROM entities WHERE type = ? ORDER BY name;
 

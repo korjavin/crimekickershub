@@ -10,6 +10,7 @@ import { CinemaPage } from './pages/public/CinemaPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { PromptStudioPage } from './pages/admin/PromptStudioPage';
 import { MediaPage } from './pages/admin/MediaPage';
+import { EntitiesPage } from './pages/admin/EntitiesPage';
 
 function App() {
   return (
@@ -40,7 +41,7 @@ function App() {
             <Route path="/admin/prompts" element={<PromptStudioPage />} />
             <Route path="/admin/media" element={<MediaPage />} />
             <Route path="/admin/stories" element={<div className="p-4"><h1 className="text-2xl font-bold">Story Builder</h1></div>} />
-            <Route path="/admin/entities" element={<div className="p-4"><h1 className="text-2xl font-bold">Entities</h1></div>} />
+            <Route path="/admin/entities" element={<EntitiesPage />} />
           </Route>
         </Routes>
       </AuthProvider>
