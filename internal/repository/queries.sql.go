@@ -201,6 +201,15 @@ func (q *Queries) DeleteEntity(ctx context.Context, id int64) error {
 	return err
 }
 
+const deletePromptType = `-- name: DeletePromptType :exec
+DELETE FROM prompt_types WHERE id = ?
+`
+
+func (q *Queries) DeletePromptType(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deletePromptType, id)
+	return err
+}
+
 const deleteStoryItem = `-- name: DeleteStoryItem :exec
 DELETE FROM story_items WHERE id = ?
 `
@@ -289,6 +298,22 @@ func (q *Queries) GetMediaAsset(ctx context.Context, id int64) (MediaAsset, erro
 		&i.YoutubeID,
 		&i.SourcePromptVersionID,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getPromptTypeByID = `-- name: GetPromptTypeByID :one
+SELECT id, slug, description, template_text FROM prompt_types WHERE id = ?
+`
+
+func (q *Queries) GetPromptTypeByID(ctx context.Context, id int64) (PromptType, error) {
+	row := q.db.QueryRowContext(ctx, getPromptTypeByID, id)
+	var i PromptType
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Description,
+		&i.TemplateText,
 	)
 	return i, err
 }
@@ -909,6 +934,27 @@ func (q *Queries) UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Ent
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const updatePromptType = `-- name: UpdatePromptType :exec
+UPDATE prompt_types SET slug = ?, description = ?, template_text = ? WHERE id = ?
+`
+
+type UpdatePromptTypeParams struct {
+	Slug         string         `json:"slug"`
+	Description  sql.NullString `json:"description"`
+	TemplateText string         `json:"template_text"`
+	ID           int64          `json:"id"`
+}
+
+func (q *Queries) UpdatePromptType(ctx context.Context, arg UpdatePromptTypeParams) error {
+	_, err := q.db.ExecContext(ctx, updatePromptType,
+		arg.Slug,
+		arg.Description,
+		arg.TemplateText,
+		arg.ID,
+	)
+	return err
 }
 
 const updateStoryItemSortOrder = `-- name: UpdateStoryItemSortOrder :exec

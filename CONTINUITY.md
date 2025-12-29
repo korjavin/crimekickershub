@@ -29,7 +29,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Use standard Go 1.22+ http.ServeMux (no chi/gin)
 
 ## State:
-Task 12: Backend Implementation for Media Management & Story Builder
+Task 13: Admin Entity Management - COMPLETED
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -98,24 +98,30 @@ Task 12: Backend Implementation for Media Management & Story Builder
   - Added OAuth endpoints: /api/auth/google/login, /api/auth/google/callback
   - Added dev login bypass for localhost development
 
+- Task 12: Media Management & Story Builder (COMPLETED)
+  - Backend: Fixed POST /api/admin/upload, added GET /api/admin/media, GET /api/admin/prompts/versions
+  - Backend: Added GET /api/admin/stories, GET /api/admin/stories/{id}, PUT /api/admin/stories/{id}
+  - Backend: Added UpdateStoryItemSortOrder and ListAllPromptVersions SQL queries
+  - Frontend: Created MediaPage.tsx with drag-drop upload and metadata modal
+  - Frontend: Created StoryBuilderPage.tsx with sortable timeline using @dnd-kit
+  - Added TypeScript API functions: uploadMedia, listMedia, listPromptVersions, listStoriesAdmin, getStory, updateStory
+
+- Task 13: Admin Entity Management (COMPLETED)
+  - Backend: Added POST/PUT/DELETE /api/admin/entities endpoints
+  - Backend: Added UpdateEntity and DeleteEntity SQL queries
+  - Frontend: Created EntitiesPage.tsx with DataTable (Avatar, Name, Type, Last Updated)
+  - Frontend: Created Entity Editor Sheet component (Name, Type, Description, Avatar Upload)
+  - Added TypeScript API functions: createEntity, updateEntity, deleteEntity
+  - Added Sheet and Table UI components to shadcn/ui
+
 ## Now:
-Task 12: Backend Implementation for Media Management & Story Builder
-Implementing:
-1. Fix POST /api/admin/upload - parse multipart, upload to R2, call RegisterAsset
-2. Add UpdateStoryItemSortOrder SQL query
-3. Add ListAllPromptVersions SQL query
-4. Add GET /api/admin/media endpoint (handleListMedia)
-5. Fix GET /api/admin/prompts/versions endpoint (handleListPromptVersions)
-6. Add GET /api/admin/stories endpoint (handleListStoriesAdmin)
-7. Add GET /api/admin/stories/{id} endpoint (handleGetStory)
-8. Add PUT /api/admin/stories/{id} endpoint (handleUpdateStory)
-9. Add TypeScript API functions
+Ready for Task 14
 
 ## Next:
-Task 11: Prompt Studio UI (Prompt Matrix, Version History, Diff Viewer) - will follow after Task 12
+Task 14: Prompt Versioning & Diff Viewer
 
 ## Open questions (UNCONFIRMED if needed):
-- None - Task 12 implementation in progress
+- None - Task 13 completed, awaiting Task 14
 
 ## Working set (files/ids/commands):
 - sql/queries/queries.sql
@@ -124,5 +130,8 @@ Task 11: Prompt Studio UI (Prompt Matrix, Version History, Diff Viewer) - will f
 - internal/service/media/media.go
 - frontend/src/lib/api.ts
 - frontend/src/lib/api-types.ts
+- frontend/src/pages/admin/EntitiesPage.tsx
+- frontend/src/pages/admin/MediaPage.tsx
+- frontend/src/pages/admin/StoryBuilderPage.tsx
 - go generate ./...
 - cd frontend && npm run dev

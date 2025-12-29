@@ -11,6 +11,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { PromptStudioPage } from './pages/admin/PromptStudioPage';
 import { MediaPage } from './pages/admin/MediaPage';
 import { EntitiesPage } from './pages/admin/EntitiesPage';
+import { PromptTypesPage } from './pages/admin/PromptTypesPage';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="/admin/media" element={<MediaPage />} />
             <Route path="/admin/stories" element={<div className="p-4"><h1 className="text-2xl font-bold">Story Builder</h1></div>} />
             <Route path="/admin/entities" element={<EntitiesPage />} />
+            <Route path="/admin/prompt-types" element={<PromptTypesPage />} />
           </Route>
         </Routes>
       </AuthProvider>

@@ -36,8 +36,17 @@ RETURNING *;
 -- name: GetPromptTypeBySlug :one
 SELECT * FROM prompt_types WHERE slug = ?;
 
+-- name: GetPromptTypeByID :one
+SELECT * FROM prompt_types WHERE id = ?;
+
 -- name: ListPromptTypes :many
 SELECT * FROM prompt_types ORDER BY slug;
+
+-- name: UpdatePromptType :exec
+UPDATE prompt_types SET slug = ?, description = ?, template_text = ? WHERE id = ?;
+
+-- name: DeletePromptType :exec
+DELETE FROM prompt_types WHERE id = ?;
 
 -- name: CreatePromptVersion :one
 INSERT INTO prompt_versions (entity_id, type_id, version_number, prompt_text, technical_params_json)

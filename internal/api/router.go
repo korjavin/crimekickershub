@@ -89,6 +89,9 @@ func (r *Router) adminRoutes() {
 	// Prompt management (admin only)
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("GET /types", r.handleListPromptTypes)
+	adminMux.HandleFunc("POST /types", r.handleCreatePromptType)
+	adminMux.HandleFunc("PUT /types/{id}", r.handleUpdatePromptType)
+	adminMux.HandleFunc("DELETE /types/{id}", r.handleDeletePromptType)
 	adminMux.HandleFunc("GET /", r.handleListPromptVersions)
 	adminMux.HandleFunc("POST /compose", r.handleComposePrompt)
 	adminMux.HandleFunc("POST /save", r.handleSavePrompt)
@@ -244,6 +247,102 @@ func (r *Router) handleListPromptTypes(w http.ResponseWriter, req *http.Request)
 		return
 	}
 	respondJSON(w, promptTypes)
+}
+
+// handleCreatePromptType creates a new prompt type
+func (r *Router) handleCreatePromptType(w http.ResponseWriter, req *http.Request) {
+	var input CreatePromptTypeInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	promptType, err := r.repo.CreatePromptType(req.Context(), repository.CreatePromptTypeParams{
+		Slug:         input.Slug,
+		Description:  sql.NullString{String: input.Description, Valid: input.Description != ""},
+		TemplateText: input.TemplateText,
+	})
+	if err != nil {
+		http.Error(w, "Failed to create prompt type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, promptType)
+}
+
+// handleUpdatePromptType updates an existing prompt type
+func (r *Router) handleUpdatePromptType(w http.ResponseWriter, req *http.Request) {
+	typeID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if typeID == 0 {
+		http.Error(w, "Prompt type ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input UpdatePromptTypeInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get current prompt type to have values for update
+	current, err := r.repo.GetPromptTypeByID(req.Context(), typeID)
+	if err != nil && err != sql.ErrNoRows {
+		http.Error(w, "Failed to get current prompt type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Use provided values or fall back to current values
+	slug := input.Slug
+	if slug == nil {
+		slug = &current.Slug
+	}
+	templateText := input.TemplateText
+	if templateText == nil {
+		templateText = &current.TemplateText
+	}
+
+	// Handle description - it's sql.NullString in the model
+	var description sql.NullString
+	if input.Description != nil {
+		description = sql.NullString{String: *input.Description, Valid: *input.Description != ""}
+	} else if current.Description.Valid {
+		description = current.Description
+	}
+
+	err = r.repo.UpdatePromptType(req.Context(), repository.UpdatePromptTypeParams{
+		Slug:         *slug,
+		Description:  description,
+		TemplateText: *templateText,
+		ID:           typeID,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update prompt type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch and return the updated prompt type
+	updated, err := r.repo.GetPromptTypeByID(req.Context(), typeID)
+	if err != nil {
+		http.Error(w, "Failed to fetch updated prompt type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, updated)
+}
+
+// handleDeletePromptType deletes a prompt type
+func (r *Router) handleDeletePromptType(w http.ResponseWriter, req *http.Request) {
+	typeID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if typeID == 0 {
+		http.Error(w, "Prompt type ID is required", http.StatusBadRequest)
+		return
+	}
+
+	err := r.repo.DeletePromptType(req.Context(), typeID)
+	if err != nil {
+		http.Error(w, "Failed to delete prompt type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]bool{"success": true})
 }
 
 // handleListPromptVersions returns all prompt versions
@@ -682,6 +781,20 @@ type UpdateEntityInput struct {
 	Type        *string `json:"type,omitempty"`
 	Description *string `json:"description,omitempty"`
 	AvatarURL   *string `json:"avatar_url,omitempty"`
+}
+
+// CreatePromptTypeInput is the input for creating a prompt type
+type CreatePromptTypeInput struct {
+	Slug         string `json:"slug"`
+	Description  string `json:"description"`
+	TemplateText string `json:"template_text"`
+}
+
+// UpdatePromptTypeInput is the input for updating a prompt type
+type UpdatePromptTypeInput struct {
+	Slug         *string `json:"slug,omitempty"`
+	Description  *string `json:"description,omitempty"`
+	TemplateText *string `json:"template_text,omitempty"`
 }
 
 // Helper functions

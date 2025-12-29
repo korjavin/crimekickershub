@@ -16,11 +16,13 @@ type Querier interface {
 	CreatePromptVersion(ctx context.Context, arg CreatePromptVersionParams) (PromptVersion, error)
 	CreateStory(ctx context.Context, arg CreateStoryParams) (Story, error)
 	DeleteEntity(ctx context.Context, id int64) error
+	DeletePromptType(ctx context.Context, id int64) error
 	DeleteStoryItem(ctx context.Context, id int64) error
 	GetEntityByID(ctx context.Context, id int64) (Entity, error)
 	GetEntityBySlug(ctx context.Context, slug string) (Entity, error)
 	GetLatestPromptVersion(ctx context.Context, arg GetLatestPromptVersionParams) (PromptVersion, error)
 	GetMediaAsset(ctx context.Context, id int64) (MediaAsset, error)
+	GetPromptTypeByID(ctx context.Context, id int64) (PromptType, error)
 	GetPromptTypeBySlug(ctx context.Context, slug string) (PromptType, error)
 	GetPromptVersionByID(ctx context.Context, id int64) (PromptVersion, error)
 	GetStoryByID(ctx context.Context, id int64) (Story, error)
@@ -41,6 +43,7 @@ type Querier interface {
 	ListPublishedStories(ctx context.Context) ([]Story, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Entity, error)
+	UpdatePromptType(ctx context.Context, arg UpdatePromptTypeParams) error
 	UpdateStoryItemSortOrder(ctx context.Context, arg UpdateStoryItemSortOrderParams) error
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
 	UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error)

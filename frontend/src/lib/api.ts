@@ -152,6 +152,40 @@ export async function getPromptTypes() {
   return fetchApi<any[]>('/admin/prompt-types');
 }
 
+export async function createPromptType(data: { slug: string; description: string; template_text: string }) {
+  const response = await fetch(`${API_BASE}/admin/prompt-types`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updatePromptType(id: string, data: { slug?: string; description?: string; template_text?: string }) {
+  const response = await fetch(`${API_BASE}/admin/prompt-types/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deletePromptType(id: string) {
+  const response = await fetch(`${API_BASE}/admin/prompt-types/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export async function getPromptVersions() {
   return fetchApi<any[]>('/admin/prompts');
 }

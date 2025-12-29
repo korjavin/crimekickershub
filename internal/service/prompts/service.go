@@ -51,21 +51,25 @@ func (s *PromptService) ComposePrompt(ctx context.Context, entityIDs []int, type
 		}
 	}
 
-	// Compose the final prompt: [Entity 1] [Entity 2] ... + [Template] + [Technical Params]
+	// Compose the final prompt: replace {{ENTITY}} placeholder in template with narratives
 	var sb strings.Builder
 
-	// Add entity narratives
-	for i, narrative := range entityNarratives {
-		if i > 0 {
-			sb.WriteString(" ")
-		}
-		sb.WriteString(narrative)
-	}
+	// Combine all entity narratives
+	narrative := strings.Join(entityNarratives, " ")
 
-	// Add the prompt type template
+	// Replace {{ENTITY}} placeholder in template with the combined narrative
 	if promptType.TemplateText != "" {
-		sb.WriteString(" ")
-		sb.WriteString(promptType.TemplateText)
+		if strings.Contains(promptType.TemplateText, "{{ENTITY}}") {
+			sb.WriteString(strings.Replace(promptType.TemplateText, "{{ENTITY}}", narrative, -1))
+		} else {
+			// Fallback: append narrative to template
+			sb.WriteString(narrative)
+			sb.WriteString(" ")
+			sb.WriteString(promptType.TemplateText)
+		}
+	} else {
+		// No template, just use the narrative
+		 sb.WriteString(narrative)
 	}
 
 	// Add technical parameters if provided
