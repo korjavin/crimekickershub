@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -47,7 +48,7 @@ func main() {
 		log.Fatalf("Schema file not found: %s", schemaPath)
 	}
 
-	if err := db.InitSchema(database, schemaPath); err != nil {
+	if err := db.InitSchema(database, schemaPath, "001_initial"); err != nil {
 		log.Fatalf("Failed to initialize schema: %v", err)
 	}
 
@@ -66,12 +67,14 @@ func main() {
 		PublicDomain:    os.Getenv("R2_PUBLIC_DOMAIN"),
 	}
 
-	r2Client, err := storage.NewR2Client(context.Background(), r2Config)
-	if err != nil {
-		log.Printf("Warning: Failed to initialize R2 client: %v (uploads will be disabled)", err)
-		r2Client = nil
-	} else {
-		log.Println("R2 client initialized")
+	r2Client, r2Status := storage.NewR2Client(context.Background(), r2Config)
+	switch r2Status.State {
+	case storage.R2StateReady:
+		log.Printf("R2 client initialized successfully (bucket: %s, public domain: %s)", r2Config.BucketName, r2Config.PublicDomain)
+	case storage.R2StateMissingCredentials:
+		log.Println("WARNING: R2 credentials not configured - uploads will be disabled (degraded mode)")
+	case storage.R2StateConnectionFailed:
+		log.Printf("WARNING: R2 connection failed: %v - uploads will be disabled (degraded mode)", r2Status.Error)
 	}
 
 	// Initialize Google OAuth2
@@ -139,25 +142,23 @@ func main() {
 	log.Println("Server exited gracefully")
 }
 
-// parseCSV parses a CSV string into a slice
+// parseCSV parses a CSV string into a slice of non-empty email addresses.
+// It handles:
+// - Trimming whitespace from each value
+// - Skipping empty values
+// - Stripping surrounding quotes from quoted strings
 func parseCSV(s string) []string {
 	if s == "" {
 		return nil
 	}
+	parts := strings.Split(s, ",")
 	var result []string
-	current := ""
-	for _, c := range s {
-		if c == ',' {
-			if current != "" {
-				result = append(result, current)
-			}
-			current = ""
-		} else if c != ' ' {
-			current += string(c)
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		trimmed = strings.Trim(trimmed, `"`)
+		if trimmed != "" {
+			result = append(result, trimmed)
 		}
-	}
-	if current != "" {
-		result = append(result, current)
 	}
 	return result
 }

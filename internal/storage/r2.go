@@ -23,6 +23,26 @@ type R2Config struct {
 	PublicDomain    string
 }
 
+// R2State represents the initialization state of the R2 client
+type R2State int
+
+const (
+	// R2StateUnknown indicates the R2 state is not determined
+	R2StateUnknown R2State = iota
+	// R2StateReady indicates R2 is fully initialized and ready
+	R2StateReady
+	// R2StateMissingCredentials indicates credentials were not provided
+	R2StateMissingCredentials
+	// R2StateConnectionFailed indicates a connection error occurred
+	R2StateConnectionFailed
+)
+
+// R2InitStatus holds the result of R2 client initialization
+type R2InitStatus struct {
+	State R2State
+	Error error
+}
+
 // R2Client handles Cloudflare R2 operations
 type R2Client struct {
 	client    *s3.Client
@@ -31,13 +51,17 @@ type R2Client struct {
 }
 
 // NewR2Client creates a new R2 client
-func NewR2Client(ctx context.Context, cfg R2Config) (*R2Client, error) {
+// Returns the client and its initialization status
+func NewR2Client(ctx context.Context, cfg R2Config) (*R2Client, R2InitStatus) {
+	status := R2InitStatus{State: R2StateUnknown}
+
 	if cfg.AccessKeyID == "" || cfg.SecretAccessKey == "" || cfg.AccountID == "" {
-		// Return a nil client that will fail gracefully if used without credentials
+		// Return a client without credentials - graceful degradation
+		status.State = R2StateMissingCredentials
 		return &R2Client{
 			bucket:    cfg.BucketName,
 			publicURL: cfg.PublicDomain,
-		}, nil
+		}, status
 	}
 
 	// Create custom endpoint resolver for R2
@@ -64,25 +88,28 @@ func NewR2Client(ctx context.Context, cfg R2Config) (*R2Client, error) {
 		)),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		status.State = R2StateConnectionFailed
+		status.Error = fmt.Errorf("failed to load AWS config: %w", err)
+		return nil, status
 	}
 
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.UsePathStyle = true // R2 requires path style
 	})
 
+	status.State = R2StateReady
 	return &R2Client{
 		client:    client,
 		bucket:    cfg.BucketName,
 		publicURL: cfg.PublicDomain,
-	}, nil
+	}, status
 }
 
 // UploadImage uploads an image to R2 and returns the public URL
 func (c *R2Client) UploadImage(ctx context.Context, file io.Reader, filename string) (string, error) {
 	if c.client == nil {
-		// Return a mock URL if client is not initialized (no credentials)
-		return c.mockUpload(filename), nil
+		// R2 is not available - return an error so the caller knows uploads won't work
+		return "", fmt.Errorf("R2 storage is not available: missing credentials or connection failure")
 	}
 
 	// Read file content
@@ -116,6 +143,11 @@ func (c *R2Client) UploadImageFromPath(ctx context.Context, filepath string) (st
 
 	filename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath)
 	return c.UploadImage(ctx, file, filename)
+}
+
+// IsAvailable returns true if R2 is properly configured and ready
+func (c *R2Client) IsAvailable() bool {
+	return c.client != nil
 }
 
 // mockUpload returns a mock URL for testing without credentials

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,6 +25,7 @@ type Router struct {
 	media        *media.MediaService
 	repo         *repository.Queries
 	auth         *auth.GoogleOAuth2
+	r2           *storage.R2Client
 	frontendPath string
 }
 
@@ -45,7 +47,8 @@ func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2, fronte
 	// Admin routes (require admin authentication)
 	r.adminRoutes()
 
-	// Note: Static handler is NOT registered on apiMux
+	// Initialize R2 client field
+	r.r2 = r2
 	// It's only used in ServeHTTP for non-API paths
 
 	return r
@@ -53,9 +56,12 @@ func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2, fronte
 
 // ServeHTTP implements http.Handler - routes to API or SPA
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Apply CORS middleware to all requests
+	handler := corsMiddleware(r.mux)
+
 	// Route API requests to apiMux
 	if strings.HasPrefix(req.URL.Path, "/api") {
-		r.mux.ServeHTTP(w, req)
+		handler.ServeHTTP(w, req)
 		return
 	}
 
@@ -82,55 +88,64 @@ func (r *Router) publicRoutes() {
 	r.mux.HandleFunc("GET /api/auth/google/callback", r.handleGoogleCallback)
 
 	// Health check
-	r.mux.HandleFunc("GET /health", r.handleHealth)
+	r.mux.HandleFunc("GET /api/health", r.handleHealth)
 }
 
 // adminRoutes registers admin API endpoints (protected)
 func (r *Router) adminRoutes() {
-	// Prompt management (admin only)
-	adminMux := http.NewServeMux()
-	adminMux.HandleFunc("GET /types", r.handleListPromptTypes)
-	adminMux.HandleFunc("POST /types", r.handleCreatePromptType)
-	adminMux.HandleFunc("PUT /types/{id}", r.handleUpdatePromptType)
-	adminMux.HandleFunc("DELETE /types/{id}", r.handleDeletePromptType)
-	adminMux.HandleFunc("GET /", r.handleListPromptVersions)
-	adminMux.HandleFunc("GET /recent", r.handleListRecentPromptVersions)
-	adminMux.HandleFunc("POST /compose", r.handleComposePrompt)
-	adminMux.HandleFunc("POST /save", r.handleSavePrompt)
-	adminMux.HandleFunc("GET /diff", r.handleGetPromptDiff)
+	// Prompts management (admin only)
+	r.mux.Handle("GET /api/admin/prompts", r.auth.RequireAdmin(http.HandlerFunc(r.handleListPromptVersions)))
+	r.mux.Handle("GET /api/admin/prompts/recent", r.auth.RequireAdmin(http.HandlerFunc(r.handleListRecentPromptVersions)))
+	r.mux.Handle("GET /api/admin/prompts/types", r.auth.RequireAdmin(http.HandlerFunc(r.handleListPromptTypes)))
+	r.mux.Handle("POST /api/admin/prompts/types", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreatePromptType)))
+	r.mux.Handle("PUT /api/admin/prompts/types/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdatePromptType)))
+	r.mux.Handle("DELETE /api/admin/prompts/types/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeletePromptType)))
+	r.mux.Handle("POST /api/admin/prompts/compose", r.auth.RequireAdmin(http.HandlerFunc(r.handleComposePrompt)))
+	r.mux.Handle("POST /api/admin/prompts/save", r.auth.RequireAdmin(http.HandlerFunc(r.handleSavePrompt)))
+	r.mux.Handle("GET /api/admin/prompts/diff", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetPromptDiff)))
+
+	// Upload (admin only)
+	r.mux.Handle("POST /api/admin/upload", r.auth.RequireAdmin(http.HandlerFunc(r.handleUploadMedia)))
 
 	// Media management (admin only)
-	adminMux.HandleFunc("GET /media", r.handleListMedia)
-	adminMux.HandleFunc("POST /upload", r.handleUploadMedia)
-	adminMux.HandleFunc("POST /assets", r.handleRegisterAsset)
+	r.mux.Handle("GET /api/admin/media", r.auth.RequireAdmin(http.HandlerFunc(r.handleListMedia)))
 
-	// Story management (admin only)
-	adminMux.HandleFunc("GET /stories", r.handleListStoriesAdmin)
-	adminMux.HandleFunc("POST /stories", r.handleCreateStory)
-	adminMux.HandleFunc("GET /stories/{id}", r.handleGetStory)
-	adminMux.HandleFunc("PUT /stories/{id}", r.handleUpdateStory)
-	adminMux.HandleFunc("POST /stories/{id}/items", r.handleAddStoryItem)
+	// Assets management (admin only)
+	r.mux.Handle("POST /api/admin/assets", r.auth.RequireAdmin(http.HandlerFunc(r.handleRegisterAsset)))
+
+	// Stories management (admin only)
+	r.mux.Handle("GET /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleListStoriesAdmin)))
+	r.mux.Handle("POST /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateStory)))
+	r.mux.Handle("GET /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetStory)))
+	r.mux.Handle("PUT /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStory)))
+	r.mux.Handle("POST /api/admin/stories/{id}/items", r.auth.RequireAdmin(http.HandlerFunc(r.handleAddStoryItem)))
+
+	// Entities management (admin only)
+	r.mux.Handle("GET /api/admin/entities", r.auth.RequireAdmin(http.HandlerFunc(r.handleListEntities)))
+	r.mux.Handle("POST /api/admin/entities", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateEntity)))
+	r.mux.Handle("PUT /api/admin/entities/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateEntity)))
+	r.mux.Handle("DELETE /api/admin/entities/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteEntity)))
 
 	// Matrix view (admin only)
-	adminMux.HandleFunc("GET /matrix", r.handleGetMatrix)
-
-	// Entity management (admin only)
-	adminMux.HandleFunc("POST /entities", r.handleCreateEntity)
-	adminMux.HandleFunc("PUT /entities/{id}", r.handleUpdateEntity)
-	adminMux.HandleFunc("DELETE /entities/{id}", r.handleDeleteEntity)
-
-	// Wrap admin mux with auth middleware
-	r.mux.Handle("/api/admin/prompts/", r.auth.RequireAdmin(http.StripPrefix("/api/admin/prompts", adminMux)))
-	r.mux.Handle("/api/admin/upload/", r.auth.RequireAdmin(http.StripPrefix("/api/admin/upload", adminMux)))
-	r.mux.Handle("/api/admin/assets/", r.auth.RequireAdmin(http.StripPrefix("/api/admin/assets", adminMux)))
-	r.mux.Handle("/api/admin/stories/", r.auth.RequireAdmin(http.StripPrefix("/api/admin/stories", adminMux)))
+	r.mux.Handle("GET /api/admin/matrix", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetMatrix)))
 }
 
 // Handler methods
 
-// handleHealth returns the health status
+// handleHealth returns the health status including R2 availability
 func (r *Router) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	w.Write([]byte("OK"))
+	r2Available := false
+	if r.r2 != nil {
+		r2Available = r.r2.IsAvailable()
+	}
+	status := map[string]interface{}{
+		"status": "healthy",
+		"r2": map[string]interface{}{
+			"available": r2Available,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
 }
 
 // handleListHeroes returns all heroes (entities of type 'hero')
@@ -877,3 +892,101 @@ func respondJSON(w http.ResponseWriter, data any) {
 type contextKey string
 
 func (c contextKey) String() string { return string(c) }
+
+// ValidationError represents a validation error with specific field errors
+type ValidationError struct {
+	MissingFields []string `json:"missing_fields"`
+	Message       string   `json:"message"`
+}
+
+func (ve ValidationError) Error() string {
+	return ve.Message
+}
+
+// validateRequest parses JSON body and validates required fields are present
+func validateRequest(r *http.Request, requiredFields []string) error {
+	// Check content type for POST/PUT requests
+	if r.Method == "POST" || r.Method == "PUT" {
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "" && !strings.Contains(contentType, "application/json") {
+			return ValidationError{
+				Message: "Content-Type must be application/json",
+			}
+		}
+	}
+
+	// Read body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return ValidationError{
+			Message: "Failed to read request body: " + err.Error(),
+		}
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+
+	// Handle empty body for GET/DELETE requests
+	if len(body) == 0 && (r.Method == "GET" || r.Method == "DELETE") {
+		return nil
+	}
+
+	// Parse JSON to map for field checking
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return ValidationError{
+			Message: "Invalid JSON: " + err.Error(),
+		}
+	}
+
+	// Check required fields
+	var missing []string
+	for _, field := range requiredFields {
+		if _, exists := data[field]; !exists {
+			missing = append(missing, field)
+		}
+	}
+
+	if len(missing) > 0 {
+		return ValidationError{
+			MissingFields: missing,
+			Message:       "Missing required fields",
+		}
+	}
+
+	return nil
+}
+
+// WriteValidationError writes a validation error response
+func WriteValidationError(w http.ResponseWriter, err error) {
+	var ve ValidationError
+	if errors.As(err, &ve) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":          "Validation failed",
+			"message":        ve.Message,
+			"missing_fields": ve.MissingFields,
+		})
+		return
+	}
+	// Fallback for other errors
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
+// corsMiddleware adds CORS headers to responses
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		// Handle preflight OPTIONS requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

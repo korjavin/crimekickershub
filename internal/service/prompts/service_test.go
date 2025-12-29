@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"crimekickershub/internal/db"
@@ -25,9 +26,11 @@ func setupTestDB(t *testing.T) (*repository.Queries, func()) {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
 
-	// Initialize schema
-	schemaPath := "sql/schema/001_initial.sql"
-	if err := db.InitSchema(testDB, schemaPath); err != nil {
+	// Initialize schema - compute path relative to the test file location
+	_, currentFile, _, _ := runtime.Caller(0)
+	testDir := filepath.Dir(currentFile)
+	schemaPath := filepath.Join(testDir, "..", "..", "..", "sql", "schema", "001_initial.sql")
+	if err := db.InitSchema(testDB, schemaPath, "001_initial"); err != nil {
 		testDB.Close()
 		os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to init schema: %v", err)
