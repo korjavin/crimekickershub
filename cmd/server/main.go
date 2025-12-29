@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"crimekickershub/internal/db"
+	"crimekickershub/internal/repository"
 )
 
 func main() {
@@ -41,6 +42,10 @@ func main() {
 	if err := db.InitSchema(database, schemaPath); err != nil {
 		log.Fatalf("Failed to initialize schema: %v", err)
 	}
+
+	// Initialize repository
+	queries := repository.New(database)
+	log.Printf("Repository initialized: %T", queries)
 
 	log.Println("Crime Kickers Hub initialized successfully!")
 	log.Println("Server is ready to accept connections.")
