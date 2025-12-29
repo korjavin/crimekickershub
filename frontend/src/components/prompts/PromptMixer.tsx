@@ -56,8 +56,8 @@ export function PromptMixer({ onPromptGenerated, isLoading }: PromptMixerProps) 
     }
   };
 
-  const locations = entities.filter((e) => e.type === 'location');
-  const heroes = entities.filter((e) => e.type === 'hero');
+  const locations = entities.filter((e) => e.type.toLowerCase() === 'location');
+  const heroes = entities.filter((e) => e.type.toLowerCase() === 'hero');
 
   return (
     <div className="space-y-6">
