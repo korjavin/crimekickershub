@@ -10,6 +10,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Cloudflare R2 integration for image storage
 - YouTube integration for video links
 - Google OAuth authentication with admin whitelist
+- HTTP API with Go 1.22+ ServeMux
 
 ## Constraints/Assumptions:
 - Go 1.25.5, module: crimekickershub
@@ -24,9 +25,10 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Media assets link to prompt_version_id for traceability
 - Stories contain ordered StoryItems (images/video links)
 - Auth uses secure cookies with base64 encoding
+- Use standard Go 1.22+ http.ServeMux (no chi/gin)
 
 ## State:
-5 tasks completed out of 7
+6 tasks completed out of 7
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -57,17 +59,26 @@ Build Crime Kickers Hub - a Go-based web application with:
   - RequireAdmin middleware for route protection
   - Context-based user info retrieval
 
+- Task 6: HTTP Router & API Implementation
+  - Router with public routes (/api/heroes, /api/entities, /api/comics)
+  - Admin routes protected by RequireAdmin middleware
+  - POST /compose, POST /save, GET /diff for prompts
+  - POST /upload, POST /assets for media
+  - POST /stories, POST /stories/{id}/items for story management
+  - Main server with logging, recovery middleware
+  - Graceful shutdown with signal handling
+
 ## Now:
-Task 5 completed. Ready to move to Task 6.
+Task 6 completed. Ready to move to Task 7.
 
 ## Next:
-Task 6: HTTP Handlers & Routing (likely)
+Task 7: Docker & Deployment (likely)
 
 ## Open questions (UNCONFIRMED if needed):
-- Need to clarify HTTP handler structure
+- Need to clarify deployment requirements
 
 ## Working set (files/ids/commands):
-- internal/auth/google.go
-- internal/service/media/media.go
+- cmd/server/main.go
+- internal/api/router.go
 - go build ./...
-- git commit -m "feat: ..."
+- go run cmd/server/main.go
