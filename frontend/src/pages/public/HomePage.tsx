@@ -18,8 +18,8 @@ export function HomePage() {
           getStories(),
           getHeroes(),
         ]);
-        setStories(storiesData);
-        setHeroes(heroesData);
+        setStories(storiesData || []);
+        setHeroes(heroesData || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
