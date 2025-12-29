@@ -71,6 +71,13 @@ func (r *Router) publicRoutes() {
 	r.mux.HandleFunc("GET /api/comics", r.handleListStories)
 	r.mux.HandleFunc("GET /api/comics/{slug}", r.handleGetStoryBySlug)
 
+	// Auth endpoints (public - need to check session)
+	r.mux.HandleFunc("GET /api/auth/me", r.handleAuthMe)
+	r.mux.HandleFunc("POST /api/auth/logout", r.handleAuthLogout)
+	r.mux.HandleFunc("POST /api/auth/dev-login", r.handleDevLogin)
+	r.mux.HandleFunc("GET /api/auth/google/login", r.handleGoogleLogin)
+	r.mux.HandleFunc("GET /api/auth/google/callback", r.handleGoogleCallback)
+
 	// Health check
 	r.mux.HandleFunc("GET /health", r.handleHealth)
 }
@@ -305,6 +312,74 @@ func (r *Router) handleAddStoryItem(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	respondJSON(w, item)
+}
+
+// handleAuthMe returns the current user info if authenticated
+func (r *Router) handleAuthMe(w http.ResponseWriter, req *http.Request) {
+	user, err := r.auth.GetSessionCookie(req)
+	if err != nil || user == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	respondJSON(w, user)
+}
+
+// handleAuthLogout clears the session cookie
+func (r *Router) handleAuthLogout(w http.ResponseWriter, req *http.Request) {
+	r.auth.ClearSessionCookie(w)
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleGoogleLogin initiates Google OAuth flow
+func (r *Router) handleGoogleLogin(w http.ResponseWriter, req *http.Request) {
+	state := req.URL.Query().Get("state")
+	if state == "" {
+		state = "default"
+	}
+	loginURL := r.auth.GetLoginURL(state)
+	http.Redirect(w, req, loginURL, http.StatusFound)
+}
+
+// handleGoogleCallback handles the OAuth callback
+func (r *Router) handleGoogleCallback(w http.ResponseWriter, req *http.Request) {
+	code := req.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "Missing code parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Exchange code for token
+	token, err := r.auth.ExchangeCode(req.Context(), code)
+	if err != nil {
+		http.Error(w, "Failed to exchange code: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get user info
+	userInfo, err := r.auth.GetUserInfo(req.Context(), token)
+	if err != nil {
+		http.Error(w, "Failed to get user info: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set session cookie
+	r.auth.SetSessionCookie(w, userInfo)
+
+	// Redirect to admin dashboard
+	http.Redirect(w, req, "/admin", http.StatusFound)
+}
+
+// handleDevLogin creates a development session for localhost users
+func (r *Router) handleDevLogin(w http.ResponseWriter, req *http.Request) {
+	// Create a dev user with admin privileges
+	devUser := &auth.UserInfo{
+		Email:   "dev@localhost",
+		Name:    "Development User",
+		Picture: "",
+		IsAdmin: true,
+	}
+	r.auth.SetSessionCookie(w, devUser)
+	w.WriteHeader(http.StatusOK)
 }
 
 // Helper types for request/response

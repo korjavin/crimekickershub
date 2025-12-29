@@ -29,7 +29,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Use standard Go 1.22+ http.ServeMux (no chi/gin)
 
 ## State:
-9 tasks completed (Task 9 just finished)
+10 tasks completed (Task 10 just finished)
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -87,27 +87,36 @@ Build Crime Kickers Hub - a Go-based web application with:
   - Updated App.tsx with new routes: /, /wiki, /comics, /comics/:slug, /cinema
   - All pages use dark mode aesthetic with violet/indigo color scheme
 
+- Task 10: Admin Authentication & Dashboard (COMPLETED)
+  - Created LoginPage.tsx with "Sign in with Google" button
+  - Created AuthContext.tsx for session state management
+  - Created RequireAuth.tsx protected route wrapper with loading spinner
+  - Updated AdminLayout with responsive sidebar (collapsible on mobile)
+  - Added user info display and logout button in sidebar
+  - Updated App.tsx with /login route and RequireAuth wrapper
+  - Added backend auth endpoints: /api/auth/me, /api/auth/logout
+  - Added OAuth endpoints: /api/auth/google/login, /api/auth/google/callback
+  - Added dev login bypass for localhost development
+
 ## Now:
-Task 9 completed. Public presentation layer is fully functional with:
-- Immersive home page with hero section and content grids
-- Character wiki with filtering and modal detail views
-- Comic reader with webtoon-style layout for mobile/desktop
-- Video gallery with YouTube integration and tag filters
-- All pages integrated with backend API endpoints
+Task 10 completed. Admin authentication & dashboard is fully functional with:
+- Login page with Google Sign-In button
+- AuthContext for session state management
+- Protected admin routes with RequireAuth wrapper
+- Responsive sidebar with user info and logout
+- Backend OAuth endpoints for login/callback/logout
 
 ## Next:
-Task 10: Admin Dashboard & State Management or Task 11: Polish & Optimization
+Task 11: Prompt Studio UI (Prompt Matrix, Version History, Diff Viewer)
 
 ## Open questions (UNCONFIRMED if needed):
-- Need to clarify next task priority (admin dashboard vs polish)
+- None - Task 10 completed successfully
 
 ## Working set (files/ids/commands):
-- frontend/vite.config.ts
-- frontend/tsconfig.app.json
-- frontend/src/index.css
+- frontend/src/pages/auth/LoginPage.tsx
+- frontend/src/context/AuthContext.tsx
+- frontend/src/components/RequireAuth.tsx
+- frontend/src/components/layouts/AdminLayout.tsx
 - frontend/src/App.tsx
-- frontend/src/main.tsx
-- frontend/src/components/layouts/
-- frontend/src/components/ui/
+- internal/api/router.go
 - cd frontend && npm run dev
-- cd frontend && npm run build
