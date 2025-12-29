@@ -69,10 +69,12 @@ Build Crime Kickers Hub - a Go-based web application with:
   - Graceful shutdown with signal handling
 
 - Task 7: Frontend Integration (http.Dir)
-  - StaticHandler serving frontend files from filesystem
+  - StaticHandler serving frontend files from filesystem (not embed)
   - SPA fallback serving index.html for non-existent paths
   - FRONTEND_PATH env var (default: frontend/dist)
   - Works seamlessly with Docker deployments
+  - Dual-mux architecture: API mux for /api/*, static for everything else
+  - Fixes Go 1.22+ ServeMux pattern conflicts by routing at request time
 
 ## Now:
 All 7 tasks completed. Ready for production or next phase.

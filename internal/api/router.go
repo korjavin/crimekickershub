@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"crimekickershub/internal/auth"
 	"crimekickershub/internal/repository"
@@ -15,22 +16,24 @@ import (
 
 // Router holds all dependencies for the API
 type Router struct {
-	mux     *http.ServeMux
-	prompts *prompts.PromptService
-	media   *media.MediaService
-	repo    *repository.Queries
-	auth    *auth.GoogleOAuth2
+	mux          *http.ServeMux
+	prompts      *prompts.PromptService
+	media        *media.MediaService
+	repo         *repository.Queries
+	auth         *auth.GoogleOAuth2
+	frontendPath string
 }
 
 // NewRouter creates a new HTTP router with all routes configured
 func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2, frontendPath string) *Router {
 	repo := repository.New(db)
 	r := &Router{
-		mux:     http.NewServeMux(),
-		prompts: prompts.NewPromptService(repo),
-		media:   media.NewMediaService(db, r2),
-		repo:    repo,
-		auth:    auth,
+		mux:          http.NewServeMux(),
+		prompts:      prompts.NewPromptService(repo),
+		media:        media.NewMediaService(db, r2),
+		repo:         repo,
+		auth:         auth,
+		frontendPath: frontendPath,
 	}
 
 	// Public routes (no auth required)
@@ -39,19 +42,23 @@ func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2, fronte
 	// Admin routes (require admin authentication)
 	r.adminRoutes()
 
-	// Static file handler for SPA (catch-all, must be last)
-	staticHandler := NewStaticHandler(frontendPath)
-	r.mux.Handle("GET /", staticHandler)
-	r.mux.Handle("GET /admin", staticHandler)
-	r.mux.Handle("GET /admin/*", staticHandler)
-	r.mux.Handle("GET /*", staticHandler)
+	// Note: Static handler is NOT registered on apiMux
+	// It's only used in ServeHTTP for non-API paths
 
 	return r
 }
 
-// ServeHTTP implements http.Handler
+// ServeHTTP implements http.Handler - routes to API or SPA
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	r.mux.ServeHTTP(w, req)
+	// Route API requests to apiMux
+	if strings.HasPrefix(req.URL.Path, "/api") {
+		r.mux.ServeHTTP(w, req)
+		return
+	}
+
+	// All other requests serve the SPA
+	staticHandler := NewStaticHandler(r.frontendPath)
+	staticHandler.ServeHTTP(w, req)
 }
 
 // publicRoutes registers public API endpoints
