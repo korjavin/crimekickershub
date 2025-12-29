@@ -1,0 +1,56 @@
+# Continuity Ledger
+
+## Goal (incl. success criteria):
+Build Crime Kickers Hub - a Go-based web application with:
+- Public CMS for comic book universe
+- Internal "Prompt Studio" for managing Generative AI workflows
+- SQLite database with WAL mode
+- Type-safe data access via sqlc
+- Prompt versioning and composition engine
+
+## Constraints/Assumptions:
+- Go 1.25.5, module: crimekickershub
+- SQLite with WAL mode (no external DB)
+- Google OAuth 2.0 with admin whitelist
+- Cloudflare R2 for image storage
+- YouTube for video hosting
+
+## Key decisions:
+- Use sqlc for type-safe SQL queries (not gorm/raw SQL)
+- Prompts are never overwritten - version increment on update
+- Media assets link to prompt_version_id for traceability
+- Stories contain ordered StoryItems (images/video links)
+
+## State:
+3 tasks completed out of 7
+
+## Done:
+- Task 1: Project Initialization & Database Schema
+  - Go module initialized (crimekickershub)
+  - SQLite DB with WAL mode configured
+  - 7 tables: entities, prompt_types, prompt_versions, media_assets, stories, story_items, users
+
+- Task 2: Data Access Layer (SQLC)
+  - sqlc.yaml configured for SQLite
+  - 30+ queries in sql/queries/queries.sql
+  - Generated repository package with interfaces
+
+- Task 3: Prompt Engine Service
+  - PromptService with ComposePrompt, SaveNewVersion, GetPromptDiff
+  - Unit tests for version increment logic
+  - go-diff library for text comparison
+
+## Now:
+Review task4.md requirements and implement next task
+
+## Next:
+Task 4: R2 & Media Storage Integration (likely)
+
+## Open questions (UNCONFIRMED if needed):
+- Need to clarify R2 configuration requirements
+
+## Working set (files/ids/commands):
+- internal/service/prompts/service.go
+- internal/service/prompts/service_test.go
+- internal/repository/*.go
+- go test ./internal/service/prompts/...
