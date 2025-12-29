@@ -27,9 +27,10 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Stories contain ordered StoryItems (images/video links)
 - Auth uses secure cookies with base64 encoding
 - Use standard Go 1.22+ http.ServeMux (no chi/gin)
+- Prompt composition uses {{ENTITY}} placeholder replacement
 
 ## State:
-Task 13: Admin Entity Management - COMPLETED
+Task 14: Prompt Types & Common Parts - COMPLETED
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -114,22 +115,31 @@ Task 13: Admin Entity Management - COMPLETED
   - Added TypeScript API functions: createEntity, updateEntity, deleteEntity
   - Added Sheet and Table UI components to shadcn/ui
 
+- Task 14: Prompt Types & Common Parts (COMPLETED)
+  - Backend: Added POST/PUT/DELETE /api/admin/prompt-types endpoints
+  - Backend: Added UpdatePromptType and DeletePromptType SQL queries
+  - Backend: Updated ComposePrompt to use {{ENTITY}} placeholder replacement
+  - Frontend: Created PromptTypesPage.tsx with card grid and editor dialog
+  - Template validation warns if {{ENTITY}} placeholder is missing
+  - Added TypeScript API functions: createPromptType, updatePromptType, deletePromptType
+
 ## Now:
-Ready for Task 14
+Ready for Task 15
 
 ## Next:
-Task 14: Prompt Versioning & Diff Viewer
+Task 15: Story Publishing & Deployment Prep
 
 ## Open questions (UNCONFIRMED if needed):
-- None - Task 13 completed, awaiting Task 14
+- None - Task 14 completed
 
 ## Working set (files/ids/commands):
 - sql/queries/queries.sql
 - internal/repository/queries.sql.go
 - internal/api/router.go
-- internal/service/media/media.go
+- internal/service/prompts/service.go
 - frontend/src/lib/api.ts
 - frontend/src/lib/api-types.ts
+- frontend/src/pages/admin/PromptTypesPage.tsx
 - frontend/src/pages/admin/EntitiesPage.tsx
 - frontend/src/pages/admin/MediaPage.tsx
 - frontend/src/pages/admin/StoryBuilderPage.tsx
