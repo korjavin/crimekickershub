@@ -73,7 +73,7 @@ export function EntitiesPage() {
       const response = await fetch('/api/entities');
       if (response.ok) {
         const data = await response.json();
-        setEntities(data);
+        setEntities(data || []);
       }
     } catch (error) {
       console.error('Failed to load entities:', error);

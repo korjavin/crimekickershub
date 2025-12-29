@@ -154,7 +154,7 @@ export function isYouTubeUrl(url: string): boolean {
 
 // Prompt Studio APIs
 export async function getPromptTypes() {
-  return fetchApi<any[]>('/admin/prompt-types');
+  return fetchApi<any[]>('/admin/prompts/types');
 }
 
 export async function createPromptType(data: { slug: string; description: string; template_text: string }) {
