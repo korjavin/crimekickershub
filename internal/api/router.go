@@ -23,7 +23,7 @@ type Router struct {
 }
 
 // NewRouter creates a new HTTP router with all routes configured
-func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2) *Router {
+func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2, frontendPath string) *Router {
 	repo := repository.New(db)
 	r := &Router{
 		mux:     http.NewServeMux(),
@@ -38,6 +38,13 @@ func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2) *Route
 
 	// Admin routes (require admin authentication)
 	r.adminRoutes()
+
+	// Static file handler for SPA (catch-all, must be last)
+	staticHandler := NewStaticHandler(frontendPath)
+	r.mux.Handle("GET /", staticHandler)
+	r.mux.Handle("GET /admin", staticHandler)
+	r.mux.Handle("GET /admin/*", staticHandler)
+	r.mux.Handle("GET /*", staticHandler)
 
 	return r
 }

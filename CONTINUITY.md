@@ -28,7 +28,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Use standard Go 1.22+ http.ServeMux (no chi/gin)
 
 ## State:
-6 tasks completed out of 7
+7 tasks completed
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -68,8 +68,14 @@ Build Crime Kickers Hub - a Go-based web application with:
   - Main server with logging, recovery middleware
   - Graceful shutdown with signal handling
 
+- Task 7: Frontend Integration (http.Dir)
+  - StaticHandler serving frontend files from filesystem
+  - SPA fallback serving index.html for non-existent paths
+  - FRONTEND_PATH env var (default: frontend/dist)
+  - Works seamlessly with Docker deployments
+
 ## Now:
-Task 6 completed. Ready to move to Task 7.
+All 7 tasks completed. Ready for production or next phase.
 
 ## Next:
 Task 7: Docker & Deployment (likely)

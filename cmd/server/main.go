@@ -87,8 +87,14 @@ func main() {
 	googleAuth := auth.NewGoogleOAuth2(authConfig)
 	log.Printf("Google OAuth2 initialized with %d admin emails", len(googleAuth.AdminWhitelist()))
 
+	// Determine frontend path from environment or use default
+	frontendPath := os.Getenv("FRONTEND_PATH")
+	if frontendPath == "" {
+		frontendPath = "frontend/dist"
+	}
+
 	// Create router
-	router := api.NewRouter(database, r2Client, googleAuth)
+	router := api.NewRouter(database, r2Client, googleAuth, frontendPath)
 	log.Println("API router initialized")
 
 	// Wrap with standard middleware
