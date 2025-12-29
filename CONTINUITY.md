@@ -30,7 +30,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Prompt composition uses {{ENTITY}} placeholder replacement
 
 ## State:
-Task 14: Prompt Types & Common Parts - COMPLETED
+Task 16: Media Linking & Traceability UI - COMPLETED
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -123,14 +123,36 @@ Task 14: Prompt Types & Common Parts - COMPLETED
   - Template validation warns if {{ENTITY}} placeholder is missing
   - Added TypeScript API functions: createPromptType, updatePromptType, deletePromptType
 
+- Task 15: The Prompt Matrix Grid (COMPLETED)
+  - Backend: Added GET /api/admin/matrix endpoint with entities, types, and version map
+  - SQL: Added GetLatestPromptVersionForMatrix query
+  - Frontend: Created PromptMatrix.tsx component with grid layout
+  - Features: Entity rows × Type columns matrix, click-to-edit cells, version badges
+  - Bulk action: Checkbox selection with "Mix Selected" button
+  - Editor dialog with version history dropdown
+  - Added PromptMatrixPage.tsx and route /admin/matrix
+  - Updated AdminLayout sidebar with Matrix link
+
+- Task 16: Media Linking & Traceability UI (COMPLETED)
+  - Backend: Added GET /api/admin/prompts/recent endpoint for last 10 prompts
+  - SQL: Modified ListAllPromptVersions to limit to 10 results
+  - Frontend: Enhanced MediaPage.tsx with:
+    - Recent prompts selector with time-ago display in upload modal
+    - Asset detail sheet (Sheet component) showing full media preview
+    - "Generated from" section with linked prompt version
+    - "Copy Prompt" button to copy prompt text to clipboard
+    - Entity filter dropdown to filter media by entity
+    - Hover overlay with eye icon on media cards
+    - FormatTimeAgo helper for relative timestamps
+
 ## Now:
-Ready for Task 15
+Ready for next task
 
 ## Next:
-Task 15: Story Publishing & Deployment Prep
+TBD
 
 ## Open questions (UNCONFIRMED if needed):
-- None - Task 14 completed
+- None - Task 16 completed
 
 ## Working set (files/ids/commands):
 - sql/queries/queries.sql
@@ -139,9 +161,9 @@ Task 15: Story Publishing & Deployment Prep
 - internal/service/prompts/service.go
 - frontend/src/lib/api.ts
 - frontend/src/lib/api-types.ts
-- frontend/src/pages/admin/PromptTypesPage.tsx
-- frontend/src/pages/admin/EntitiesPage.tsx
 - frontend/src/pages/admin/MediaPage.tsx
-- frontend/src/pages/admin/StoryBuilderPage.tsx
+- frontend/src/components/prompts/PromptMatrix.tsx
+- frontend/src/App.tsx
+- frontend/src/components/layouts/AdminLayout.tsx
 - go generate ./...
 - cd frontend && npm run dev

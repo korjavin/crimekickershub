@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { path: '/admin', label: 'Dashboard', icon: '📊' },
+  { path: '/admin/matrix', label: 'Prompt Matrix', icon: '🔲' },
   { path: '/admin/prompts', label: 'Prompt Studio', icon: '🎨' },
   { path: '/admin/media', label: 'Media Assets', icon: '🖼️' },
   { path: '/admin/stories', label: 'Story Builder', icon: '📚' },

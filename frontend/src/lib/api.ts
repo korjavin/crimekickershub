@@ -95,6 +95,11 @@ export async function listPromptVersions() {
   return fetchApi<any[]>('/admin/prompts');
 }
 
+// Recent prompt versions for linking
+export async function listRecentPromptVersions() {
+  return fetchApi<any[]>('/admin/prompts/recent');
+}
+
 // Admin Story APIs
 export async function listStoriesAdmin() {
   return fetchApi<any[]>('/admin/stories');
@@ -216,4 +221,13 @@ export async function savePrompt(input: { entity_id: number; type_id: number; pr
 
 export async function getPromptDiff(from: number, to: number) {
   return fetchApi<{ diff: string }>(`/admin/prompts/diff?from=${from}&to=${to}`);
+}
+
+// Matrix API
+export async function getMatrixData() {
+  return fetchApi<{
+    entities: any[];
+    types: any[];
+    versions: Record<string, { id: number; entity_id: number; type_id: number; version_number: number; prompt_text: string; created_at: string }>;
+  }>('/admin/matrix');
 }

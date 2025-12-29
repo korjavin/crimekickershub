@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -93,6 +94,7 @@ func (r *Router) adminRoutes() {
 	adminMux.HandleFunc("PUT /types/{id}", r.handleUpdatePromptType)
 	adminMux.HandleFunc("DELETE /types/{id}", r.handleDeletePromptType)
 	adminMux.HandleFunc("GET /", r.handleListPromptVersions)
+	adminMux.HandleFunc("GET /recent", r.handleListRecentPromptVersions)
 	adminMux.HandleFunc("POST /compose", r.handleComposePrompt)
 	adminMux.HandleFunc("POST /save", r.handleSavePrompt)
 	adminMux.HandleFunc("GET /diff", r.handleGetPromptDiff)
@@ -108,6 +110,9 @@ func (r *Router) adminRoutes() {
 	adminMux.HandleFunc("GET /stories/{id}", r.handleGetStory)
 	adminMux.HandleFunc("PUT /stories/{id}", r.handleUpdateStory)
 	adminMux.HandleFunc("POST /stories/{id}/items", r.handleAddStoryItem)
+
+	// Matrix view (admin only)
+	adminMux.HandleFunc("GET /matrix", r.handleGetMatrix)
 
 	// Entity management (admin only)
 	adminMux.HandleFunc("POST /entities", r.handleCreateEntity)
@@ -351,6 +356,21 @@ func (r *Router) handleListPromptVersions(w http.ResponseWriter, req *http.Reque
 	if err != nil {
 		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	respondJSON(w, versions)
+}
+
+// handleListRecentPromptVersions returns the 10 most recent prompt versions
+func (r *Router) handleListRecentPromptVersions(w http.ResponseWriter, req *http.Request) {
+	// For now, just return the last 10 from ListAllPromptVersions
+	versions, err := r.repo.ListAllPromptVersions(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Return last 10 (they're already ordered by created_at DESC from the query)
+	if len(versions) > 10 {
+		versions = versions[:10]
 	}
 	respondJSON(w, versions)
 }
@@ -742,6 +762,52 @@ func (r *Router) handleDeleteEntity(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respondJSON(w, map[string]bool{"success": true})
+}
+
+// handleGetMatrix returns the prompt matrix data
+func (r *Router) handleGetMatrix(w http.ResponseWriter, req *http.Request) {
+	// Get all entities
+	entities, err := r.repo.ListEntities(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list entities: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get all prompt types
+	promptTypes, err := r.repo.ListPromptTypes(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list prompt types: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get all prompt versions with details
+	versions, err := r.repo.ListAllPromptVersions(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Build version map: key = "entityID_typeID", value = version data
+	versionMap := make(map[string]map[string]interface{})
+	for _, v := range versions {
+		key := fmt.Sprintf("%d_%d", v.EntityID, v.TypeID)
+		versionMap[key] = map[string]interface{}{
+			"id":             v.ID,
+			"entity_id":      v.EntityID,
+			"type_id":        v.TypeID,
+			"version_number": v.VersionNumber,
+			"prompt_text":    v.PromptText,
+			"created_at":     v.CreatedAt,
+		}
+	}
+
+	response := map[string]interface{}{
+		"entities": entities,
+		"types":    promptTypes,
+		"versions": versionMap,
+	}
+
+	respondJSON(w, response)
 }
 
 // Helper types for request/response

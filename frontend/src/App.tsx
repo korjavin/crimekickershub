@@ -12,6 +12,7 @@ import { PromptStudioPage } from './pages/admin/PromptStudioPage';
 import { MediaPage } from './pages/admin/MediaPage';
 import { EntitiesPage } from './pages/admin/EntitiesPage';
 import { PromptTypesPage } from './pages/admin/PromptTypesPage';
+import { PromptMatrixPage } from './pages/admin/PromptMatrixPage';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
           >
             <Route path="/admin" element={<div className="p-4"><h1 className="text-2xl font-bold">Dashboard</h1></div>} />
             <Route path="/admin/prompts" element={<PromptStudioPage />} />
+            <Route path="/admin/matrix" element={<PromptMatrixPage />} />
             <Route path="/admin/media" element={<MediaPage />} />
             <Route path="/admin/stories" element={<div className="p-4"><h1 className="text-2xl font-bold">Story Builder</h1></div>} />
             <Route path="/admin/entities" element={<EntitiesPage />} />

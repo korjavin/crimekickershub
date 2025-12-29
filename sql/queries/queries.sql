@@ -48,6 +48,15 @@ UPDATE prompt_types SET slug = ?, description = ?, template_text = ? WHERE id = 
 -- name: DeletePromptType :exec
 DELETE FROM prompt_types WHERE id = ?;
 
+-- name: GetLatestPromptVersionForMatrix :one
+SELECT pv.*, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+FROM prompt_versions pv
+JOIN entities e ON pv.entity_id = e.id
+JOIN prompt_types pt ON pv.type_id = pt.id
+WHERE pv.entity_id = ? AND pv.type_id = ?
+ORDER BY pv.version_number DESC
+LIMIT 1;
+
 -- name: CreatePromptVersion :one
 INSERT INTO prompt_versions (entity_id, type_id, version_number, prompt_text, technical_params_json)
 VALUES (?, ?, ?, ?, ?)
@@ -105,7 +114,14 @@ SELECT * FROM stories WHERE published = 1 ORDER BY created_at DESC;
 SELECT * FROM stories ORDER BY created_at DESC;
 
 -- name: ListAllPromptVersions :many
-SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions ORDER BY created_at DESC;
+SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions ORDER BY created_at DESC LIMIT 10;
+
+-- name: ListRecentPromptVersions :many
+SELECT pv.*, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+FROM prompt_versions pv
+JOIN entities e ON pv.entity_id = e.id
+JOIN prompt_types pt ON pv.type_id = pt.id
+ORDER BY pv.created_at DESC LIMIT 10;
 
 -- name: AddStoryItem :one
 INSERT INTO story_items (story_id, media_asset_id, sort_order)
