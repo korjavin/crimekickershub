@@ -29,7 +29,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Use standard Go 1.22+ http.ServeMux (no chi/gin)
 
 ## State:
-10 tasks completed (Task 10 just finished)
+Task 12: Backend Implementation for Media Management & Story Builder
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -99,24 +99,30 @@ Build Crime Kickers Hub - a Go-based web application with:
   - Added dev login bypass for localhost development
 
 ## Now:
-Task 10 completed. Admin authentication & dashboard is fully functional with:
-- Login page with Google Sign-In button
-- AuthContext for session state management
-- Protected admin routes with RequireAuth wrapper
-- Responsive sidebar with user info and logout
-- Backend OAuth endpoints for login/callback/logout
+Task 12: Backend Implementation for Media Management & Story Builder
+Implementing:
+1. Fix POST /api/admin/upload - parse multipart, upload to R2, call RegisterAsset
+2. Add UpdateStoryItemSortOrder SQL query
+3. Add ListAllPromptVersions SQL query
+4. Add GET /api/admin/media endpoint (handleListMedia)
+5. Fix GET /api/admin/prompts/versions endpoint (handleListPromptVersions)
+6. Add GET /api/admin/stories endpoint (handleListStoriesAdmin)
+7. Add GET /api/admin/stories/{id} endpoint (handleGetStory)
+8. Add PUT /api/admin/stories/{id} endpoint (handleUpdateStory)
+9. Add TypeScript API functions
 
 ## Next:
-Task 11: Prompt Studio UI (Prompt Matrix, Version History, Diff Viewer)
+Task 11: Prompt Studio UI (Prompt Matrix, Version History, Diff Viewer) - will follow after Task 12
 
 ## Open questions (UNCONFIRMED if needed):
-- None - Task 10 completed successfully
+- None - Task 12 implementation in progress
 
 ## Working set (files/ids/commands):
-- frontend/src/pages/auth/LoginPage.tsx
-- frontend/src/context/AuthContext.tsx
-- frontend/src/components/RequireAuth.tsx
-- frontend/src/components/layouts/AdminLayout.tsx
-- frontend/src/App.tsx
+- sql/queries/queries.sql
+- internal/repository/queries.sql.go
 - internal/api/router.go
+- internal/service/media/media.go
+- frontend/src/lib/api.ts
+- frontend/src/lib/api-types.ts
+- go generate ./...
 - cd frontend && npm run dev

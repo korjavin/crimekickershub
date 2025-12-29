@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Search, Play, X } from 'lucide-react';
-import { getYouTubeEmbedUrl, getYouTubeThumbnail, extractYouTubeId } from '@/lib/api';
+import { getYouTubeEmbedUrl, getYouTubeThumbnail } from '@/lib/api';
 
 interface VideoItem {
   id: number;

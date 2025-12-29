@@ -33,6 +33,66 @@ export async function getMediaAssets() {
   return fetchApi<any[]>('/media-assets');
 }
 
+// Admin Media APIs
+export async function listMedia() {
+  return fetchApi<any[]>('/admin/media');
+}
+
+export async function uploadMedia(file: File, promptVersionId?: string) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (promptVersionId) {
+    formData.append('prompt_version_id', promptVersionId);
+  }
+  
+  const response = await fetch(`${API_BASE}/admin/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(`Upload Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// Prompt Version APIs (for dropdown)
+export async function listPromptVersions() {
+  return fetchApi<any[]>('/admin/prompts');
+}
+
+// Admin Story APIs
+export async function listStoriesAdmin() {
+  return fetchApi<any[]>('/admin/stories');
+}
+
+export async function getStory(id: string) {
+  return fetchApi<any>(`/admin/stories/${id}`);
+}
+
+export async function updateStory(id: string, itemIds: string[]) {
+  const response = await fetch(`${API_BASE}/admin/stories/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemIds }),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function createStory(data: { title: string; slug?: string }) {
+  const response = await fetch(`${API_BASE}/admin/stories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // YouTube helpers
 export function getYouTubeEmbedUrl(videoId: string): string {
   return `https://www.youtube.com/embed/${videoId}`;

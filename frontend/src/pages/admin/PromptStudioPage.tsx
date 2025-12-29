@@ -8,7 +8,6 @@ import type { Entity, PromptType } from '@/lib/api-types';
 
 export function PromptStudioPage() {
   const [generatedPrompt, setGeneratedPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [promptTypes, setPromptTypes] = useState<PromptType[]>([]);
 
@@ -46,7 +45,7 @@ export function PromptStudioPage() {
               <h2 className="text-xl font-semibold mb-4">Compose Prompt</h2>
               <PromptMixer
                 onPromptGenerated={handlePromptGenerated}
-                isLoading={isGenerating}
+                isLoading={false}
               />
             </Card>
 

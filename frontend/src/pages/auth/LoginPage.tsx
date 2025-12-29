@@ -1,9 +1,7 @@
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 export function LoginPage() {
-  const navigate = useNavigate();
   const [isLocalhost, setIsLocalhost] = useState(false);
 
   useEffect(() => {

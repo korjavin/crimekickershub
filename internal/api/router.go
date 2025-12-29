@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -93,11 +95,15 @@ func (r *Router) adminRoutes() {
 	adminMux.HandleFunc("GET /diff", r.handleGetPromptDiff)
 
 	// Media management (admin only)
+	adminMux.HandleFunc("GET /media", r.handleListMedia)
 	adminMux.HandleFunc("POST /upload", r.handleUploadMedia)
 	adminMux.HandleFunc("POST /assets", r.handleRegisterAsset)
 
 	// Story management (admin only)
+	adminMux.HandleFunc("GET /stories", r.handleListStoriesAdmin)
 	adminMux.HandleFunc("POST /stories", r.handleCreateStory)
+	adminMux.HandleFunc("GET /stories/{id}", r.handleGetStory)
+	adminMux.HandleFunc("PUT /stories/{id}", r.handleUpdateStory)
 	adminMux.HandleFunc("POST /stories/{id}/items", r.handleAddStoryItem)
 
 	// Wrap admin mux with auth middleware
@@ -237,9 +243,12 @@ func (r *Router) handleListPromptTypes(w http.ResponseWriter, req *http.Request)
 
 // handleListPromptVersions returns all prompt versions
 func (r *Router) handleListPromptVersions(w http.ResponseWriter, req *http.Request) {
-	// For now, return an empty array - we need a query for all versions
-	// TODO: Add ListAllPromptVersions query to sqlc
-	respondJSON(w, []interface{}{})
+	versions, err := r.repo.ListAllPromptVersions(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, versions)
 }
 
 // handleUploadMedia handles file upload to R2
@@ -257,17 +266,27 @@ func (r *Router) handleUploadMedia(w http.ResponseWriter, req *http.Request) {
 	}
 	defer file.Close()
 
-	// Create a simple input for the media service
+	// Read file content for the media service
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read file: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Create input for the media service
 	input := media.RegisterAssetInput{
 		Type:     "image",
-		File:     file,
+		File:     bytes.NewReader(fileContent),
 		Filename: header.Filename,
 	}
 
-	// Use media service directly (it's not exported, so we'll need to handle this differently)
-	// For now, we'll just respond with a success message
-	_ = input
-	respondJSON(w, map[string]string{"message": "Upload endpoint - configure R2 client directly"})
+	asset, err := r.media.RegisterAsset(req.Context(), input)
+	if err != nil {
+		http.Error(w, "Failed to register asset: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, asset)
 }
 
 // handleRegisterAsset registers a media asset in the database
@@ -331,6 +350,125 @@ func (r *Router) handleAddStoryItem(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	respondJSON(w, item)
+}
+
+// handleListMedia returns all media assets
+func (r *Router) handleListMedia(w http.ResponseWriter, req *http.Request) {
+	assets, err := r.media.ListAssets(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list media assets: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, assets)
+}
+
+// handleListStoriesAdmin returns all stories (for admin)
+func (r *Router) handleListStoriesAdmin(w http.ResponseWriter, req *http.Request) {
+	stories, err := r.repo.ListAllStories(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list stories: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, stories)
+}
+
+// handleGetStory returns a story with its items
+func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
+	storyID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if storyID == 0 {
+		http.Error(w, "Story ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get story details
+	story, err := r.repo.GetStoryByID(req.Context(), storyID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Story not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to get story: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get story items with media details
+	items, err := r.repo.GetStoryItems(req.Context(), storyID)
+	if err != nil {
+		http.Error(w, "Failed to get story items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Build response with media details for each item
+	type StoryItemResponse struct {
+		ID           int64                  `json:"id"`
+		StoryID      int64                  `json:"story_id"`
+		MediaAssetID int64                  `json:"media_asset_id"`
+		SortOrder    int64                  `json:"sort_order"`
+		Media        *repository.MediaAsset `json:"media,omitempty"`
+	}
+
+	response := map[string]interface{}{
+		"id":              story.ID,
+		"title":           story.Title,
+		"slug":            story.Slug,
+		"cover_image_url": story.CoverImageUrl,
+		"published":       story.Published,
+		"created_at":      story.CreatedAt,
+		"items":           []StoryItemResponse{},
+	}
+
+	itemResponses := make([]StoryItemResponse, 0, len(items))
+	for _, item := range items {
+		itemResp := StoryItemResponse{
+			ID:           item.ID,
+			StoryID:      item.StoryID,
+			MediaAssetID: item.MediaAssetID,
+			SortOrder:    item.SortOrder,
+		}
+
+		// Fetch media asset details
+		if item.MediaAssetID > 0 {
+			media, err := r.repo.GetMediaAsset(req.Context(), item.MediaAssetID)
+			if err == nil {
+				itemResp.Media = &media
+			}
+		}
+
+		itemResponses = append(itemResponses, itemResp)
+	}
+
+	response["items"] = itemResponses
+	respondJSON(w, response)
+}
+
+// handleUpdateStory updates story item order
+func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
+	storyID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if storyID == 0 {
+		http.Error(w, "Story ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input UpdateStoryInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Update sort order for each item
+	for i, itemID := range input.ItemIDs {
+		err := r.repo.UpdateStoryItemSortOrder(req.Context(), repository.UpdateStoryItemSortOrderParams{
+			SortOrder: int64(i),
+			ID:        itemID,
+		})
+		if err != nil {
+			http.Error(w, "Failed to update item sort order: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Return updated story
+	r.handleGetStory(w, req)
 }
 
 // handleAuthMe returns the current user info if authenticated
@@ -415,6 +553,11 @@ type CreateStoryInput struct {
 type AddStoryItemInput struct {
 	MediaAssetID int64 `json:"media_asset_id"`
 	SortOrder    int64 `json:"sort_order"`
+}
+
+// UpdateStoryInput is the input for updating story item order
+type UpdateStoryInput struct {
+	ItemIDs []int64 `json:"itemIds"`
 }
 
 // Helper functions

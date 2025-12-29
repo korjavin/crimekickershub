@@ -3,8 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getStoryBySlug, getYouTubeEmbedUrl, isYouTubeUrl } from '@/lib/api';
-import type { Story, StoryItem, MediaAsset } from '@/lib/api-types';
+import { getStoryBySlug, getYouTubeEmbedUrl } from '@/lib/api';
+import type { Story, StoryItem } from '@/lib/api-types';
 
 export function ComicReaderPage() {
   const { slug } = useParams<{ slug: string }>();

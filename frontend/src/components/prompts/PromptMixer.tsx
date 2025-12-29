@@ -76,7 +76,7 @@ export function PromptMixer({ onPromptGenerated, isLoading }: PromptMixerProps) 
             >
               <Checkbox
                 checked={selectedEntities.includes(entity.id)}
-                onCheckedChange={() => handleEntityToggle(entity.id)}
+                onChange={() => handleEntityToggle(entity.id)}
               />
               <span className="text-sm">{entity.name}</span>
             </label>
@@ -99,7 +99,7 @@ export function PromptMixer({ onPromptGenerated, isLoading }: PromptMixerProps) 
             >
               <Checkbox
                 checked={selectedEntities.includes(entity.id)}
-                onCheckedChange={() => handleEntityToggle(entity.id)}
+                onChange={() => handleEntityToggle(entity.id)}
               />
               <span className="text-sm">{entity.name}</span>
             </label>

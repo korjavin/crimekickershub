@@ -82,6 +82,9 @@ SELECT * FROM stories WHERE published = 1 ORDER BY created_at DESC;
 -- name: ListAllStories :many
 SELECT * FROM stories ORDER BY created_at DESC;
 
+-- name: ListAllPromptVersions :many
+SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions ORDER BY created_at DESC;
+
 -- name: AddStoryItem :one
 INSERT INTO story_items (story_id, media_asset_id, sort_order)
 VALUES (?, ?, ?)
@@ -102,6 +105,9 @@ ORDER BY si.sort_order;
 SELECT si.* FROM story_items si
 WHERE si.story_id = ?
 ORDER BY si.sort_order;
+
+-- name: UpdateStoryItemSortOrder :exec
+UPDATE story_items SET sort_order = ? WHERE id = ?;
 
 -- name: DeleteStoryItem :exec
 DELETE FROM story_items WHERE id = ?;

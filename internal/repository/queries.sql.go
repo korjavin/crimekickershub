@@ -508,6 +508,41 @@ func (q *Queries) ListAllMediaAssets(ctx context.Context) ([]MediaAsset, error) 
 	return items, nil
 }
 
+const listAllPromptVersions = `-- name: ListAllPromptVersions :many
+SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions ORDER BY created_at DESC
+`
+
+func (q *Queries) ListAllPromptVersions(ctx context.Context) ([]PromptVersion, error) {
+	rows, err := q.db.QueryContext(ctx, listAllPromptVersions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PromptVersion
+	for rows.Next() {
+		var i PromptVersion
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntityID,
+			&i.TypeID,
+			&i.VersionNumber,
+			&i.PromptText,
+			&i.TechnicalParamsJson,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAllStories = `-- name: ListAllStories :many
 SELECT id, title, slug, cover_image_url, published, created_at FROM stories ORDER BY created_at DESC
 `
@@ -823,6 +858,20 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateStoryItemSortOrder = `-- name: UpdateStoryItemSortOrder :exec
+UPDATE story_items SET sort_order = ? WHERE id = ?
+`
+
+type UpdateStoryItemSortOrderParams struct {
+	SortOrder int64 `json:"sort_order"`
+	ID        int64 `json:"id"`
+}
+
+func (q *Queries) UpdateStoryItemSortOrder(ctx context.Context, arg UpdateStoryItemSortOrderParams) error {
+	_, err := q.db.ExecContext(ctx, updateStoryItemSortOrder, arg.SortOrder, arg.ID)
+	return err
 }
 
 const updateUserRole = `-- name: UpdateUserRole :exec

@@ -39,7 +39,7 @@ export function WikiPage() {
       : entities.filter(e => e.type === filter);
 
   // Generate mock stats for heroes
-  const getHeroStats = (hero: Entity) => ({
+  const getHeroStats = (_hero: Entity) => ({
     power: Math.floor(Math.random() * 50) + 50,
     speed: Math.floor(Math.random() * 50) + 50,
     intelligence: Math.floor(Math.random() * 50) + 50,

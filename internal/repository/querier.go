@@ -29,6 +29,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByGoogleID(ctx context.Context, googleID string) (User, error)
 	ListAllMediaAssets(ctx context.Context) ([]MediaAsset, error)
+	ListAllPromptVersions(ctx context.Context) ([]PromptVersion, error)
 	ListAllStories(ctx context.Context) ([]Story, error)
 	ListEntities(ctx context.Context) ([]Entity, error)
 	ListEntitiesByType(ctx context.Context, type_ string) ([]Entity, error)
@@ -38,6 +39,7 @@ type Querier interface {
 	ListPromptVersionsForEntityAndType(ctx context.Context, arg ListPromptVersionsForEntityAndTypeParams) ([]PromptVersion, error)
 	ListPublishedStories(ctx context.Context) ([]Story, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	UpdateStoryItemSortOrder(ctx context.Context, arg UpdateStoryItemSortOrderParams) error
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
 	UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error)
 }
