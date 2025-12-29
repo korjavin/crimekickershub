@@ -11,6 +11,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - YouTube integration for video links
 - Google OAuth authentication with admin whitelist
 - HTTP API with Go 1.22+ ServeMux
+- React frontend with Vite, Tailwind CSS, and shadcn/ui
 
 ## Constraints/Assumptions:
 - Go 1.25.5, module: crimekickershub
@@ -28,7 +29,7 @@ Build Crime Kickers Hub - a Go-based web application with:
 - Use standard Go 1.22+ http.ServeMux (no chi/gin)
 
 ## State:
-7 tasks completed
+8 tasks completed (Task 8 just finished)
 
 ## Done:
 - Task 1: Project Initialization & Database Schema
@@ -76,17 +77,40 @@ Build Crime Kickers Hub - a Go-based web application with:
   - Dual-mux architecture: API mux for /api/*, static for everything else
   - Fixes Go 1.22+ ServeMux pattern conflicts by routing at request time
 
+- Task 8: Frontend Config, Proxy & UI Libs (COMPLETED)
+  - Initialized React + Vite + TypeScript project
+  - Installed and configured Tailwind CSS v4 with @tailwindcss/vite
+  - Configured path aliases (@/ → src/)
+  - Configured dev server proxy for /api → http://localhost:8080
+  - Installed shadcn/ui components: button, input, textarea, card, dialog, select, tabs, scroll-area, separator, badge
+  - Installed and configured dark mode with next-themes
+  - Installed react-router-dom v6+
+  - Created PublicLayout and AdminLayout components
+  - Configured routing in App.tsx with public and admin routes
+  - Updated main.tsx with ThemeProvider
+  - Verified build output in frontend/dist/
+
 ## Now:
-All 7 tasks completed. Ready for production or next phase.
+Task 8 completed. Frontend is ready with:
+- Development server proxy for API calls
+- Production build in frontend/dist/
+- All shadcn/ui components installed
+- Routing configured for public and admin sections
+- Dark mode toggle functional
 
 ## Next:
-Task 7: Docker & Deployment (likely)
+Task 9: API Integration & State Management or Task 10: Feature Pages
 
 ## Open questions (UNCONFIRMED if needed):
-- Need to clarify deployment requirements
+- Need to clarify next task priority (API integration vs feature pages)
 
 ## Working set (files/ids/commands):
-- cmd/server/main.go
-- internal/api/router.go
-- go build ./...
-- go run cmd/server/main.go
+- frontend/vite.config.ts
+- frontend/tsconfig.app.json
+- frontend/src/index.css
+- frontend/src/App.tsx
+- frontend/src/main.tsx
+- frontend/src/components/layouts/
+- frontend/src/components/ui/
+- cd frontend && npm run dev
+- cd frontend && npm run build
