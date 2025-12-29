@@ -157,7 +157,7 @@ export function HomePage() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       <p className="text-sm text-slate-400">
-                        {story.published ? 'Published' : 'Coming Soon'}
+                        {story.published === true ? 'Published' : 'Coming Soon'}
                       </p>
                     </CardContent>
                   </Card>
