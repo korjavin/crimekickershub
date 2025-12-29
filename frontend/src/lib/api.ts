@@ -51,3 +51,40 @@ export function extractYouTubeId(url: string): string | null {
 export function isYouTubeUrl(url: string): boolean {
   return extractYouTubeId(url) !== null;
 }
+
+// Prompt Studio APIs
+export async function getPromptTypes() {
+  return fetchApi<any[]>('/admin/prompt-types');
+}
+
+export async function getPromptVersions() {
+  return fetchApi<any[]>('/admin/prompts');
+}
+
+export async function composePrompt(input: { entity_ids: number[]; type_slug: string; extra_params_json?: string }) {
+  const response = await fetch(`${API_BASE}/admin/prompts/compose`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function savePrompt(input: { entity_id: number; type_id: number; prompt_text: string; technical_params_json?: string }) {
+  const response = await fetch(`${API_BASE}/admin/prompts/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function getPromptDiff(from: number, to: number) {
+  return fetchApi<{ diff: string }>(`/admin/prompts/diff?from=${from}&to=${to}`);
+}

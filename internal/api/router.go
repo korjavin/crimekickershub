@@ -86,6 +86,8 @@ func (r *Router) publicRoutes() {
 func (r *Router) adminRoutes() {
 	// Prompt management (admin only)
 	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("GET /types", r.handleListPromptTypes)
+	adminMux.HandleFunc("GET /", r.handleListPromptVersions)
 	adminMux.HandleFunc("POST /compose", r.handleComposePrompt)
 	adminMux.HandleFunc("POST /save", r.handleSavePrompt)
 	adminMux.HandleFunc("GET /diff", r.handleGetPromptDiff)
@@ -221,6 +223,23 @@ func (r *Router) handleGetPromptDiff(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	respondJSON(w, map[string]string{"diff": diff})
+}
+
+// handleListPromptTypes returns all prompt types
+func (r *Router) handleListPromptTypes(w http.ResponseWriter, req *http.Request) {
+	promptTypes, err := r.repo.ListPromptTypes(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list prompt types: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, promptTypes)
+}
+
+// handleListPromptVersions returns all prompt versions
+func (r *Router) handleListPromptVersions(w http.ResponseWriter, req *http.Request) {
+	// For now, return an empty array - we need a query for all versions
+	// TODO: Add ListAllPromptVersions query to sqlc
+	respondJSON(w, []interface{}{})
 }
 
 // handleUploadMedia handles file upload to R2

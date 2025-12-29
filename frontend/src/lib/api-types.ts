@@ -91,3 +91,37 @@ export interface VideoGalleryItem {
   title: string;
   tags: string[];
 }
+
+// Prompt Studio types
+export interface PromptType {
+  id: number;
+  slug: string;
+  description: string | null;
+  template_text: string;
+}
+
+export interface PromptVersion {
+  id: number;
+  entity_id: number;
+  type_id: number;
+  version_number: number;
+  prompt_text: string;
+  technical_params_json: string | null;
+  created_at: string | null;
+  // Expanded fields
+  entity?: Entity;
+  type?: PromptType;
+}
+
+export interface ComposePromptInput {
+  entity_ids: number[];
+  type_slug: string;
+  extra_params_json?: string;
+}
+
+export interface SavePromptInput {
+  entity_id: number;
+  type_id: number;
+  prompt_text: string;
+  technical_params_json?: string;
+}
