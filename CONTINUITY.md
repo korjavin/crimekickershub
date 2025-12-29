@@ -157,10 +157,10 @@ All audit fixes completed - 8 of 10 findings resolved
   - Fixed LOW R2 Client Warnings (internal/storage/r2.go, cmd/server/main.go) - Added R2 state tracking and improved logging
 
 ## Now:
-Manual testing session - fixing bugs found during user testing
+Manual testing session complete - 6 critical bugs fixed and committed
 
 ## Next:
-Continue manual testing and fixing issues as they arise
+Continue manual testing to find any remaining issues
 
 ## Manual Testing Session (2025-12-29):
 
@@ -335,6 +335,62 @@ Changed WikiPage.tsx ([WikiPage.tsx:39](frontend/src/pages/public/WikiPage.tsx#L
 - Location filter shows "Sky Isles" entity
 - Hero filter shows "Windman" and "Pho-boman" entities
 - Case-insensitive filtering works for all entity types
+
+### Issue #7: Roti villain avatar not showing & API filter not working (FIXED)
+**Found:**
+1. Created "Roti" villain entity with uploaded image, visible in R2 bucket but not showing in admin or public pages
+2. API endpoint `/api/entities?type=Villain` returning all entities instead of just villains
+
+**Root Cause:**
+1. `extractR2Key()` function had bug: was looking for prefix with double slash `"https://img.cc.wandergeek.org//"` instead of single slash
+2. This caused r2_key field to store full URLs instead of just filenames
+3. When `toMediaAssetDTO` computed URL, it added domain prefix again → double URL
+4. `handleListEntities` didn't implement the `type` query parameter filtering
+
+**Fix Applied:**
+1. Fixed `extractR2Key()` in [media.go:111-112](internal/service/media/media.go#L111-L112):
+   ```go
+   // The prefix from GetPublicURL("") already ends with "/", so just trim it directly
+   if strings.HasPrefix(url, prefix) {
+       return strings.TrimPrefix(url, prefix)
+   }
+   ```
+
+2. Added type filtering to [router.go:162-181](internal/api/router.go#L162-L181):
+   ```go
+   func (r *Router) handleListEntities(w http.ResponseWriter, req *http.Request) {
+       // Check if filtering by type
+       entityType := req.URL.Query().Get("type")
+       if entityType != "" {
+           entities, err = r.repo.ListEntitiesByType(req.Context(), entityType)
+       } else {
+           entities, err = r.repo.ListEntities(req.Context())
+       }
+       ...
+   }
+   ```
+
+3. Fixed corrupted data in database:
+   ```sql
+   -- Fixed all media_assets r2_key to store only filename
+   UPDATE media_assets SET r2_key = REPLACE(r2_key, 'https://img.cc.wandergeek.org/', '');
+
+   -- Fixed Roti's double URL in entities
+   UPDATE entities SET avatar_url = 'https://img.cc.wandergeek.org/ElevenLabs_image_flux-2-pro_Roti – _Body..._2025-12-29T20_58_36.png' WHERE id = 4;
+   ```
+
+**Impact:**
+- All future uploads will now store only R2 key (filename) in media_assets table
+- `toMediaAssetDTO` correctly computes full URL from R2 key
+- No more double URL prefix issues
+- API filtering by type now works correctly
+
+**Verified:**
+- `/api/entities?type=Villain` returns only Roti (correct filtering)
+- `/api/entities?type=Hero` returns only Windman and Pho-boman
+- `/api/entities?type=Location` returns only Sky Isles
+- All avatar URLs are correct with single domain prefix
+- Roti villain avatar displays correctly in both admin and public pages
 
 ## Working set (files/ids/commands):
 - sql/queries/queries.sql

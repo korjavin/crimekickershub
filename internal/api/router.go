@@ -158,9 +158,21 @@ func (r *Router) handleListHeroes(w http.ResponseWriter, req *http.Request) {
 	respondJSON(w, toEntityDTOs(entities))
 }
 
-// handleListEntities returns all entities
+// handleListEntities returns all entities (optionally filtered by type query param)
 func (r *Router) handleListEntities(w http.ResponseWriter, req *http.Request) {
-	entities, err := r.repo.ListEntities(req.Context())
+	// Check if filtering by type
+	entityType := req.URL.Query().Get("type")
+	var entities []repository.Entity
+	var err error
+
+	if entityType != "" {
+		// Filter by type (case-insensitive)
+		entities, err = r.repo.ListEntitiesByType(req.Context(), entityType)
+	} else {
+		// Return all entities
+		entities, err = r.repo.ListEntities(req.Context())
+	}
+
 	if err != nil {
 		http.Error(w, "Failed to list entities: "+err.Error(), http.StatusInternalServerError)
 		return

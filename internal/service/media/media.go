@@ -107,8 +107,9 @@ func nullInt64(v *int64) sql.NullInt64 {
 // extractR2Key extracts the R2 object key from a public URL
 func extractR2Key(url string, r2 *storage.R2Client) string {
 	prefix := r2.GetPublicURL("")
+	// The prefix from GetPublicURL("") already ends with "/", so just trim it directly
 	if strings.HasPrefix(url, prefix) {
-		return strings.TrimPrefix(url, prefix+"/")
+		return strings.TrimPrefix(url, prefix)
 	}
 	// Fallback: try to extract filename from URL
 	parts := strings.Split(url, "/")
