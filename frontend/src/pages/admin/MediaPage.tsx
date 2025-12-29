@@ -18,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Sheet,
   SheetContent,
@@ -27,13 +26,12 @@ import {
 } from '@/components/ui/sheet';
 import { listMedia, listRecentPromptVersions, uploadMedia, getEntities } from '@/lib/api';
 import type { MediaAsset, PromptVersion, Entity } from '@/lib/api-types';
-import { Upload, FileImage, X, Search, Loader2, Copy, Clock, Link2, Eye } from 'lucide-react';
+import { Upload, FileImage, Search, Loader2, Copy, Clock, Link2, Eye } from 'lucide-react';
 
 export function MediaPage() {
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [recentVersions, setRecentVersions] = useState<PromptVersion[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
-  const [isUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [entityFilter, setEntityFilter] = useState<string>('all');
@@ -171,11 +169,6 @@ export function MediaPage() {
     const typeName = (version as any).type_slug || version.type?.slug || 'Unknown';
     const versionNum = version.version_number;
     return `${entityName} - ${typeName} (v${versionNum})`;
-  };
-
-  // Get entity by ID
-  const getEntityById = (id: number): Entity | undefined => {
-    return entities.find(e => e.id === id);
   };
 
   // Filter media assets
