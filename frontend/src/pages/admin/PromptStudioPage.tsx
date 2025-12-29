@@ -10,17 +10,23 @@ export function PromptStudioPage() {
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [entities, setEntities] = useState<Entity[]>([]);
   const [promptTypes, setPromptTypes] = useState<PromptType[]>([]);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<number[]>([]);
+  const [selectedTypeSlug, setSelectedTypeSlug] = useState<string>('');
 
-  const handlePromptGenerated = (prompt: string) => {
+  const handlePromptGenerated = (prompt: string, ids: number[], typeSlug: string) => {
     setGeneratedPrompt(prompt);
+    setSelectedEntityIds(ids);
+    setSelectedTypeSlug(typeSlug);
   };
 
   const handleSaved = () => {
     setGeneratedPrompt('');
+    setSelectedEntityIds([]);
+    setSelectedTypeSlug('');
     // Refresh entities and prompt types
     Promise.all([getEntities(), getPromptTypes()]).then(([entitiesData, typesData]) => {
-      setEntities(entitiesData);
-      setPromptTypes(typesData);
+      setEntities(entitiesData || []);
+      setPromptTypes(typesData || []);
     });
   };
 
@@ -57,7 +63,7 @@ export function PromptStudioPage() {
                 </div>
               ) : (
                 <div className="text-muted-foreground text-center py-8">
-                  Select entities and a prompt type, then click "Generate Prompt"
+                  Select subjects and a template, then click Mix.
                 </div>
               )}
             </Card>
@@ -71,6 +77,8 @@ export function PromptStudioPage() {
               prompt={generatedPrompt}
               promptTypes={promptTypes}
               entities={entities}
+              selectedEntityIds={selectedEntityIds}
+              selectedTypeSlug={selectedTypeSlug}
               onSaved={handleSaved}
             />
           </Card>

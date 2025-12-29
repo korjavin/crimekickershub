@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { savePrompt } from '@/lib/api';
@@ -8,25 +8,47 @@ interface PromptResultProps {
   prompt: string;
   promptTypes: PromptType[];
   entities: Entity[];
+  selectedEntityIds: number[];
+  selectedTypeSlug: string;
   onSaved: () => void;
 }
 
-export function PromptResult({ prompt, promptTypes, entities, onSaved }: PromptResultProps) {
+export function PromptResult({ 
+  prompt, 
+  promptTypes, 
+  entities, 
+  selectedEntityIds, 
+  selectedTypeSlug,
+  onSaved 
+}: PromptResultProps) {
   const [editedPrompt, setEditedPrompt] = useState(prompt);
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedEntity, setSelectedEntity] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Sync with props from PromptMixer
+  useEffect(() => {
+    if (selectedTypeSlug) {
+      setSelectedType(selectedTypeSlug);
+    }
+    if (selectedEntityIds.length > 0) {
+      setSelectedEntity(selectedEntityIds[0]);
+    }
+  }, [selectedTypeSlug, selectedEntityIds]);
+
+  // Update editedPrompt when prompt prop changes
+  useEffect(() => {
+    setEditedPrompt(prompt);
+  }, [prompt]);
+
   const handleSave = async () => {
-    if (!selectedType || !selectedEntity) {
+    const type = promptTypes.find((t) => t.slug === selectedType);
+    if (!type || !selectedEntity) {
       return;
     }
 
     setIsSaving(true);
     try {
-      const type = promptTypes.find((t) => t.slug === selectedType);
-      if (!type) return;
-
       await savePrompt({
         entity_id: selectedEntity,
         type_id: type.id,
@@ -40,36 +62,50 @@ export function PromptResult({ prompt, promptTypes, entities, onSaved }: PromptR
     }
   };
 
+  // Get selected entity names for display
+  const selectedEntityNames = entities
+    .filter((e) => selectedEntityIds.includes(e.id))
+    .map((e) => e.name)
+    .join(', ');
+
   return (
     <div className="space-y-4">
+      {/* Selected Subjects Display */}
+      {selectedEntityNames && (
+        <div className="bg-muted/50 rounded-lg p-3 text-sm">
+          <span className="font-medium">Subject(s): </span>
+          {selectedEntityNames}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium mb-2 block">Entity</label>
+          <label className="text-sm font-medium mb-2 block">Generator Template</label>
           <select
             className="w-full p-2 rounded border bg-background"
-            value={selectedEntity || ''}
-            onChange={(e) => setSelectedEntity(Number(e.target.value))}
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
           >
-            <option value="">Select entity</option>
-            {entities.filter((e) => e.type === 'hero').map((entity) => (
-              <option key={entity.id} value={entity.id}>
-                {entity.name}
+            <option value="">Select template</option>
+            {promptTypes.map((type) => (
+              <option key={type.id} value={type.slug}>
+                {type.description || type.slug}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Type</label>
+          <label className="text-sm font-medium mb-2 block">Primary Subject</label>
           <select
             className="w-full p-2 rounded border bg-background"
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
+            value={selectedEntity || ''}
+            onChange={(e) => setSelectedEntity(Number(e.target.value))}
           >
-            <option value="">Select type</option>
-            {promptTypes.map((type) => (
-              <option key={type.id} value={type.slug}>
-                {type.slug}
+            <option value="">Select subject</option>
+            {entities.filter((e) => selectedEntityIds.includes(e.id)).map((entity) => (
+              <option key={entity.id} value={entity.id}>
+                {entity.name}
               </option>
             ))}
           </select>
@@ -83,6 +119,7 @@ export function PromptResult({ prompt, promptTypes, entities, onSaved }: PromptR
           onChange={(e) => setEditedPrompt(e.target.value)}
           rows={8}
           className="font-mono text-sm"
+          placeholder="Select subjects and a template, then click Mix."
         />
       </div>
 

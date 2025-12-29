@@ -151,6 +151,18 @@ All audit fixes completed - 8 of 10 findings resolved
   - Route /admin/types now accessible from admin sidebar
   - Resolves final missing item from Task 17 requirements
 
+- Task 18: Prompt Studio Logic (The Mixer Wiring) (COMPLETED)
+  - Connected PromptMixer to backend compose API via onPromptGenerated callback
+  - Updated callback signature to pass (prompt, entityIds, typeSlug)
+  - Connected PromptMixer selected entities to PromptResult component
+  - State flows: Mixer → PromptStudioPage → PromptResult
+  - Renamed labels: "Entity" → "Subject(s) & Location", "Type" → "Generator Template"
+  - Added Villains section to entity selection (Heroes, Villains, Locations)
+  - Updated button text: "Generate Prompt" → "✨ Mix Prompt"
+  - Added placeholder text: "Select subjects and a template, then click Mix."
+  - Added selected subjects display badge in Result Editor
+  - Added isGenerating state for better loading UX
+
 - Audit Fix Session (COMPLETED)
   - Fixed CRITICAL Admin API Routing Logic Error (internal/api/router.go) - Removed StripPrefix pattern, registered all handlers with full paths
   - Fixed CRITICAL Health Endpoint Unreachable (internal/api/router.go) - Changed /health to /api/health
