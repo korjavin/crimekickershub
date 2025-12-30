@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  crimekickershub:
+    # The image tag will be replaced by GitHub Actions workflow in the deploy branch
+    image: ghcr.io/korjavin/crimekickershub:latest
+    container_name: crimekickershub
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.crimekickershub.rule=Host(`${HOSTNAME}`)"
+      - "traefik.http.routers.crimekickershub.entrypoints=websecure"
+      - "traefik.http.routers.crimekickershub.tls.certresolver=myresolver"
+      - "traefik.http.services.crimekickershub.loadbalancer.server.port=3000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      # Google OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
+
+      # Cloudflare R2 Configuration
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
+
+      # Application Configuration
+      - APP_ENV=${APP_ENV:-production}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ALLOWED_EMAILS=${ALLOWED_EMAILS}
+      - DATABASE_PATH=${DATABASE_PATH:-/app/data/crimekickers.db}
+      - PORT=${PORT:-3000}
+
+networks:
+  traefik_network:
+    name: ${NETWORK_NAME:-traefik_network}
+    external: true
