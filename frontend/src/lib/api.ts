@@ -157,6 +157,18 @@ export async function updateStory(id: string, itemIds: string[]) {
   return response.json();
 }
 
+export async function updateStoryMetadata(id: string, data: { title?: string; slug?: string; coverImageUrl?: string; published?: boolean }) {
+  const response = await fetch(`${API_BASE}/admin/stories/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export async function addStoryItem(storyId: string, mediaAssetId: string, sortOrder: number) {
   const response = await fetch(`${API_BASE}/admin/stories/${storyId}/items`, {
     method: 'POST',

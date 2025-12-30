@@ -20,6 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -42,6 +43,7 @@ import {
   getStory,
   createStory,
   updateStory,
+  updateStoryMetadata,
   listMedia,
   getYouTubeThumbnail,
   addStoryItem,
@@ -394,6 +396,31 @@ export function StoryEditorPage() {
     }
   };
 
+  const handleTogglePublish = async (checked: boolean) => {
+    if (!storyWithItems) return;
+
+    try {
+      const updatedStory = await updateStoryMetadata(String(storyWithItems.id), {
+        published: checked,
+      });
+
+      setStoryWithItems({
+        ...storyWithItems,
+        published: updatedStory.published,
+      });
+
+      // Also update the story in the stories list
+      setStories(stories.map(s =>
+        s.id === storyWithItems.id ? { ...s, published: updatedStory.published } : s
+      ));
+
+      toast.success(checked ? 'Story published successfully' : 'Story unpublished');
+    } catch (error) {
+      console.error('Failed to update publish status:', error);
+      toast.error('Failed to update publish status. Please try again.');
+    }
+  };
+
   // Filter media
   const filteredMedia = availableMedia.filter((media) => {
     // Search query filter
@@ -526,6 +553,22 @@ export function StoryEditorPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {storyWithItems && (
+            <div className="flex items-center gap-2 px-3 py-2 border rounded-md">
+              <Checkbox
+                id="publish-toggle"
+                checked={storyWithItems.published || false}
+                onCheckedChange={handleTogglePublish}
+              />
+              <label
+                htmlFor="publish-toggle"
+                className="text-sm font-medium cursor-pointer"
+              >
+                Published
+              </label>
+            </div>
+          )}
 
           <Button
             variant="outline"

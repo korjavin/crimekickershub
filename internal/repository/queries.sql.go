@@ -210,6 +210,15 @@ func (q *Queries) DeletePromptType(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteStory = `-- name: DeleteStory :exec
+DELETE FROM stories WHERE id = ?
+`
+
+func (q *Queries) DeleteStory(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteStory, id)
+	return err
+}
+
 const deleteStoryItem = `-- name: DeleteStoryItem :exec
 DELETE FROM story_items WHERE id = ?
 `
@@ -1056,6 +1065,41 @@ func (q *Queries) UpdatePromptType(ctx context.Context, arg UpdatePromptTypePara
 		arg.ID,
 	)
 	return err
+}
+
+const updateStory = `-- name: UpdateStory :one
+UPDATE stories
+SET title = ?, slug = ?, cover_image_url = ?, published = ?
+WHERE id = ?
+RETURNING id, title, slug, cover_image_url, published, created_at
+`
+
+type UpdateStoryParams struct {
+	Title         string         `json:"title"`
+	Slug          string         `json:"slug"`
+	CoverImageUrl sql.NullString `json:"cover_image_url"`
+	Published     sql.NullBool   `json:"published"`
+	ID            int64          `json:"id"`
+}
+
+func (q *Queries) UpdateStory(ctx context.Context, arg UpdateStoryParams) (Story, error) {
+	row := q.db.QueryRowContext(ctx, updateStory,
+		arg.Title,
+		arg.Slug,
+		arg.CoverImageUrl,
+		arg.Published,
+		arg.ID,
+	)
+	var i Story
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Slug,
+		&i.CoverImageUrl,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const updateStoryItemSortOrder = `-- name: UpdateStoryItemSortOrder :exec
