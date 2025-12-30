@@ -13,10 +13,6 @@ services:
       - "traefik.http.routers.crimekickershub.entrypoints=websecure"
       - "traefik.http.routers.crimekickershub.tls.certresolver=myresolver"
       - "traefik.http.services.crimekickershub.loadbalancer.server.port=8080"
-      # Increase timeouts for file uploads
-      - "traefik.http.services.crimekickershub.loadbalancer.responseforwardingtimeouts.dialtimeout=120s"
-      - "traefik.http.services.crimekickershub.loadbalancer.responseforwardingtimeouts.responseheadertimeout=120s"
-      - "traefik.http.middlewares.crimekickershub-timeout.buffering.maxRequestBodyBytes=52428800"
     volumes:
       - ./data:/app/data
     restart: unless-stopped
