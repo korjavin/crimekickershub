@@ -192,7 +192,35 @@ func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
 	if stories == nil {
 		stories = []repository.Story{}
 	}
-	respondJSON(w, stories)
+
+	// Helper struct to flatten response
+	type StoryDTO struct {
+		ID            int64   `json:"id"`
+		Title         string  `json:"title"`
+		Slug          string  `json:"slug"`
+		CoverImageURL *string `json:"cover_image_url"`
+		Published     bool    `json:"published"`
+		CreatedAt     string  `json:"created_at"`
+	}
+
+	dtos := make([]StoryDTO, len(stories))
+	for i, s := range stories {
+		dto := StoryDTO{
+			ID:        s.ID,
+			Title:     s.Title,
+			Slug:      s.Slug,
+			Published: s.Published.Bool,
+		}
+		if s.CoverImageUrl.Valid {
+			dto.CoverImageURL = &s.CoverImageUrl.String
+		}
+		if s.CreatedAt.Valid {
+			dto.CreatedAt = s.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		}
+		dtos[i] = dto
+	}
+
+	respondJSON(w, dtos)
 }
 
 // handleGetStoryBySlug returns a story by its slug
@@ -212,7 +240,50 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "Failed to get story: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, story)
+
+	// Get all media assets for the story using a single query
+	mediaAssets, err := r.repo.ListMediaByStory(req.Context(), story.ID)
+	if err != nil {
+		http.Error(w, "Failed to get story media: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Build response
+	type PublicStoryItemResponse struct {
+		Type        string `json:"type"`
+		URL         string `json:"url,omitempty"`
+		YoutubeID   string `json:"youtube_id,omitempty"`
+		AspectRatio string `json:"aspect_ratio,omitempty"` // Placeholder for now
+	}
+
+	type PublicStoryResponse struct {
+		Title string                    `json:"title"`
+		Items []PublicStoryItemResponse `json:"items"`
+	}
+
+	response := PublicStoryResponse{
+		Title: story.Title,
+		Items: make([]PublicStoryItemResponse, 0, len(mediaAssets)),
+	}
+
+	for _, media := range mediaAssets {
+		mediaDTO := r.toMediaAssetDTO(media)
+		itemResp := PublicStoryItemResponse{
+			Type: mediaDTO.Type,
+		}
+
+		if mediaDTO.Type == "video" && mediaDTO.YoutubeID != nil {
+			itemResp.YoutubeID = *mediaDTO.YoutubeID
+			itemResp.AspectRatio = "16:9" // Default for YouTube
+		} else if mediaDTO.URL != nil {
+			itemResp.URL = *mediaDTO.URL
+			itemResp.AspectRatio = "1:1" // Default/Placeholder for images
+		}
+
+		response.Items = append(response.Items, itemResp)
+	}
+
+	respondJSON(w, response)
 }
 
 // handleComposePrompt composes a prompt from entity, type, and parameters
