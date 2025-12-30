@@ -595,7 +595,7 @@ export function StoryEditorPage() {
                 <Checkbox
                   id="publish-toggle"
                   checked={storyWithItems.published || false}
-                  onCheckedChange={handleTogglePublish}
+                  onChange={(e) => handleTogglePublish(e.target.checked)}
                 />
                 <label
                   htmlFor="publish-toggle"
