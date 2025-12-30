@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -806,11 +807,23 @@ func (r *Router) handleGoogleCallback(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	// Log authentication attempt
+	if userInfo.IsAdmin {
+		log.Printf("Admin login successful: %s", userInfo.Email)
+	} else {
+		log.Printf("WARNING: Non-admin user attempted to login: %s", userInfo.Email)
+	}
+
 	// Set session cookie
 	r.auth.SetSessionCookie(w, userInfo)
 
-	// Redirect to admin dashboard
-	http.Redirect(w, req, "/admin", http.StatusFound)
+	// Redirect based on admin status
+	if userInfo.IsAdmin {
+		http.Redirect(w, req, "/admin", http.StatusFound)
+	} else {
+		// Redirect non-admin users to public area with error message
+		http.Redirect(w, req, "/?error=unauthorized", http.StatusFound)
+	}
 }
 
 // handleDevLogin creates a development session for localhost users
