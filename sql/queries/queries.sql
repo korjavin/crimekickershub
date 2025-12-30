@@ -113,6 +113,15 @@ SELECT * FROM stories WHERE published = 1 ORDER BY created_at DESC;
 -- name: ListAllStories :many
 SELECT * FROM stories ORDER BY created_at DESC;
 
+-- name: UpdateStory :one
+UPDATE stories
+SET title = ?, slug = ?, cover_image_url = ?, published = ?
+WHERE id = ?
+RETURNING *;
+
+-- name: DeleteStory :exec
+DELETE FROM stories WHERE id = ?;
+
 -- name: ListAllPromptVersions :many
 SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions ORDER BY created_at DESC LIMIT 10;
 

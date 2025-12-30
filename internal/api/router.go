@@ -645,9 +645,15 @@ func (r *Router) handleCreateStory(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Auto-generate slug from title if not provided
+	slug := input.Slug
+	if slug == "" {
+		slug = generateSlug(input.Title)
+	}
+
 	story, err := r.repo.CreateStory(req.Context(), repository.CreateStoryParams{
 		Title:         input.Title,
-		Slug:          input.Slug,
+		Slug:          slug,
 		CoverImageUrl: sql.NullString{String: input.CoverImageURL, Valid: input.CoverImageURL != ""},
 		Published:     sql.NullBool{Bool: input.Published, Valid: input.Published},
 	})
@@ -656,6 +662,26 @@ func (r *Router) handleCreateStory(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	respondJSON(w, story)
+}
+
+// generateSlug creates a URL-friendly slug from a title
+func generateSlug(title string) string {
+	// Convert to lowercase
+	slug := strings.ToLower(title)
+	// Replace spaces and special characters with hyphens
+	slug = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			return r
+		}
+		return '-'
+	}, slug)
+	// Remove consecutive hyphens
+	for strings.Contains(slug, "--") {
+		slug = strings.ReplaceAll(slug, "--", "-")
+	}
+	// Trim hyphens from start and end
+	slug = strings.Trim(slug, "-")
+	return slug
 }
 
 // handleAddStoryItem adds a media item to a story
@@ -783,11 +809,66 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 // handleUpdateStory updates story metadata (title, slug, etc) - Placeholder for now if needed
 // or we can keep it for backward compatibility or general updates
 func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
-	// For now, redirect to handleUpdateStoryItems if the body looks like it has itemIds
-	// But ideally we should separate concerns.
-	// Since the previous implementation used this for sorting, let's keep it as is or deprecate it.
-	// We'll leave it but implementing handleUpdateStoryItems for the specific route.
-	r.handleUpdateStoryItems(w, req)
+	storyID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if storyID == 0 {
+		http.Error(w, "Story ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input struct {
+		Title         *string `json:"title"`
+		Slug          *string `json:"slug"`
+		CoverImageURL *string `json:"coverImageUrl"`
+		Published     *bool   `json:"published"`
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get current story to preserve fields not being updated
+	currentStory, err := r.repo.GetStoryByID(req.Context(), storyID)
+	if err != nil {
+		http.Error(w, "Story not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Use current values if not provided in update
+	title := currentStory.Title
+	if input.Title != nil {
+		title = *input.Title
+	}
+
+	slug := currentStory.Slug
+	if input.Slug != nil {
+		slug = *input.Slug
+	}
+
+	coverImageURL := currentStory.CoverImageUrl
+	if input.CoverImageURL != nil {
+		coverImageURL = sql.NullString{String: *input.CoverImageURL, Valid: *input.CoverImageURL != ""}
+	}
+
+	published := currentStory.Published
+	if input.Published != nil {
+		published = sql.NullBool{Bool: *input.Published, Valid: true}
+	}
+
+	// Update the story
+	updatedStory, err := r.repo.UpdateStory(req.Context(), repository.UpdateStoryParams{
+		ID:            storyID,
+		Title:         title,
+		Slug:          slug,
+		CoverImageUrl: coverImageURL,
+		Published:     published,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update story: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, updatedStory)
 }
 
 // handleUpdateStoryItems updates the sequence of items in a story
