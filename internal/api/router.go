@@ -766,11 +766,11 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 
 	// Build response with media details for each item
 	type StoryItemResponse struct {
-		ID           int64                  `json:"id"`
-		StoryID      int64                  `json:"story_id"`
-		MediaAssetID int64                  `json:"media_asset_id"`
-		SortOrder    int64                  `json:"sort_order"`
-		Media        *repository.MediaAsset `json:"media,omitempty"`
+		ID           int64          `json:"id"`
+		StoryID      int64          `json:"story_id"`
+		MediaAssetID int64          `json:"media_asset_id"`
+		SortOrder    int64          `json:"sort_order"`
+		Media        *MediaAssetDTO `json:"media,omitempty"`
 	}
 
 	response := map[string]interface{}{
@@ -792,11 +792,12 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 			SortOrder:    item.SortOrder,
 		}
 
-		// Fetch media asset details
+		// Fetch media asset details and convert to DTO
 		if item.MediaAssetID > 0 {
 			media, err := r.repo.GetMediaAsset(req.Context(), item.MediaAssetID)
 			if err == nil {
-				itemResp.Media = &media
+				dto := r.toMediaAssetDTO(media)
+				itemResp.Media = &dto
 			}
 		}
 
