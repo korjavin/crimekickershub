@@ -58,8 +58,8 @@ jobs:
           git fetch origin deploy:deploy || git checkout -b deploy
           git checkout deploy
 
-          # Merge latest changes from master
-          git merge origin/master --no-edit || true
+          # Reset deploy to match master exactly (except for image tag)
+          git reset --hard origin/master
 
           # Update docker-compose.yml with the new SHA tag
           sed -i "s|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:.*|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}|g" docker-compose.yml
