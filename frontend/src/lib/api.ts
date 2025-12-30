@@ -203,6 +203,17 @@ export async function createStory(data: { title: string; slug?: string }) {
   return response.json();
 }
 
+export async function deleteStory(id: string) {
+  const response = await fetch(`${API_BASE}/admin/stories/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // YouTube helpers
 export function getYouTubeEmbedUrl(videoId: string): string {
   return `https://www.youtube.com/embed/${videoId}`;

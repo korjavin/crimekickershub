@@ -44,6 +44,7 @@ import {
   createStory,
   updateStory,
   updateStoryMetadata,
+  deleteStory,
   listMedia,
   getYouTubeThumbnail,
   addStoryItem,
@@ -87,10 +88,12 @@ function SortableTimelineItem({ item, onRemove, isRemoving }: SortableTimelineIt
         ${isDragging ? 'opacity-50 shadow-lg ring-2 ring-primary' : ''}
         ${isRemoving ? 'opacity-50 pointer-events-none' : ''}
       `}
-      {...attributes}
-      {...listeners}
     >
-      <div className="cursor-grab active:cursor-grabbing text-muted-foreground">
+      <div
+        className="cursor-grab active:cursor-grabbing text-muted-foreground"
+        {...attributes}
+        {...listeners}
+      >
         ⋮⋮
       </div>
       <span className="text-sm text-muted-foreground w-6">
@@ -421,6 +424,38 @@ export function StoryEditorPage() {
     }
   };
 
+  const handleDeleteStory = async () => {
+    if (!storyWithItems) return;
+
+    // Check if story has items
+    if (storyWithItems.items.length > 0) {
+      toast.error('Cannot delete story with slides. Remove all slides first.');
+      return;
+    }
+
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete "${storyWithItems.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteStory(String(storyWithItems.id));
+
+      // Remove from stories list
+      setStories(stories.filter(s => s.id !== storyWithItems.id));
+
+      // Clear selected story
+      setSelectedStoryId('');
+      setStoryWithItems(null);
+
+      toast.success('Story deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete story:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete story';
+      toast.error(errorMessage);
+    }
+  };
+
   // Filter media
   const filteredMedia = availableMedia.filter((media) => {
     // Search query filter
@@ -555,19 +590,29 @@ export function StoryEditorPage() {
           </Dialog>
 
           {storyWithItems && (
-            <div className="flex items-center gap-2 px-3 py-2 border rounded-md">
-              <Checkbox
-                id="publish-toggle"
-                checked={storyWithItems.published || false}
-                onCheckedChange={handleTogglePublish}
-              />
-              <label
-                htmlFor="publish-toggle"
-                className="text-sm font-medium cursor-pointer"
+            <>
+              <div className="flex items-center gap-2 px-3 py-2 border rounded-md">
+                <Checkbox
+                  id="publish-toggle"
+                  checked={storyWithItems.published || false}
+                  onCheckedChange={handleTogglePublish}
+                />
+                <label
+                  htmlFor="publish-toggle"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Published
+                </label>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleDeleteStory}
+                disabled={storyWithItems.items.length > 0}
+                title={storyWithItems.items.length > 0 ? 'Remove all slides before deleting' : 'Delete this story'}
               >
-                Published
-              </label>
-            </div>
+                🗑️ Delete
+              </Button>
+            </>
           )}
 
           <Button

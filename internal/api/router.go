@@ -131,6 +131,7 @@ func (r *Router) adminRoutes() {
 	r.mux.Handle("POST /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateStory)))
 	r.mux.Handle("GET /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetStory)))
 	r.mux.Handle("PUT /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStory)))           // Legacy/General update
+	r.mux.Handle("DELETE /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteStory)))
 	r.mux.Handle("PUT /api/admin/stories/{id}/items", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStoryItems))) // Sequence update
 	r.mux.Handle("POST /api/admin/stories/{id}/items", r.auth.RequireAdmin(http.HandlerFunc(r.handleAddStoryItem)))
 	r.mux.Handle("DELETE /api/admin/stories/{id}/items/{itemId}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteStoryItem)))
@@ -869,6 +870,36 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respondJSON(w, updatedStory)
+}
+
+// handleDeleteStory deletes a story (only if it has no items)
+func (r *Router) handleDeleteStory(w http.ResponseWriter, req *http.Request) {
+	storyID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if storyID == 0 {
+		http.Error(w, "Story ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the story has any items
+	items, err := r.repo.GetStoryItems(req.Context(), storyID)
+	if err != nil {
+		http.Error(w, "Failed to check story items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(items) > 0 {
+		http.Error(w, "Cannot delete story with items. Remove all slides first.", http.StatusBadRequest)
+		return
+	}
+
+	// Delete the story
+	err = r.repo.DeleteStory(req.Context(), storyID)
+	if err != nil {
+		http.Error(w, "Failed to delete story: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]bool{"success": true})
 }
 
 // handleUpdateStoryItems updates the sequence of items in a story
