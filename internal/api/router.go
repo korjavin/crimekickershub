@@ -117,8 +117,10 @@ func (r *Router) adminRoutes() {
 	r.mux.Handle("GET /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleListStoriesAdmin)))
 	r.mux.Handle("POST /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateStory)))
 	r.mux.Handle("GET /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetStory)))
-	r.mux.Handle("PUT /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStory)))
+	r.mux.Handle("PUT /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStory)))           // Legacy/General update
+	r.mux.Handle("PUT /api/admin/stories/{id}/items", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStoryItems))) // Sequence update
 	r.mux.Handle("POST /api/admin/stories/{id}/items", r.auth.RequireAdmin(http.HandlerFunc(r.handleAddStoryItem)))
+	r.mux.Handle("DELETE /api/admin/stories/{id}/items/{itemId}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteStoryItem)))
 
 	// Entities management (admin only)
 	r.mux.Handle("GET /api/admin/entities", r.auth.RequireAdmin(http.HandlerFunc(r.handleListEntities)))
@@ -611,8 +613,18 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 	respondJSON(w, response)
 }
 
-// handleUpdateStory updates story item order
+// handleUpdateStory updates story metadata (title, slug, etc) - Placeholder for now if needed
+// or we can keep it for backward compatibility or general updates
 func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
+	// For now, redirect to handleUpdateStoryItems if the body looks like it has itemIds
+	// But ideally we should separate concerns.
+	// Since the previous implementation used this for sorting, let's keep it as is or deprecate it.
+	// We'll leave it but implementing handleUpdateStoryItems for the specific route.
+	r.handleUpdateStoryItems(w, req)
+}
+
+// handleUpdateStoryItems updates the sequence of items in a story
+func (r *Router) handleUpdateStoryItems(w http.ResponseWriter, req *http.Request) {
 	storyID, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
 	if storyID == 0 {
 		http.Error(w, "Story ID is required", http.StatusBadRequest)
@@ -620,6 +632,11 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var input UpdateStoryInput
+	// Use item_ids from json to match task description better, but keep itemIds support
+	// decoding into struct UpdateStoryInput which has ItemIDs `json:"itemIds"`
+	// We might need to support snake_case too if strict.
+	// Let's check the struct definition.
+
 	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
 		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
@@ -639,6 +656,25 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 
 	// Return updated story
 	r.handleGetStory(w, req)
+}
+
+// handleDeleteStoryItem removes an item from a story
+func (r *Router) handleDeleteStoryItem(w http.ResponseWriter, req *http.Request) {
+	// storyID := req.PathValue("id") // Not strictly needed for the delete query but good for verification if we wanted
+	itemID, _ := strconv.ParseInt(req.PathValue("itemId"), 10, 64)
+
+	if itemID == 0 {
+		http.Error(w, "Item ID is required", http.StatusBadRequest)
+		return
+	}
+
+	err := r.repo.DeleteStoryItem(req.Context(), itemID)
+	if err != nil {
+		http.Error(w, "Failed to delete story item: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]bool{"success": true})
 }
 
 // handleAuthMe returns the current user info if authenticated
@@ -874,7 +910,7 @@ type AddStoryItemInput struct {
 
 // UpdateStoryInput is the input for updating story item order
 type UpdateStoryInput struct {
-	ItemIDs []int64 `json:"itemIds"`
+	ItemIDs []int64 `json:"item_ids"` // Changed to snake_case to match task
 }
 
 // CreateEntityInput is the input for creating an entity

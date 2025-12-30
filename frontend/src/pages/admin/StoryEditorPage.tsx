@@ -36,6 +36,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 import {
   listStoriesAdmin,
   getStory,
@@ -43,15 +44,20 @@ import {
   updateStory,
   listMedia,
   getYouTubeThumbnail,
+  addStoryItem,
+  deleteStoryItem,
+  getEntities,
+  listPromptVersions,
 } from '@/lib/api';
-import type { Story, StoryItem, MediaAsset, StoryWithItems } from '@/lib/api-types';
+import type { Story, StoryItem, MediaAsset, StoryWithItems, Entity } from '@/lib/api-types';
 
 interface SortableTimelineItemProps {
   item: StoryItem;
-  onRemove: (id: number) => void;
+  onRemove: (item: StoryItem) => void;
+  isRemoving: boolean;
 }
 
-function SortableTimelineItem({ item, onRemove }: SortableTimelineItemProps) {
+function SortableTimelineItem({ item, onRemove, isRemoving }: SortableTimelineItemProps) {
   const {
     attributes,
     listeners,
@@ -77,6 +83,7 @@ function SortableTimelineItem({ item, onRemove }: SortableTimelineItemProps) {
       className={`
         flex items-center gap-3 p-3 bg-card border rounded-lg mb-2
         ${isDragging ? 'opacity-50 shadow-lg ring-2 ring-primary' : ''}
+        ${isRemoving ? 'opacity-50 pointer-events-none' : ''}
       `}
       {...attributes}
       {...listeners}
@@ -104,8 +111,9 @@ function SortableTimelineItem({ item, onRemove }: SortableTimelineItemProps) {
         size="icon"
         onClick={(e) => {
           e.stopPropagation();
-          onRemove(item.id);
+          onRemove(item);
         }}
+        disabled={isRemoving}
       >
         ✕
       </Button>
@@ -116,10 +124,10 @@ function SortableTimelineItem({ item, onRemove }: SortableTimelineItemProps) {
 interface MediaGridItemProps {
   media: MediaAsset;
   onAdd: (media: MediaAsset) => void;
-  isDisabled: boolean;
+  isAdding: boolean;
 }
 
-function MediaGridItem({ media, onAdd, isDisabled }: MediaGridItemProps) {
+function MediaGridItem({ media, onAdd, isAdding }: MediaGridItemProps) {
   const thumbnailUrl = media.type === 'video' && media.youtube_id
     ? getYouTubeThumbnail(media.youtube_id)
     : (media.thumbnail_url || media.url || '');
@@ -141,9 +149,9 @@ function MediaGridItem({ media, onAdd, isDisabled }: MediaGridItemProps) {
         <Button
           size="sm"
           onClick={() => onAdd(media)}
-          disabled={isDisabled}
+          disabled={isAdding}
         >
-          Add to Story
+          {isAdding ? 'Adding...' : 'Add to Story'}
         </Button>
       </div>
       <div className="absolute top-1 right-1">
@@ -155,17 +163,22 @@ function MediaGridItem({ media, onAdd, isDisabled }: MediaGridItemProps) {
   );
 }
 
-export function StoryBuilderPage() {
+export function StoryEditorPage() {
   const [stories, setStories] = useState<Story[]>([]);
   const [selectedStoryId, setSelectedStoryId] = useState<string>('');
   const [storyWithItems, setStoryWithItems] = useState<StoryWithItems | null>(null);
   const [availableMedia, setAvailableMedia] = useState<MediaAsset[]>([]);
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [selectedEntityId, setSelectedEntityId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [newStoryTitle, setNewStoryTitle] = useState('');
   const [newStorySlug, setNewStorySlug] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [addingMediaIds, setAddingMediaIds] = useState<Set<number>>(new Set());
+  const [removingItemIds, setRemovingItemIds] = useState<Set<number>>(new Set());
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -174,10 +187,11 @@ export function StoryBuilderPage() {
     })
   );
 
-  // Load stories and media on mount
+  // Load initial data
   useEffect(() => {
     loadStories();
     loadMedia();
+    loadEntities();
   }, []);
 
   // Load story items when selected story changes
@@ -193,6 +207,7 @@ export function StoryBuilderPage() {
       setStories(data);
     } catch (error) {
       console.error('Failed to load stories:', error);
+      toast.error('Failed to load stories');
     }
   };
 
@@ -202,6 +217,17 @@ export function StoryBuilderPage() {
       setAvailableMedia(data);
     } catch (error) {
       console.error('Failed to load media:', error);
+      toast.error('Failed to load media library');
+    }
+  };
+
+  const loadEntities = async () => {
+    try {
+      const data = await getEntities();
+      setEntities(data);
+    } catch (error) {
+      console.error('Failed to load entities:', error);
+      toast.error('Failed to load entities');
     }
   };
 
@@ -212,6 +238,7 @@ export function StoryBuilderPage() {
       setStoryWithItems(data);
     } catch (error) {
       console.error('Failed to load story:', error);
+      toast.error('Failed to load story details');
     } finally {
       setIsLoading(false);
     }
@@ -219,66 +246,106 @@ export function StoryBuilderPage() {
 
   const handleCreateStory = async () => {
     if (!newStoryTitle.trim()) return;
-    
+
     try {
       setIsLoading(true);
       const newStory = await createStory({
         title: newStoryTitle,
         slug: newStorySlug || undefined,
       });
-      
+
       await loadStories();
       setSelectedStoryId(String(newStory.id));
       setIsCreateDialogOpen(false);
       setNewStoryTitle('');
       setNewStorySlug('');
+      toast.success('Story created successfully');
     } catch (error) {
       console.error('Failed to create story:', error);
+      toast.error('Failed to create story. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddToStory = (media: MediaAsset) => {
+  const handleAddToStory = async (media: MediaAsset) => {
     if (!storyWithItems) return;
-    
-    // Check if already in story
-    const exists = storyWithItems.items.some(
+
+    // Check if media is already in the story
+    const isDuplicate = storyWithItems.items.some(
       (item) => item.media_asset_id === media.id
     );
-    if (exists) return;
+    if (isDuplicate) {
+      toast.warning('This media is already in the story');
+      return;
+    }
 
-    const newItem: StoryItem = {
-      id: Date.now(), // Temporary ID
-      story_id: storyWithItems.id,
-      media_asset_id: media.id,
-      sort_order: storyWithItems.items.length,
-      media,
-    };
+    try {
+      setAddingMediaIds(prev => new Set(prev).add(media.id));
+      const nextSortOrder = storyWithItems.items.length;
 
-    setStoryWithItems({
-      ...storyWithItems,
-      items: [...storyWithItems.items, newItem],
-    });
+      // Call API to add item
+      const newItem = await addStoryItem(
+        String(storyWithItems.id),
+        String(media.id),
+        nextSortOrder
+      );
+
+      // Attach media object for display
+      newItem.media = media;
+
+      setStoryWithItems({
+        ...storyWithItems,
+        items: [...storyWithItems.items, newItem],
+      });
+      toast.success('Media added to story');
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      toast.error('Failed to add media. Please try again.');
+    } finally {
+      setAddingMediaIds(prev => {
+        const next = new Set(prev);
+        next.delete(media.id);
+        return next;
+      });
+    }
   };
 
-  const handleRemoveFromStory = (itemId: number) => {
+  const handleRemoveFromStory = async (item: StoryItem) => {
     if (!storyWithItems) return;
 
-    const filteredItems = storyWithItems.items.filter(
-      (item) => item.id !== itemId
-    );
+    try {
+      setRemovingItemIds(prev => new Set(prev).add(item.id));
 
-    // Recalculate sort orders
-    const reorderedItems = filteredItems.map((item, index) => ({
-      ...item,
-      sort_order: index,
-    }));
+      // Call API to remove item
+      await deleteStoryItem(String(storyWithItems.id), String(item.id));
 
-    setStoryWithItems({
-      ...storyWithItems,
-      items: reorderedItems,
-    });
+      const filteredItems = storyWithItems.items.filter(
+        (i) => i.id !== item.id
+      );
+
+      // Recalculate sort orders locally
+      const reorderedItems = filteredItems.map((item, index) => ({
+        ...item,
+        sort_order: index,
+      }));
+
+      setStoryWithItems({
+        ...storyWithItems,
+        items: reorderedItems,
+      });
+
+      toast.success('Item removed from story');
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+      toast.error('Failed to remove item. Please try again.');
+    } finally {
+      setRemovingItemIds(prev => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -316,36 +383,90 @@ export function StoryBuilderPage() {
       setIsSaving(true);
       const itemIds = storyWithItems.items.map((item) => String(item.id));
       await updateStory(String(storyWithItems.id), itemIds);
+      // Reload to ensure sync
       await loadStory(String(storyWithItems.id));
+      toast.success('Story order saved successfully');
     } catch (error) {
       console.error('Failed to save order:', error);
+      toast.error('Failed to save order. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Filter media by search query
+  // Filter media
   const filteredMedia = availableMedia.filter((media) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      media.type.toLowerCase().includes(query) ||
-      String(media.id).includes(query)
-    );
+    // Search query filter
+    const matchesSearch = !searchQuery ||
+      media.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(media.id).includes(searchQuery);
+
+    // Entity filter (requires looking up prompt version -> entity relation if we had it easily)
+    // Currently media assets don't have direct entity link in the frontend DTO except via source_prompt_version_id
+    // But we don't have the full prompt version map here efficiently.
+    // Wait, the task implies "Show me Windman images".
+    // I can assume if I have 'source_prompt_version_id', I might need to fetch prompt versions or check if the media DTO was enhanced.
+    // The current `listMedia` returns `MediaAsset` which has `source_prompt_version_id`.
+    // It doesn't have the entity ID directly.
+    // However, `MediaPage.tsx` implemented a filter. Let's see how `MediaPage` did it.
+    // It seems MediaPage also lacked direct entity link unless it fetched prompts.
+    // Task 16 added `Recent prompts selector` but maybe not full traceability in the list.
+
+    // For now, I will implement the filter logic if possible.
+    // If not, I'll assume I need to fetch more data or skip it.
+    // But the task is explicit.
+    // Ideally, `listMedia` should return entity info.
+    // Current `listMedia` calls `r.media.ListAssets`.
+    // Let's assume for this task, I'll rely on what I have.
+    // Use `searchQuery` for now as primary filter.
+    // If I really need entity filter, I'd need to join tables in backend `ListMedia`.
+    // BUT, the task says "Filter: By Entity".
+    // I'll leave the UI for it, but if data is missing, it might not work fully without backend change.
+    // Wait, let's look at `MediaPage` implementation in my memory or file list.
+    // I'll just check `MediaPage.tsx` later if needed.
+    // For now, I'll check if any media has entity info in name/metadata? No.
+
+    // Actually, I can filter by "Entity" if I know which prompt version belongs to which entity.
+    // I can fetch `listPromptVersions` which returns all versions with entity_id.
+    // Then map media -> prompt_version -> entity.
+    return matchesSearch;
   });
 
-  // Get IDs of media already in story
-  const storyMediaIds = new Set(
-    storyWithItems?.items.map((item) => item.media_asset_id) || []
-  );
+  // Advanced filtering with Entity map
+  // To make entity filter work, we need a map of promptVersionId -> entityId
+  const [promptVersionEntityMap, setPromptVersionEntityMap] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    const loadPromptVersionMap = async () => {
+      try {
+        const versions = await listPromptVersions();
+        const map: Record<number, number> = {};
+        versions.forEach((v: any) => {
+          map[v.id] = v.entity_id;
+        });
+        setPromptVersionEntityMap(map);
+      } catch (error) {
+        console.error("Failed to load prompt versions for filter", error);
+        // Silent fail - entity filter just won't work
+      }
+    };
+    loadPromptVersionMap();
+  }, []);
+
+  const finalFilteredMedia = filteredMedia.filter(media => {
+      if (selectedEntityId === 'all') return true;
+      if (!media.source_prompt_version_id) return false;
+      const entityId = promptVersionEntityMap[media.source_prompt_version_id];
+      return String(entityId) === selectedEntityId;
+  });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Story Builder</h1>
+          <h1 className="text-3xl font-bold">Story Editor</h1>
           <p className="text-muted-foreground">
-            Create and edit comic stories by arranging media frames
+            Create and edit comic stories
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -405,11 +526,19 @@ export function StoryBuilderPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Button
+            variant="outline"
+            onClick={() => setIsPreviewOpen(true)}
+            disabled={!storyWithItems || storyWithItems.items.length === 0}
+          >
+            📱 Preview
+          </Button>
         </div>
       </div>
 
       {!selectedStoryId ? (
-        <Card className="p-12 text-center">
+        <Card className="flex-1 flex items-center justify-center p-12 text-center">
           <div className="text-muted-foreground">
             <p className="text-lg mb-2">No story selected</p>
             <p className="text-sm">
@@ -418,33 +547,48 @@ export function StoryBuilderPage() {
           </div>
         </Card>
       ) : isLoading ? (
-        <Card className="p-12 text-center">
+        <Card className="flex-1 flex items-center justify-center p-12 text-center">
           <div className="text-muted-foreground">Loading...</div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Available Media Panel */}
-          <Card className="p-4">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold mb-2">Available Media</h2>
-              <Input
-                placeholder="Search media..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+          {/* Left Column: Media Library */}
+          <Card className="flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b space-y-4">
+              <h2 className="text-lg font-semibold">Media Library</h2>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                    <Input
+                        placeholder="Search media..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                <Select value={selectedEntityId} onValueChange={setSelectedEntityId}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by Entity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Entities</SelectItem>
+                        {entities.map(e => (
+                            <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+              </div>
             </div>
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="grid grid-cols-3 gap-2">
-                {filteredMedia.map((media) => (
+            <ScrollArea className="flex-1 p-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {finalFilteredMedia.map((media) => (
                   <MediaGridItem
                     key={media.id}
                     media={media}
                     onAdd={handleAddToStory}
-                    isDisabled={storyMediaIds.has(media.id)}
+                    isAdding={addingMediaIds.has(media.id)}
                   />
                 ))}
               </div>
-              {filteredMedia.length === 0 && (
+              {finalFilteredMedia.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
                   No media found
                 </div>
@@ -452,9 +596,9 @@ export function StoryBuilderPage() {
             </ScrollArea>
           </Card>
 
-          {/* Story Timeline Panel */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-4">
+          {/* Right Column: Timeline */}
+          <Card className="flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
               <h2 className="text-lg font-semibold">
                 Story Timeline
                 {storyWithItems && (
@@ -470,7 +614,7 @@ export function StoryBuilderPage() {
                 {isSaving ? 'Saving...' : 'Save Order'}
               </Button>
             </div>
-            <ScrollArea className="h-[500px] pr-4">
+            <ScrollArea className="flex-1 p-4 bg-muted/20">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -480,13 +624,16 @@ export function StoryBuilderPage() {
                   items={storyWithItems?.items.map((item) => item.id) || []}
                   strategy={verticalListSortingStrategy}
                 >
-                  {storyWithItems?.items.map((item) => (
-                    <SortableTimelineItem
-                      key={item.id}
-                      item={item}
-                      onRemove={handleRemoveFromStory}
-                    />
-                  ))}
+                  <div className="space-y-2">
+                    {storyWithItems?.items.map((item) => (
+                        <SortableTimelineItem
+                        key={item.id}
+                        item={item}
+                        onRemove={handleRemoveFromStory}
+                        isRemoving={removingItemIds.has(item.id)}
+                        />
+                    ))}
+                  </div>
                 </SortableContext>
               </DndContext>
               {(!storyWithItems?.items || storyWithItems.items.length === 0) && (
@@ -498,6 +645,46 @@ export function StoryBuilderPage() {
           </Card>
         </div>
       )}
+
+      {/* Preview Modal */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+           <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
+              <h3 className="font-semibold">Mobile Preview</h3>
+              <Button variant="ghost" size="sm" onClick={() => setIsPreviewOpen(false)}>✕</Button>
+           </div>
+           <ScrollArea className="flex-1 bg-black">
+              <div className="flex flex-col">
+                  {storyWithItems?.items.map((item) => {
+                      const url = item.media?.url || '';
+                      if (!url) return null;
+
+                      return (
+                          <div key={item.id} className="w-full">
+                              {item.media?.type === 'video' || (item.media?.youtube_id) ? (
+                                  <div className="aspect-video w-full">
+                                      <iframe
+                                          src={item.media?.url}
+                                          className="w-full h-full"
+                                          title="Video"
+                                          allowFullScreen
+                                      />
+                                  </div>
+                              ) : (
+                                  <img
+                                      src={url}
+                                      alt="Comic Panel"
+                                      className="w-full h-auto block"
+                                      loading="lazy"
+                                  />
+                              )}
+                          </div>
+                      );
+                  })}
+              </div>
+           </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
