@@ -1,0 +1,58 @@
+# Crime Kickers Hub - Docker Compose with Traefik
+# ================================================
+
+services:
+  crimekickershub:
+    image: ghcr.io/iv/crimekickershub:latest
+    container_name: crimekickershub
+    restart: unless-stopped
+    # Disable default network - we'll use traefik_network
+    networks:
+      - traefik_network
+    ports:
+      # Expose on a local port if not using Traefik routing
+      - "8080:8080"
+    volumes:
+      # Mount environment file
+      - ./.env:/app/.env:ro
+      # Mount data directory for SQLite persistence
+      - crimekickers_data:/data
+    environment:
+      # These can also be set in .env file
+      - DB_PATH=/data/crime-kickers.db
+      - SERVER_ADDR=:8080
+      - FRONTEND_PATH=/frontend/dist
+    labels:
+      # Traefik configuration
+      - "traefik.enable=true"
+      # HTTP router
+      - "traefik.http.routers.crimekickershub-http.rule=Host(`crimekickershub.example.com`)"
+      - "traefik.http.routers.crimekickershub-http.entrypoints=web"
+      - "traefik.http.routers.crimekickershub-http.service=crimekickershub-service"
+      # HTTPS router (redirects HTTP to HTTPS)
+      - "traefik.http.routers.crimekickershub-https.rule=Host(`crimekickershub.example.com`)"
+      - "traefik.http.routers.crimekickershub-https.entrypoints=websecure"
+      - "traefik.http.routers.crimekickershub-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.crimekickershub-https.service=crimekickershub-service"
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.crimekickershub-http.middlewares=redirect-to-https@file"
+      # Service configuration
+      - "traefik.http.services.crimekickershub-service.loadbalancer.server.port=8080"
+      - "traefik.http.services.crimekickershub-service.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.crimekickershub-service.loadbalancer.healthcheck.interval=30s"
+      # Add security headers middleware (define in Traefik dynamic config)
+      - "traefik.http.routers.crimekickershub-https.middlewares=security-headers@file"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  traefik_network:
+    external: true
+
+volumes:
+  crimekickers_data:
+    driver: local
