@@ -74,20 +74,56 @@ export async function listMedia() {
 }
 
 export async function uploadMedia(file: File, promptVersionId?: string) {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (promptVersionId) {
-    formData.append('prompt_version_id', promptVersionId);
-  }
-  
-  const response = await fetch(`${API_BASE}/admin/upload`, {
+  // Step 1: Get presigned URL from backend
+  const presignedResponse = await fetch(`${API_BASE}/admin/upload/presigned`, {
     method: 'POST',
-    body: formData,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type,
+    }),
   });
-  if (!response.ok) {
-    throw new Error(`Upload Error: ${response.status} ${response.statusText}`);
+
+  if (!presignedResponse.ok) {
+    throw new Error(`Failed to get upload URL: ${presignedResponse.status}`);
   }
-  return response.json();
+
+  const { uploadURL, key, publicURL } = await presignedResponse.json();
+
+  // Step 2: Upload directly to R2 using presigned URL
+  const uploadResponse = await fetch(uploadURL, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type,
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Upload to R2 failed: ${uploadResponse.status}`);
+  }
+
+  // Step 3: Register the asset in database
+  const registerResponse = await fetch(`${API_BASE}/admin/assets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      type: 'image',
+      r2Key: key,
+      url: publicURL,
+      promptVersionId: promptVersionId ? parseInt(promptVersionId) : undefined,
+    }),
+  });
+
+  if (!registerResponse.ok) {
+    throw new Error(`Failed to register asset: ${registerResponse.status}`);
+  }
+
+  return registerResponse.json();
 }
 
 // Prompt Version APIs (for dropdown)
