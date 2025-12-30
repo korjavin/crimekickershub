@@ -1,22 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getStoryBySlug } from '../../lib/api';
-import { ComicReader } from '../../components/ComicReader';
+import { toast } from 'sonner';
+import { getStoryBySlug } from '@/lib/api';
+import { ComicReader } from '@/components/ComicReader';
 import { ChevronLeft } from 'lucide-react';
+import type { PublicStory } from '@/lib/api-types';
 
-interface Story {
-  title: string;
-  items: Array<{
-    type: 'image' | 'video';
-    url?: string;
-    youtube_id?: string;
-    aspect_ratio?: string;
-  }>;
-}
-
-export const ComicReaderPage: React.FC = () => {
+export const ComicReaderPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [story, setStory] = useState<Story | null>(null);
+  const [story, setStory] = useState<PublicStory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +22,7 @@ export const ComicReaderPage: React.FC = () => {
         })
         .catch((err) => {
           console.error(err);
+          toast.error('Failed to load story. Please try again.');
           setError('Failed to load story');
           setLoading(false);
         });
@@ -67,13 +60,6 @@ export const ComicReaderPage: React.FC = () => {
 
       {/* Comic Reader */}
       <ComicReader items={story.items} />
-
-      {/* Footer / Navigation */}
-      <div className="max-w-[600px] mx-auto p-8 flex justify-center bg-black">
-        <button className="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors w-full max-w-xs">
-          Next Episode
-        </button>
-      </div>
     </div>
   );
 };

@@ -1,17 +1,10 @@
-import React from 'react';
-
-interface StoryItem {
-  type: 'image' | 'video';
-  url?: string;
-  youtube_id?: string;
-  aspect_ratio?: string;
-}
+import type { PublicStoryItem } from '@/lib/api-types';
 
 interface ComicReaderProps {
-  items: StoryItem[];
+  items: PublicStoryItem[];
 }
 
-export const ComicReader: React.FC<ComicReaderProps> = ({ items }) => {
+export const ComicReader = ({ items }: ComicReaderProps) => {
   return (
     <div className="w-full max-w-[600px] mx-auto bg-black min-h-screen">
       {items.map((item, index) => (

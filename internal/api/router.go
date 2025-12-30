@@ -184,7 +184,7 @@ func (r *Router) handleListEntities(w http.ResponseWriter, req *http.Request) {
 
 // handleListStories returns all published stories
 func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
-	stories, err := r.repo.ListAllStories(req.Context())
+	stories, err := r.repo.ListPublishedStories(req.Context())
 	if err != nil {
 		http.Error(w, "Failed to list stories: "+err.Error(), http.StatusInternalServerError)
 		return

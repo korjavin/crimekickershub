@@ -45,6 +45,19 @@ export interface StoryWithItems extends Story {
   items: StoryItem[];
 }
 
+// Public comic reader types (simplified from backend PublicStoryResponse)
+export interface PublicStoryItem {
+  type: 'image' | 'video';
+  url?: string;
+  youtube_id?: string;
+  aspect_ratio?: string;
+}
+
+export interface PublicStory {
+  title: string;
+  items: PublicStoryItem[];
+}
+
 export interface ComicCard {
   id: number;
   title: string;

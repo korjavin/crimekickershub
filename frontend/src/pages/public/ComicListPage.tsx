@@ -1,15 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getStories } from '../../lib/api';
+import { toast } from 'sonner';
+import { getStories } from '@/lib/api';
+import type { Story } from '@/lib/api-types';
 
-interface Story {
-  id: number;
-  title: string;
-  slug: string;
-  cover_image_url?: string;
-}
-
-export const ComicListPage: React.FC = () => {
+export const ComicListPage = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,6 +16,7 @@ export const ComicListPage: React.FC = () => {
       })
       .catch((err) => {
         console.error(err);
+        toast.error('Failed to load comics. Please try again.');
         setLoading(false);
       });
   }, []);
