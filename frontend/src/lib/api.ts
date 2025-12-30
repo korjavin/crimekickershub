@@ -145,7 +145,7 @@ export async function getStory(id: string) {
   return fetchApi<any>(`/admin/stories/${id}`);
 }
 
-export async function updateStory(id: string, itemIds: string[]) {
+export async function updateStory(id: string, itemIds: number[]) {
   const response = await fetch(`${API_BASE}/admin/stories/${id}/items`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

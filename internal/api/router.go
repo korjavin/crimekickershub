@@ -869,7 +869,33 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondJSON(w, updatedStory)
+	// Format response with proper boolean handling
+	type StoryUpdateResponse struct {
+		ID            int64   `json:"id"`
+		Title         string  `json:"title"`
+		Slug          string  `json:"slug"`
+		CoverImageURL *string `json:"cover_image_url"`
+		Published     bool    `json:"published"`
+		CreatedAt     *string `json:"created_at"`
+	}
+
+	response := StoryUpdateResponse{
+		ID:        updatedStory.ID,
+		Title:     updatedStory.Title,
+		Slug:      updatedStory.Slug,
+		Published: updatedStory.Published.Bool,
+	}
+
+	if updatedStory.CoverImageUrl.Valid {
+		response.CoverImageURL = &updatedStory.CoverImageUrl.String
+	}
+
+	if updatedStory.CreatedAt.Valid {
+		createdAt := updatedStory.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		response.CreatedAt = &createdAt
+	}
+
+	respondJSON(w, response)
 }
 
 // handleDeleteStory deletes a story (only if it has no items)

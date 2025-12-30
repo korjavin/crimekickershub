@@ -386,7 +386,7 @@ export function StoryEditorPage() {
 
     try {
       setIsSaving(true);
-      const itemIds = storyWithItems.items.map((item) => String(item.id));
+      const itemIds = storyWithItems.items.map((item) => item.id);
       await updateStory(String(storyWithItems.id), itemIds);
       // Reload to ensure sync
       await loadStory(String(storyWithItems.id));
