@@ -110,10 +110,32 @@ export async function getStory(id: string) {
 }
 
 export async function updateStory(id: string, itemIds: string[]) {
-  const response = await fetch(`${API_BASE}/admin/stories/${id}`, {
+  const response = await fetch(`${API_BASE}/admin/stories/${id}/items`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ itemIds }),
+    body: JSON.stringify({ item_ids: itemIds }),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function addStoryItem(storyId: string, mediaAssetId: string, sortOrder: number) {
+  const response = await fetch(`${API_BASE}/admin/stories/${storyId}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ media_asset_id: parseInt(mediaAssetId), sort_order: sortOrder }),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteStoryItem(storyId: string, itemId: string) {
+  const response = await fetch(`${API_BASE}/admin/stories/${storyId}/items/${itemId}`, {
+    method: 'DELETE',
   });
   if (!response.ok) {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
