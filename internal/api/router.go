@@ -500,22 +500,29 @@ func (r *Router) handleListRecentPromptVersions(w http.ResponseWriter, req *http
 
 // handleUploadMedia handles file upload to R2
 func (r *Router) handleUploadMedia(w http.ResponseWriter, req *http.Request) {
+	log.Printf("Upload request started from %s", req.RemoteAddr)
+
 	// Parse multipart form
 	if err := req.ParseMultipartForm(10 << 20); err != nil { // 10MB limit
+		log.Printf("ERROR: Failed to parse multipart form: %v", err)
 		http.Error(w, "Failed to parse form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	file, header, err := req.FormFile("file")
 	if err != nil {
+		log.Printf("ERROR: Failed to get file from form: %v", err)
 		http.Error(w, "File is required", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
+	log.Printf("Uploading file: %s (size: %d bytes)", header.Filename, header.Size)
+
 	// Read file content for the media service
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
+		log.Printf("ERROR: Failed to read file content: %v", err)
 		http.Error(w, "Failed to read file: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -529,11 +536,14 @@ func (r *Router) handleUploadMedia(w http.ResponseWriter, req *http.Request) {
 
 	asset, err := r.media.RegisterAsset(req.Context(), input)
 	if err != nil {
+		log.Printf("ERROR: Failed to register asset: %v", err)
 		http.Error(w, "Failed to register asset: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	respondJSON(w, r.toMediaAssetDTO(*asset))
+	dto := r.toMediaAssetDTO(*asset)
+	log.Printf("Upload successful: ID=%d, URL=%v, Type=%s", dto.ID, dto.URL, dto.Type)
+	respondJSON(w, dto)
 }
 
 // handleRegisterAsset registers a media asset in the database
