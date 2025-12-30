@@ -271,6 +271,15 @@ export function StoryEditorPage() {
   const handleAddToStory = async (media: MediaAsset) => {
     if (!storyWithItems) return;
 
+    // Check if media is already in the story
+    const isDuplicate = storyWithItems.items.some(
+      (item) => item.media_asset_id === media.id
+    );
+    if (isDuplicate) {
+      toast.warning('This media is already in the story');
+      return;
+    }
+
     try {
       setAddingMediaIds(prev => new Set(prev).add(media.id));
       const nextSortOrder = storyWithItems.items.length;
