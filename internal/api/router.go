@@ -225,9 +225,26 @@ func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
 			Slug:      s.Slug,
 			Published: s.Published.Bool,
 		}
+
+		// Use explicit cover image if set, otherwise use first slide
 		if s.CoverImageUrl.Valid {
 			dto.CoverImageURL = &s.CoverImageUrl.String
+		} else {
+			// Get first slide's media as cover
+			items, err := r.repo.GetStoryItems(req.Context(), s.ID)
+			if err == nil && len(items) > 0 {
+				media, err := r.repo.GetMediaAsset(req.Context(), items[0].MediaAssetID)
+				if err == nil {
+					mediaDTO := r.toMediaAssetDTO(media)
+					if mediaDTO.ThumbnailURL != nil {
+						dto.CoverImageURL = mediaDTO.ThumbnailURL
+					} else if mediaDTO.URL != nil {
+						dto.CoverImageURL = mediaDTO.URL
+					}
+				}
+			}
 		}
+
 		if s.CreatedAt.Valid {
 			dto.CreatedAt = s.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
 		}
@@ -735,7 +752,54 @@ func (r *Router) handleListStoriesAdmin(w http.ResponseWriter, req *http.Request
 	if stories == nil {
 		stories = []repository.Story{}
 	}
-	respondJSON(w, stories)
+
+	// Convert to DTOs with auto-cover support
+	type AdminStoryDTO struct {
+		ID            int64   `json:"id"`
+		Title         string  `json:"title"`
+		Slug          string  `json:"slug"`
+		CoverImageURL *string `json:"cover_image_url"`
+		Published     bool    `json:"published"`
+		CreatedAt     *string `json:"created_at"`
+	}
+
+	dtos := make([]AdminStoryDTO, len(stories))
+	for i, s := range stories {
+		dto := AdminStoryDTO{
+			ID:        s.ID,
+			Title:     s.Title,
+			Slug:      s.Slug,
+			Published: s.Published.Bool,
+		}
+
+		// Use explicit cover image if set, otherwise use first slide
+		if s.CoverImageUrl.Valid {
+			dto.CoverImageURL = &s.CoverImageUrl.String
+		} else {
+			// Get first slide's media as cover
+			items, err := r.repo.GetStoryItems(req.Context(), s.ID)
+			if err == nil && len(items) > 0 {
+				media, err := r.repo.GetMediaAsset(req.Context(), items[0].MediaAssetID)
+				if err == nil {
+					mediaDTO := r.toMediaAssetDTO(media)
+					if mediaDTO.ThumbnailURL != nil {
+						dto.CoverImageURL = mediaDTO.ThumbnailURL
+					} else if mediaDTO.URL != nil {
+						dto.CoverImageURL = mediaDTO.URL
+					}
+				}
+			}
+		}
+
+		if s.CreatedAt.Valid {
+			createdAt := s.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+			dto.CreatedAt = &createdAt
+		}
+
+		dtos[i] = dto
+	}
+
+	respondJSON(w, dtos)
 }
 
 // handleGetStory returns a story with its items
