@@ -12,7 +12,7 @@ services:
       - "traefik.http.routers.crimekickershub.rule=Host(`${HOSTNAME}`)"
       - "traefik.http.routers.crimekickershub.entrypoints=websecure"
       - "traefik.http.routers.crimekickershub.tls.certresolver=myresolver"
-      - "traefik.http.services.crimekickershub.loadbalancer.server.port=3000"
+      - "traefik.http.services.crimekickershub.loadbalancer.server.port=${PORT}"
     volumes:
       - ./data:/app/data
     restart: unless-stopped
