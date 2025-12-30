@@ -114,7 +114,11 @@ export function MediaPage() {
     setIsSavingMetadata(true);
 
     try {
-      await uploadMedia(selectedFile, selectedPromptVersionId || undefined);
+      // Treat "none" and empty string as undefined
+      const promptVersionId = selectedPromptVersionId && selectedPromptVersionId !== 'none'
+        ? selectedPromptVersionId
+        : undefined;
+      await uploadMedia(selectedFile, promptVersionId);
       
       setMetadataModalOpen(false);
       await loadData();
@@ -390,7 +394,7 @@ export function MediaPage() {
                   <SelectValue placeholder="Select a prompt version (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None / Manual upload</SelectItem>
+                  <SelectItem value="none">None / Manual upload</SelectItem>
                   {recentVersions.map((version) => (
                     <SelectItem key={version.id} value={version.id.toString()}>
                       <div className="flex items-center justify-between w-full">
