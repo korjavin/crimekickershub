@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"crimekickershub/internal/auth"
 	"crimekickershub/internal/repository"
@@ -117,6 +118,7 @@ func (r *Router) adminRoutes() {
 
 	// Upload (admin only)
 	r.mux.Handle("POST /api/admin/upload", r.auth.RequireAdmin(http.HandlerFunc(r.handleUploadMedia)))
+	r.mux.Handle("POST /api/admin/upload/presigned", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetPresignedUploadURL)))
 
 	// Media management (admin only)
 	r.mux.Handle("GET /api/admin/media", r.auth.RequireAdmin(http.HandlerFunc(r.handleListMedia)))
@@ -544,6 +546,45 @@ func (r *Router) handleUploadMedia(w http.ResponseWriter, req *http.Request) {
 	dto := r.toMediaAssetDTO(*asset)
 	log.Printf("Upload successful: ID=%d, URL=%v, Type=%s", dto.ID, dto.URL, dto.Type)
 	respondJSON(w, dto)
+}
+
+// handleGetPresignedUploadURL generates a presigned URL for direct browser upload to R2
+func (r *Router) handleGetPresignedUploadURL(w http.ResponseWriter, req *http.Request) {
+	var input struct {
+		Filename    string `json:"filename"`
+		ContentType string `json:"contentType"`
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if input.Filename == "" {
+		http.Error(w, "filename is required", http.StatusBadRequest)
+		return
+	}
+
+	if input.ContentType == "" {
+		input.ContentType = "application/octet-stream"
+	}
+
+	// Generate unique filename with timestamp
+	uniqueFilename := fmt.Sprintf("%d-%s", time.Now().Unix(), input.Filename)
+
+	// Get presigned URL (15 minute expiration)
+	presignedURL, err := r.r2.GetPresignedUploadURL(req.Context(), uniqueFilename, input.ContentType, 15)
+	if err != nil {
+		log.Printf("ERROR: Failed to generate presigned URL: %v", err)
+		http.Error(w, "Failed to generate upload URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]string{
+		"uploadURL": presignedURL,
+		"key":       uniqueFilename,
+		"publicURL": r.r2.GetPublicURL(uniqueFilename),
+	})
 }
 
 // handleRegisterAsset registers a media asset in the database

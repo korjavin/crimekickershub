@@ -150,6 +150,29 @@ func (c *R2Client) IsAvailable() bool {
 	return c.client != nil
 }
 
+// GetPresignedUploadURL generates a presigned URL for direct upload to R2
+func (c *R2Client) GetPresignedUploadURL(ctx context.Context, filename string, contentType string, expirationMinutes int) (string, error) {
+	if c.client == nil {
+		return "", fmt.Errorf("R2 storage is not available")
+	}
+
+	presignClient := s3.NewPresignClient(c.client)
+
+	request, err := presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(c.bucket),
+		Key:         aws.String(filename),
+		ContentType: aws.String(contentType),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = time.Duration(expirationMinutes) * time.Minute
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
+	}
+
+	return request.URL, nil
+}
+
 // mockUpload returns a mock URL for testing without credentials
 func (c *R2Client) mockUpload(filename string) string {
 	return fmt.Sprintf("https://mock.r2.dev/%s", filename)
