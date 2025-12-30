@@ -36,6 +36,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 import {
   listStoriesAdmin,
   getStory,
@@ -46,6 +47,7 @@ import {
   addStoryItem,
   deleteStoryItem,
   getEntities,
+  listPromptVersions,
 } from '@/lib/api';
 import type { Story, StoryItem, MediaAsset, StoryWithItems, Entity } from '@/lib/api-types';
 
@@ -205,6 +207,7 @@ export function StoryEditorPage() {
       setStories(data);
     } catch (error) {
       console.error('Failed to load stories:', error);
+      toast.error('Failed to load stories');
     }
   };
 
@@ -214,6 +217,7 @@ export function StoryEditorPage() {
       setAvailableMedia(data);
     } catch (error) {
       console.error('Failed to load media:', error);
+      toast.error('Failed to load media library');
     }
   };
 
@@ -223,6 +227,7 @@ export function StoryEditorPage() {
       setEntities(data);
     } catch (error) {
       console.error('Failed to load entities:', error);
+      toast.error('Failed to load entities');
     }
   };
 
@@ -233,6 +238,7 @@ export function StoryEditorPage() {
       setStoryWithItems(data);
     } catch (error) {
       console.error('Failed to load story:', error);
+      toast.error('Failed to load story details');
     } finally {
       setIsLoading(false);
     }
@@ -240,21 +246,23 @@ export function StoryEditorPage() {
 
   const handleCreateStory = async () => {
     if (!newStoryTitle.trim()) return;
-    
+
     try {
       setIsLoading(true);
       const newStory = await createStory({
         title: newStoryTitle,
         slug: newStorySlug || undefined,
       });
-      
+
       await loadStories();
       setSelectedStoryId(String(newStory.id));
       setIsCreateDialogOpen(false);
       setNewStoryTitle('');
       setNewStorySlug('');
+      toast.success('Story created successfully');
     } catch (error) {
       console.error('Failed to create story:', error);
+      toast.error('Failed to create story. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -262,7 +270,7 @@ export function StoryEditorPage() {
 
   const handleAddToStory = async (media: MediaAsset) => {
     if (!storyWithItems) return;
-    
+
     try {
       setAddingMediaIds(prev => new Set(prev).add(media.id));
       const nextSortOrder = storyWithItems.items.length;
@@ -281,8 +289,10 @@ export function StoryEditorPage() {
         ...storyWithItems,
         items: [...storyWithItems.items, newItem],
       });
+      toast.success('Media added to story');
     } catch (error) {
       console.error('Failed to add item:', error);
+      toast.error('Failed to add media. Please try again.');
     } finally {
       setAddingMediaIds(prev => {
         const next = new Set(prev);
@@ -305,8 +315,7 @@ export function StoryEditorPage() {
         (i) => i.id !== item.id
       );
 
-      // Recalculate sort orders locally (backend will be out of sync until reorder save,
-      // but deleting preserves relative order usually)
+      // Recalculate sort orders locally
       const reorderedItems = filteredItems.map((item, index) => ({
         ...item,
         sort_order: index,
@@ -317,17 +326,10 @@ export function StoryEditorPage() {
         items: reorderedItems,
       });
 
-      // Optionally save the new order immediately to keep backend clean
-      // But maybe let user do it explicitly?
-      // Actually, if we delete from DB, the gaps in sort_order remain until we update.
-      // It's better to update the sort order after delete to fill gaps.
-      await updateStory(
-        String(storyWithItems.id),
-        reorderedItems.map(i => String(i.id))
-      );
-
+      toast.success('Item removed from story');
     } catch (error) {
       console.error('Failed to remove item:', error);
+      toast.error('Failed to remove item. Please try again.');
     } finally {
       setRemovingItemIds(prev => {
         const next = new Set(prev);
@@ -374,8 +376,10 @@ export function StoryEditorPage() {
       await updateStory(String(storyWithItems.id), itemIds);
       // Reload to ensure sync
       await loadStory(String(storyWithItems.id));
+      toast.success('Story order saved successfully');
     } catch (error) {
       console.error('Failed to save order:', error);
+      toast.error('Failed to save order. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -424,20 +428,20 @@ export function StoryEditorPage() {
   const [promptVersionEntityMap, setPromptVersionEntityMap] = useState<Record<number, number>>({});
 
   useEffect(() => {
-    // Fetch all prompt versions to build the map
-    // We import listPromptVersions from api
-    import('@/lib/api').then(async (api) => {
-        try {
-            const versions = await api.listPromptVersions();
-            const map: Record<number, number> = {};
-            versions.forEach((v: any) => {
-                map[v.id] = v.entity_id;
-            });
-            setPromptVersionEntityMap(map);
-        } catch (e) {
-            console.error("Failed to load prompt versions for filter", e);
-        }
-    });
+    const loadPromptVersionMap = async () => {
+      try {
+        const versions = await listPromptVersions();
+        const map: Record<number, number> = {};
+        versions.forEach((v: any) => {
+          map[v.id] = v.entity_id;
+        });
+        setPromptVersionEntityMap(map);
+      } catch (error) {
+        console.error("Failed to load prompt versions for filter", error);
+        // Silent fail - entity filter just won't work
+      }
+    };
+    loadPromptVersionMap();
   }, []);
 
   const finalFilteredMedia = filteredMedia.filter(media => {
@@ -565,7 +569,7 @@ export function StoryEditorPage() {
               </div>
             </div>
             <ScrollArea className="flex-1 p-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {finalFilteredMedia.map((media) => (
                   <MediaGridItem
                     key={media.id}

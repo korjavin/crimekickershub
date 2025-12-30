@@ -14,11 +14,13 @@ import { EntitiesPage } from './pages/admin/EntitiesPage';
 import { PromptTypesPage } from './pages/admin/PromptTypesPage';
 import { PromptMatrixPage } from './pages/admin/PromptMatrixPage';
 import { StoryEditorPage } from './pages/admin/StoryEditorPage';
+import { Toaster } from './components/ui/toast';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster />
         <Routes>
           {/* Public Routes */}
           <Route element={<PublicLayout />}>
