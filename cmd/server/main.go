@@ -111,7 +111,12 @@ func main() {
 	// Configure server
 	addr := os.Getenv("SERVER_ADDR")
 	if addr == "" {
-		addr = ":8080"
+		port := os.Getenv("PORT")
+		if port != "" {
+			addr = ":" + port
+		} else {
+			addr = ":8080"
+		}
 	}
 
 	srv := &http.Server{
