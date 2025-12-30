@@ -58,27 +58,27 @@ Add these environment variables in your Portainer stack:
 HOSTNAME=crimekickers.example.com
 NETWORK_NAME=traefik_network
 
-# Google OAuth
+# Google OAuth (whitelist admin emails who can access the Creative Studio)
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
 GOOGLE_REDIRECT_URL=https://crimekickers.example.com/auth/callback
-ALLOWED_EMAILS=admin@example.com,editor@example.com
+ADMIN_EMAILS=admin@example.com,editor@example.com
+COOKIE_SECRET=generate-a-secure-random-string-here
 
 # Cloudflare R2 Storage
 R2_ACCOUNT_ID=your-account-id
 R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
 R2_BUCKET_NAME=crimekickers-media
-R2_PUBLIC_URL=https://your-bucket.r2.dev
+R2_PUBLIC_DOMAIN=https://your-bucket.r2.dev
 
-# Application
-APP_ENV=production
-SESSION_SECRET=generate-a-secure-random-string-here
-DATABASE_PATH=/app/data/crimekickers.db
-PORT=3000
+# Application (optional - defaults shown)
+DB_PATH=/app/data/crimekickers.db
+SERVER_ADDR=:8080
+FRONTEND_PATH=frontend/dist
 ```
 
-#### Generating a Session Secret
+#### Generating a Cookie Secret
 
 ```bash
 openssl rand -base64 32
