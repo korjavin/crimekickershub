@@ -55,8 +55,8 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 # Copy SQL migration files if they exist
 COPY sql/ ./sql/
 
-# Expose port 3000
-EXPOSE 3000
+# Expose port 8080
+EXPOSE 8080
 
 # Run the server
 CMD ["./server"]
