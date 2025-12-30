@@ -34,11 +34,11 @@ func NewMediaService(db *sql.DB, r2 *storage.R2Client) *MediaService {
 
 // RegisterAssetInput represents input for registering a media asset
 type RegisterAssetInput struct {
-	Type            string // "image" or "video"
+	Type            string `json:"type"` // "image" or "video"
 	File            io.Reader
 	Filename        string
-	YouTubeURL      string
-	PromptVersionID *int64
+	YouTubeURL      string `json:"youtube_url"`
+	PromptVersionID *int64 `json:"prompt_version_id"`
 }
 
 // RegisterAsset registers a new media asset in the database
