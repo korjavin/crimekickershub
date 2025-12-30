@@ -83,17 +83,19 @@ func main() {
 	}
 
 	// Initialize Google OAuth2
+	adminEmailsRaw := os.Getenv("ADMIN_EMAILS")
+	adminEmails := parseCSV(adminEmailsRaw)
 	authConfig := auth.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		RedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
-		AdminEmails:  parseCSV(os.Getenv("ADMIN_EMAILS")),
+		AdminEmails:  adminEmails,
 		CookieName:   "session",
 		CookieSecret: []byte(os.Getenv("COOKIE_SECRET")),
 	}
 
 	googleAuth := auth.NewGoogleOAuth2(authConfig)
-	log.Printf("Google OAuth2 initialized with %d admin emails", len(googleAuth.AdminWhitelist()))
+	log.Printf("Google OAuth2 initialized with %d admin emails: %v (raw: %q)", len(googleAuth.AdminWhitelist()), googleAuth.AdminWhitelist(), adminEmailsRaw)
 
 	// Determine frontend path from environment or use default
 	frontendPath := os.Getenv("FRONTEND_PATH")

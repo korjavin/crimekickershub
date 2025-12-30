@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/gob"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
@@ -54,7 +55,10 @@ func NewGoogleOAuth2(cfg Config) *GoogleOAuth2 {
 	// Parse admin emails into a map
 	adminMap := make(map[string]bool)
 	for _, email := range cfg.AdminEmails {
-		adminMap[strings.TrimSpace(email)] = true
+		trimmed := strings.TrimSpace(email)
+		if trimmed != "" {
+			adminMap[trimmed] = true
+		}
 	}
 
 	oauth2Config := &oauth2.Config{
@@ -116,12 +120,26 @@ func (g *GoogleOAuth2) GetUserInfo(ctx context.Context, token *oauth2.Token) (*U
 	}
 	defer resp.Body.Close()
 
-	// Parse the response (simplified - in production use google.UserInfo)
-	var info UserInfo
-	info.Email = extractEmailFromToken(token)
-	info.IsAdmin = g.IsAdmin(info.Email)
+	// Parse the JSON response from Google
+	var googleUser struct {
+		Email   string `json:"email"`
+		Name    string `json:"name"`
+		Picture string `json:"picture"`
+	}
 
-	return &info, nil
+	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
+		return nil, err
+	}
+
+	// Check if user is admin
+	isAdmin := g.IsAdmin(googleUser.Email)
+
+	return &UserInfo{
+		Email:   googleUser.Email,
+		Name:    googleUser.Name,
+		Picture: googleUser.Picture,
+		IsAdmin: isAdmin,
+	}, nil
 }
 
 // extractEmailFromToken extracts email from ID token or returns empty
