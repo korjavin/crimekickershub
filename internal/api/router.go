@@ -59,8 +59,14 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Apply CORS middleware to all requests
 	handler := corsMiddleware(r.mux)
 
-	// Route API requests to apiMux
+	// Route API requests to mux
 	if strings.HasPrefix(req.URL.Path, "/api") {
+		handler.ServeHTTP(w, req)
+		return
+	}
+
+	// Route auth callback paths (used by OAuth, not prefixed with /api)
+	if strings.HasPrefix(req.URL.Path, "/auth/") {
 		handler.ServeHTTP(w, req)
 		return
 	}
@@ -84,8 +90,12 @@ func (r *Router) publicRoutes() {
 	r.mux.HandleFunc("GET /api/auth/me", r.handleAuthMe)
 	r.mux.HandleFunc("POST /api/auth/logout", r.handleAuthLogout)
 	r.mux.HandleFunc("POST /api/auth/dev-login", r.handleDevLogin)
+
+	// OAuth endpoints (both with and without /api prefix for compatibility)
 	r.mux.HandleFunc("GET /api/auth/google/login", r.handleGoogleLogin)
 	r.mux.HandleFunc("GET /api/auth/google/callback", r.handleGoogleCallback)
+	r.mux.HandleFunc("GET /auth/google/login", r.handleGoogleLogin)
+	r.mux.HandleFunc("GET /auth/google/callback", r.handleGoogleCallback)
 
 	// Health check
 	r.mux.HandleFunc("GET /api/health", r.handleHealth)
