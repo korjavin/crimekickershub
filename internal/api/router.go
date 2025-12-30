@@ -588,19 +588,53 @@ func (r *Router) handleGetPresignedUploadURL(w http.ResponseWriter, req *http.Re
 }
 
 // handleRegisterAsset registers a media asset in the database
+// This endpoint handles assets that were already uploaded directly to R2
 func (r *Router) handleRegisterAsset(w http.ResponseWriter, req *http.Request) {
-	var input media.RegisterAssetInput
+	var input struct {
+		Type            string `json:"type"`
+		R2Key           string `json:"r2Key"`
+		URL             string `json:"url"`
+		PromptVersionID *int64 `json:"promptVersionId"`
+	}
+
 	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
 		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	asset, err := r.media.RegisterAsset(req.Context(), input)
-	if err != nil {
-		http.Error(w, "Failed to register asset: "+err.Error(), http.StatusInternalServerError)
+	// Validate input
+	if input.Type != "image" && input.Type != "video" {
+		http.Error(w, "type must be 'image' or 'video'", http.StatusBadRequest)
 		return
 	}
-	respondJSON(w, asset)
+
+	if input.Type == "image" && input.R2Key == "" {
+		http.Error(w, "r2Key is required for images", http.StatusBadRequest)
+		return
+	}
+
+	// Create media asset directly in database (file already uploaded to R2)
+	asset, err := r.repo.CreateMediaAsset(req.Context(), repository.CreateMediaAssetParams{
+		Type:                  input.Type,
+		R2Key:                 sql.NullString{String: input.R2Key, Valid: input.R2Key != ""},
+		YoutubeID:             sql.NullString{}, // Not used for direct uploads
+		SourcePromptVersionID: nullInt64Ptr(input.PromptVersionID),
+	})
+	if err != nil {
+		http.Error(w, "Failed to create media asset: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	dto := r.toMediaAssetDTO(asset)
+	respondJSON(w, dto)
+}
+
+// nullInt64Ptr converts *int64 to sql.NullInt64
+func nullInt64Ptr(v *int64) sql.NullInt64 {
+	if v == nil {
+		return sql.NullInt64{Valid: false}
+	}
+	return sql.NullInt64{Int64: *v, Valid: true}
 }
 
 // handleCreateStory creates a new story
