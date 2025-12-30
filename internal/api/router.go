@@ -503,7 +503,7 @@ func (r *Router) handleUploadMedia(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Upload request started from %s", req.RemoteAddr)
 
 	// Parse multipart form
-	if err := req.ParseMultipartForm(10 << 20); err != nil { // 10MB limit
+	if err := req.ParseMultipartForm(50 << 20); err != nil { // 50MB limit
 		log.Printf("ERROR: Failed to parse multipart form: %v", err)
 		http.Error(w, "Failed to parse form: "+err.Error(), http.StatusBadRequest)
 		return

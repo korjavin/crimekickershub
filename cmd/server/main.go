@@ -124,8 +124,8 @@ func main() {
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      handler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  120 * time.Second, // Increased for file uploads
+		WriteTimeout: 120 * time.Second, // Increased for file uploads
 		IdleTimeout:  60 * time.Second,
 	}
 
