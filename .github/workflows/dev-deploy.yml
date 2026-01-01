@@ -1,0 +1,91 @@
+name: Build and Deploy Dev
+
+on:
+  push:
+    branches-ignore:
+      - master
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value={{branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update deploy-dev branch with docker-compose.dev.yml
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Checkout or create deploy-dev branch
+          git fetch origin deploy-dev:deploy-dev 2>/dev/null || git checkout -b deploy-dev
+          git checkout deploy-dev
+
+          # Reset deploy-dev to match current branch (except for docker-compose.dev.yml)
+          git reset --hard origin/${{ github.ref_name }}
+
+          # Create docker-compose.dev.yml using printf to avoid YAML parsing issues
+          printf '%s\n' 'version: "3.8"' '' 'services:' '  crimekickershub:' '    image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.ref_name }}' '    container_name: crimekickershub-dev' '    networks:' '      - traefik_network' '    labels:' '      - "traefik.enable=true"' '      - "traefik.http.routers.crimekickershub-dev.rule=Host(`dev.${HOSTNAME}`)"' '      - "traefik.http.routers.crimekickershub-dev.entrypoints=websecure"' '      - "traefik.http.routers.crimekickershub-dev.tls.certresolver=myresolver"' '      - "traefik.http.services.crimekickershub-dev.loadbalancer.server.port=8081"' '    volumes:' '      - ./data:/app/data' '    restart: unless-stopped' '    environment:' '      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}' '      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}' '      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}' '      - ADMIN_EMAILS=${ADMIN_EMAILS}' '      - COOKIE_SECRET=${COOKIE_SECRET}' '      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}' '      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}' '      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}' '      - R2_BUCKET_NAME=${R2_BUCKET_NAME}' '      - R2_PUBLIC_DOMAIN=${R2_PUBLIC_DOMAIN}' '      - DB_PATH=${DB_PATH:-/app/data/crimekickers.db}' '      - SERVER_ADDR=${SERVER_ADDR:-:8081}' '      - FRONTEND_PATH=${FRONTEND_PATH:-frontend/dist}' '' 'networks:' '  traefik_network:' '    name: ${NETWORK_NAME:-traefik_network}' '    external: true' > docker-compose.dev.yml
+
+          # Create .env.example.dev
+          printf '%s\n' '# Development Environment Variables' '# Copy this to .env and fill in your values for local development' '' '# Google OAuth Configuration' 'GOOGLE_CLIENT_ID=your-google-client-id' 'GOOGLE_CLIENT_SECRET=your-google-client-secret' 'GOOGLE_REDIRECT_URL=http://localhost:8081/auth/google/callback' 'ADMIN_EMAILS=your-email@example.com' 'COOKIE_SECRET=generate-a-secure-random-string' '' '# Cloudflare R2 Configuration' 'R2_ACCOUNT_ID=your-r2-account-id' 'R2_ACCESS_KEY_ID=your-r2-access-key' 'R2_SECRET_ACCESS_KEY=your-r2-secret-key' 'R2_BUCKET_NAME=your-bucket-name' 'R2_PUBLIC_DOMAIN=your-r2-public-domain' '' '# Application Configuration' 'DB_PATH=./data/crimekickers.db' 'SERVER_ADDR=:8081' 'FRONTEND_PATH=frontend/dist' '' '# Traefik Network' 'NETWORK_NAME=traefik_network' > .env.example.dev
+
+          # Commit and push changes
+          git add docker-compose.dev.yml .env.example.dev
+          git commit -m "Dev Deploy: Update dev stack for branch ${{ github.ref_name }}" 2>/dev/null || echo "No changes to commit"
+          git push origin deploy-dev --force
+
+      - name: Summary
+        run: |
+          echo "## Dev Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ghcr.io/${{ github.repository }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy Branch**: deploy-dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To deploy:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Set up a Portainer stack using docker-compose.dev.yml from the deploy-dev branch" >> $GITHUB_STEP_SUMMARY
+          echo "2. Or manually pull and run the image" >> $GITHUB_STEP_SUMMARY
+          echo "3. Configure environment variables using .env.example.dev as a template" >> $GITHUB_STEP_SUMMARY
+
+      - name: Trigger Portainer Webhook
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.PORTAINER_WEBHOOK_DEV }}" || echo "Webhook trigger failed (webhook may not be configured yet)"
