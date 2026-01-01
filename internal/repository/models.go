@@ -16,6 +16,7 @@ type Entity struct {
 	Description sql.NullString `json:"description"`
 	AvatarUrl   sql.NullString `json:"avatar_url"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
+	BasePrompt  sql.NullString `json:"base_prompt"`
 }
 
 type MediaAsset struct {

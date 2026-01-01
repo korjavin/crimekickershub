@@ -35,9 +35,9 @@ func (q *Queries) AddStoryItem(ctx context.Context, arg AddStoryItemParams) (Sto
 }
 
 const createEntity = `-- name: CreateEntity :one
-INSERT INTO entities (slug, name, type, description, avatar_url)
-VALUES (?, ?, ?, ?, ?)
-RETURNING id, slug, name, type, description, avatar_url, created_at
+INSERT INTO entities (slug, name, type, description, base_prompt, avatar_url)
+VALUES (?, ?, ?, ?, ?, ?)
+RETURNING id, slug, name, type, description, avatar_url, created_at, base_prompt
 `
 
 type CreateEntityParams struct {
@@ -45,6 +45,7 @@ type CreateEntityParams struct {
 	Name        string         `json:"name"`
 	Type        string         `json:"type"`
 	Description sql.NullString `json:"description"`
+	BasePrompt  sql.NullString `json:"base_prompt"`
 	AvatarUrl   sql.NullString `json:"avatar_url"`
 }
 
@@ -54,6 +55,7 @@ func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Ent
 		arg.Name,
 		arg.Type,
 		arg.Description,
+		arg.BasePrompt,
 		arg.AvatarUrl,
 	)
 	var i Entity
@@ -65,6 +67,7 @@ func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Ent
 		&i.Description,
 		&i.AvatarUrl,
 		&i.CreatedAt,
+		&i.BasePrompt,
 	)
 	return i, err
 }
@@ -229,7 +232,7 @@ func (q *Queries) DeleteStoryItem(ctx context.Context, id int64) error {
 }
 
 const getEntityByID = `-- name: GetEntityByID :one
-SELECT id, slug, name, type, description, avatar_url, created_at FROM entities WHERE id = ?
+SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities WHERE id = ?
 `
 
 func (q *Queries) GetEntityByID(ctx context.Context, id int64) (Entity, error) {
@@ -243,12 +246,13 @@ func (q *Queries) GetEntityByID(ctx context.Context, id int64) (Entity, error) {
 		&i.Description,
 		&i.AvatarUrl,
 		&i.CreatedAt,
+		&i.BasePrompt,
 	)
 	return i, err
 }
 
 const getEntityBySlug = `-- name: GetEntityBySlug :one
-SELECT id, slug, name, type, description, avatar_url, created_at FROM entities WHERE slug = ?
+SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities WHERE slug = ?
 `
 
 func (q *Queries) GetEntityBySlug(ctx context.Context, slug string) (Entity, error) {
@@ -262,6 +266,7 @@ func (q *Queries) GetEntityBySlug(ctx context.Context, slug string) (Entity, err
 		&i.Description,
 		&i.AvatarUrl,
 		&i.CreatedAt,
+		&i.BasePrompt,
 	)
 	return i, err
 }
@@ -667,7 +672,7 @@ func (q *Queries) ListAllStories(ctx context.Context) ([]Story, error) {
 }
 
 const listEntities = `-- name: ListEntities :many
-SELECT id, slug, name, type, description, avatar_url, created_at FROM entities ORDER BY name
+SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities ORDER BY name
 `
 
 func (q *Queries) ListEntities(ctx context.Context) ([]Entity, error) {
@@ -687,6 +692,7 @@ func (q *Queries) ListEntities(ctx context.Context) ([]Entity, error) {
 			&i.Description,
 			&i.AvatarUrl,
 			&i.CreatedAt,
+			&i.BasePrompt,
 		); err != nil {
 			return nil, err
 		}
@@ -702,7 +708,7 @@ func (q *Queries) ListEntities(ctx context.Context) ([]Entity, error) {
 }
 
 const listEntitiesByType = `-- name: ListEntitiesByType :many
-SELECT id, slug, name, type, description, avatar_url, created_at FROM entities WHERE LOWER(type) = LOWER(?) ORDER BY name
+SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities WHERE LOWER(type) = LOWER(?) ORDER BY name
 `
 
 func (q *Queries) ListEntitiesByType(ctx context.Context, lower string) ([]Entity, error) {
@@ -722,6 +728,7 @@ func (q *Queries) ListEntitiesByType(ctx context.Context, lower string) ([]Entit
 			&i.Description,
 			&i.AvatarUrl,
 			&i.CreatedAt,
+			&i.BasePrompt,
 		); err != nil {
 			return nil, err
 		}
@@ -1010,9 +1017,10 @@ SET slug = COALESCE(?, slug),
     name = COALESCE(?, name),
     type = COALESCE(?, type),
     description = COALESCE(?, description),
+    base_prompt = COALESCE(?, base_prompt),
     avatar_url = COALESCE(?, avatar_url)
 WHERE id = ?
-RETURNING id, slug, name, type, description, avatar_url, created_at
+RETURNING id, slug, name, type, description, avatar_url, created_at, base_prompt
 `
 
 type UpdateEntityParams struct {
@@ -1020,6 +1028,7 @@ type UpdateEntityParams struct {
 	Name        string         `json:"name"`
 	Type        string         `json:"type"`
 	Description sql.NullString `json:"description"`
+	BasePrompt  sql.NullString `json:"base_prompt"`
 	AvatarUrl   sql.NullString `json:"avatar_url"`
 	ID          int64          `json:"id"`
 }
@@ -1030,6 +1039,7 @@ func (q *Queries) UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Ent
 		arg.Name,
 		arg.Type,
 		arg.Description,
+		arg.BasePrompt,
 		arg.AvatarUrl,
 		arg.ID,
 	)
@@ -1042,6 +1052,7 @@ func (q *Queries) UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Ent
 		&i.Description,
 		&i.AvatarUrl,
 		&i.CreatedAt,
+		&i.BasePrompt,
 	)
 	return i, err
 }

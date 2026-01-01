@@ -20,7 +20,7 @@ export async function getEntities() {
 }
 
 // Entity Admin APIs
-export async function createEntity(data: { name: string; slug: string; type: string; description?: string; avatar_url?: string }) {
+export async function createEntity(data: { name: string; slug: string; type: string; description?: string; base_prompt?: string; avatar_url?: string }) {
   const response = await fetch(`${API_BASE}/admin/entities`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,7 +32,7 @@ export async function createEntity(data: { name: string; slug: string; type: str
   return response.json();
 }
 
-export async function updateEntity(id: string, data: { name?: string; slug?: string; type?: string; description?: string; avatar_url?: string }) {
+export async function updateEntity(id: string, data: { name?: string; slug?: string; type?: string; description?: string; base_prompt?: string; avatar_url?: string }) {
   const response = await fetch(`${API_BASE}/admin/entities/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

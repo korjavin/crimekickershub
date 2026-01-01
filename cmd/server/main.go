@@ -14,6 +14,7 @@ import (
 	"crimekickershub/internal/api"
 	"crimekickershub/internal/auth"
 	"crimekickershub/internal/db"
+	"crimekickershub/internal/migrations"
 	"crimekickershub/internal/repository"
 	"crimekickershub/internal/storage"
 
@@ -47,17 +48,12 @@ func main() {
 
 	log.Println("Database connection established with WAL mode")
 
-	// Initialize schema
-	schemaPath := "sql/schema/001_initial.sql"
-	if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
-		log.Fatalf("Schema file not found: %s", schemaPath)
+	// Run database migrations
+	if err := migrations.RunMigrations(database); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	if err := db.InitSchema(database, schemaPath, "001_initial"); err != nil {
-		log.Fatalf("Failed to initialize schema: %v", err)
-	}
-
-	log.Println("Database schema initialized")
+	log.Println("Database migrations completed")
 
 	// Initialize repository
 	queries := repository.New(database)

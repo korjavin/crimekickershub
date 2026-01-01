@@ -1140,6 +1140,7 @@ func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
 		Name:        input.Name,
 		Type:        input.Type,
 		Description: sql.NullString{String: input.Description, Valid: input.Description != ""},
+		BasePrompt:  sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
 		AvatarUrl:   sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
 	})
 	if err != nil {
@@ -1191,6 +1192,10 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 	if description == nil && current.Description.Valid {
 		description = &current.Description.String
 	}
+	basePrompt := input.BasePrompt
+	if basePrompt == nil && current.BasePrompt.Valid {
+		basePrompt = &current.BasePrompt.String
+	}
 	avatarURL := input.AvatarURL
 	if avatarURL == nil && current.AvatarUrl.Valid {
 		avatarURL = &current.AvatarUrl.String
@@ -1201,6 +1206,7 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 		Name:        *name,
 		Type:        *typeStr,
 		Description: sql.NullString{String: *description, Valid: description != nil && *description != ""},
+		BasePrompt:  sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
 		AvatarUrl:   sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
 		ID:          entityID,
 	})
@@ -1301,6 +1307,7 @@ type CreateEntityInput struct {
 	Slug        string `json:"slug"`
 	Type        string `json:"type"`
 	Description string `json:"description,omitempty"`
+	BasePrompt  string `json:"base_prompt,omitempty"`
 	AvatarURL   string `json:"avatar_url,omitempty"`
 }
 
@@ -1310,6 +1317,7 @@ type UpdateEntityInput struct {
 	Slug        *string `json:"slug,omitempty"`
 	Type        *string `json:"type,omitempty"`
 	Description *string `json:"description,omitempty"`
+	BasePrompt  *string `json:"base_prompt,omitempty"`
 	AvatarURL   *string `json:"avatar_url,omitempty"`
 }
 
@@ -1334,6 +1342,7 @@ type EntityDTO struct {
 	Name        string  `json:"name"`
 	Type        string  `json:"type"`
 	Description *string `json:"description"`
+	BasePrompt  *string `json:"base_prompt"`
 	AvatarURL   *string `json:"avatar_url"`
 	CreatedAt   *string `json:"created_at"`
 }
@@ -1348,6 +1357,9 @@ func toEntityDTO(e repository.Entity) EntityDTO {
 	}
 	if e.Description.Valid {
 		dto.Description = &e.Description.String
+	}
+	if e.BasePrompt.Valid {
+		dto.BasePrompt = &e.BasePrompt.String
 	}
 	if e.AvatarUrl.Valid {
 		dto.AvatarURL = &e.AvatarUrl.String

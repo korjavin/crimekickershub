@@ -19,6 +19,12 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet';
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import {
   Table,
   TableBody,
   TableCell,
@@ -37,6 +43,7 @@ interface EntityFormData {
   slug: string;
   type: string;
   description: string;
+  base_prompt: string;
   avatar_url: string | null;
 }
 
@@ -45,6 +52,7 @@ const initialFormData: EntityFormData = {
   slug: '',
   type: 'Hero',
   description: '',
+  base_prompt: '',
   avatar_url: null,
 };
 
@@ -133,6 +141,7 @@ export function EntitiesPage() {
       slug: entity.slug,
       type: entity.type,
       description: entity.description || '',
+      base_prompt: entity.base_prompt || '',
       avatar_url: entity.avatar_url,
     });
     setAvatarFile(null);
@@ -153,6 +162,7 @@ export function EntitiesPage() {
         slug: formData.slug,
         type: formData.type,
         description: formData.description || undefined,
+        base_prompt: formData.base_prompt || undefined,
         avatar_url: formData.avatar_url || undefined,
       };
 
@@ -336,101 +346,127 @@ export function EntitiesPage() {
             </SheetTitle>
           </SheetHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Avatar Upload */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Avatar</label>
-              <div className="flex items-center gap-4">
-                {formData.avatar_url ? (
-                  <img
-                    src={formData.avatar_url}
-                    alt="Avatar preview"
-                    className="w-20 h-20 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
-                    <ImageIcon className="w-8 h-8 text-muted-foreground" />
+          <Tabs defaultValue="public" className="py-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="public">Public Info</TabsTrigger>
+              <TabsTrigger value="generator">Generator Config</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="public" className="space-y-4 mt-4">
+              {/* Avatar Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Avatar</label>
+                <div className="flex items-center gap-4">
+                  {formData.avatar_url ? (
+                    <img
+                      src={formData.avatar_url}
+                      alt="Avatar preview"
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+                      <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="avatar-upload"
+                      onChange={handleAvatarChange}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('avatar-upload')?.click()}
+                      disabled={uploadingAvatar}
+                    >
+                      {uploadingAvatar ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload
+                        </>
+                      )}
+                    </Button>
                   </div>
-                )}
-                <div>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    id="avatar-upload"
-                    onChange={handleAvatarChange}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('avatar-upload')?.click()}
-                    disabled={uploadingAvatar}
-                  >
-                    {uploadingAvatar ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload
-                      </>
-                    )}
-                  </Button>
                 </div>
               </div>
-            </div>
 
-            {/* Name */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Name *</label>
-              <Input
-                placeholder="e.g., Windman"
-                value={formData.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-              />
-            </div>
+              {/* Name */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Name *</label>
+                <Input
+                  placeholder="e.g., Windman"
+                  value={formData.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                />
+              </div>
 
-            {/* Slug */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Slug</label>
-              <Input
-                placeholder="e.g., windman"
-                value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-              />
-            </div>
+              {/* Slug */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Slug</label>
+                <Input
+                  placeholder="e.g., windman"
+                  value={formData.slug}
+                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                />
+              </div>
 
-            {/* Type */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type *</label>
-              <Select
-                value={formData.type}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ENTITY_TYPES.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Type */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type *</label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ENTITY_TYPES.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <Textarea
-                placeholder="Wiki bio (not for generative prompts)"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={4}
-              />
-            </div>
-          </div>
+              {/* Wiki Bio (Public Description) */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Wiki Bio</label>
+                <p className="text-xs text-muted-foreground">
+                  Public-facing bio shown on the website (e.g., "Windman was born from a shard...")
+                </p>
+                <Textarea
+                  placeholder="Enter the public bio for this entity..."
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={6}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="generator" className="space-y-4 mt-4">
+              {/* Base Prompt (Generator Config) */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Base Prompt</label>
+                <p className="text-xs text-muted-foreground">
+                  Describe the physical appearance, colors, and consistent accessories here. This text is injected into the AI mixer for image generation.
+                </p>
+                <Textarea
+                  placeholder="e.g., Male, 180cm, bandage on eyes, blue cape, flying pose..."
+                  value={formData.base_prompt}
+                  onChange={(e) => setFormData(prev => ({ ...prev, base_prompt: e.target.value }))}
+                  rows={10}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <SheetFooter>
             <Button

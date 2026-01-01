@@ -7,6 +7,7 @@ export interface Entity {
   name: string;
   type: string;
   description: string | null;
+  base_prompt: string | null;
   avatar_url: string | null;
   created_at: string | null;
 }
