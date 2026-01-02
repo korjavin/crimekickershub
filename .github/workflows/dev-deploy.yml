@@ -65,7 +65,7 @@ jobs:
           sed -i "s|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:.*|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}|g" docker-compose.dev.yml
 
           # Commit and push changes
-          git add docker-compose.dev.yml .env.example.dev
+          git add docker-compose.dev.yml
           git commit -m "Dev Deploy: Update dev stack for branch ${{ github.ref_name }}" 2>/dev/null || echo "No changes to commit"
           git push origin deploy-dev --force
 
