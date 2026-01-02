@@ -61,10 +61,9 @@ jobs:
           # Reset deploy-dev to match current branch (except for docker-compose.dev.yml)
           git reset --hard origin/${{ github.ref_name }}
 
-         # Update docker-compose.yml with the new SHA tag
-          sed -i "s|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:.*|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}|g" docker-compose.yml
+          # Update docker-compose.dev.yml with the new SHA tag
+          sed -i "s|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:.*|ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}|g" docker-compose.dev.yml
 
-        
           # Commit and push changes
           git add docker-compose.dev.yml .env.example.dev
           git commit -m "Dev Deploy: Update dev stack for branch ${{ github.ref_name }}" 2>/dev/null || echo "No changes to commit"
