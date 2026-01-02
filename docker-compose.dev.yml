@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  crimekickershub:
+    image: ghcr.io/korjavin/crimekickershub:test-dev
+    container_name: crimekickershub-dev
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.crimekickershub-dev.rule=Host(`${HOSTNAME}`)"
+      - "traefik.http.routers.crimekickershub-dev.entrypoints=websecure"
+      - "traefik.http.routers.crimekickershub-dev.tls.certresolver=myresolver"
+      - "traefik.http.services.crimekickershub-dev.loadbalancer.server.port=${PORT}"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      - COMPOSE_PROJECT_NAME=crimekickershub-dev
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
+      - ADMIN_EMAILS=${ADMIN_EMAILS}
+      - COOKIE_SECRET=${COOKIE_SECRET}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - R2_PUBLIC_DOMAIN=${R2_PUBLIC_DOMAIN}
+      - DB_PATH=${DB_PATH:-/app/data/crimekickers.db}
+      - SERVER_ADDR=${SERVER_ADDR:-:8081}
+      - FRONTEND_PATH=${FRONTEND_PATH:-frontend/dist}
+
+networks:
+  traefik_network:
+    name: ${NETWORK_NAME:-traefik_network}
+    external: true
