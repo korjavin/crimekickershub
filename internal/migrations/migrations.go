@@ -23,7 +23,7 @@ type Migration struct {
 func RunMigrations(db *sql.DB) error {
 	// Create migrations table if it doesn't exist
 	_, err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS schema_migrations (
+		CREATE TABLE IF NOT EXISTS app_schema_migrations (
 			version INTEGER PRIMARY KEY,
 			name TEXT NOT NULL,
 			applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -35,7 +35,7 @@ func RunMigrations(db *sql.DB) error {
 
 	// Get list of applied migrations
 	appliedVersions := make(map[int]bool)
-	rows, err := db.Query("SELECT version FROM schema_migrations ORDER BY version")
+	rows, err := db.Query("SELECT version FROM app_schema_migrations ORDER BY version")
 	if err != nil {
 		return fmt.Errorf("failed to query applied migrations: %w", err)
 	}
@@ -111,7 +111,7 @@ func RunMigrations(db *sql.DB) error {
 
 		// Record the migration as applied
 		if _, err := tx.Exec(
-			"INSERT INTO schema_migrations (version, name) VALUES (?, ?)",
+			"INSERT INTO app_schema_migrations (version, name) VALUES (?, ?)",
 			migration.Version,
 			migration.Name,
 		); err != nil {
