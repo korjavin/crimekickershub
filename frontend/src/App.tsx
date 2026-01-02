@@ -12,6 +12,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { PromptStudioPage } from './pages/admin/PromptStudioPage';
 import { MediaPage } from './pages/admin/MediaPage';
 import { EntitiesPage } from './pages/admin/EntitiesPage';
+import { EntityTypesPage } from './pages/admin/EntityTypesPage';
 import { PromptTypesPage } from './pages/admin/PromptTypesPage';
 import { PromptMatrixPage } from './pages/admin/PromptMatrixPage';
 import { StoryEditorPage } from './pages/admin/StoryEditorPage';
@@ -49,6 +50,7 @@ function App() {
             <Route path="/admin/media" element={<MediaPage />} />
             <Route path="/admin/stories" element={<StoryEditorPage />} />
             <Route path="/admin/entities" element={<EntitiesPage />} />
+            <Route path="/admin/entity-types" element={<EntityTypesPage />} />
             <Route path="/admin/types" element={<PromptTypesPage />} />
           </Route>
         </Routes>

@@ -12,6 +12,7 @@ const navItems = [
   { path: '/admin/media', label: 'Media Assets', icon: '🖼️' },
   { path: '/admin/stories', label: 'Story Builder', icon: '📚' },
   { path: '/admin/entities', label: 'Entities', icon: '👤' },
+  { path: '/admin/entity-types', label: 'Entity Types', icon: '🏷️' },
 ];
 
 export function AdminLayout() {
@@ -75,11 +76,10 @@ export function AdminLayout() {
               key={item.path}
               to={item.path}
               onClick={() => setSidebarOpen(false)}
-              className={`block p-2 rounded transition-colors ${
-                location.pathname === item.path
+              className={`block p-2 rounded transition-colors ${location.pathname === item.path
                   ? 'bg-primary text-primary-foreground'
                   : 'hover:bg-muted'
-              }`}
+                }`}
             >
               {item.icon} {item.label}
             </Link>

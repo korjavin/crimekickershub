@@ -54,6 +54,45 @@ export async function deleteEntity(id: string) {
   return response.json();
 }
 
+// Entity Types APIs
+export async function getEntityTypes() {
+  return fetchApi<any[]>('/admin/entity-types');
+}
+
+export async function createEntityType(data: { slug: string; name: string; description?: string }) {
+  const response = await fetch(`${API_BASE}/admin/entity-types`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updateEntityType(id: number, data: { slug?: string; name?: string; description?: string }) {
+  const response = await fetch(`${API_BASE}/admin/entity-types/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteEntityType(id: number) {
+  const response = await fetch(`${API_BASE}/admin/entity-types/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // Story/Comic APIs
 export async function getStories() {
   return fetchApi<any[]>('/comics');

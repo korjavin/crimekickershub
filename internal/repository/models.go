@@ -9,14 +9,23 @@ import (
 )
 
 type Entity struct {
+	ID           int64          `json:"id"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Type         string         `json:"type"`
+	Description  sql.NullString `json:"description"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+	BasePrompt   sql.NullString `json:"base_prompt"`
+	EntityTypeID sql.NullInt64  `json:"entity_type_id"`
+}
+
+type EntityType struct {
 	ID          int64          `json:"id"`
 	Slug        string         `json:"slug"`
 	Name        string         `json:"name"`
-	Type        string         `json:"type"`
 	Description sql.NullString `json:"description"`
-	AvatarUrl   sql.NullString `json:"avatar_url"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
-	BasePrompt  sql.NullString `json:"base_prompt"`
 }
 
 type MediaAsset struct {

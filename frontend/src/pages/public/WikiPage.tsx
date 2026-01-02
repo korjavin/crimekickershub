@@ -4,25 +4,28 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getHeroes, getEntities } from '@/lib/api';
+import { getHeroes, getEntities, getEntityTypes } from '@/lib/api';
 import type { Entity } from '@/lib/api-types';
 
 export function WikiPage() {
   const [heroes, setHeroes] = useState<Entity[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
+  const [types, setTypes] = useState<any[]>([]);
   const [selectedHero, setSelectedHero] = useState<Entity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'hero' | 'villain' | 'location'>('all');
+  const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [heroesData, entitiesData] = await Promise.all([
+        const [heroesData, entitiesData, typesData] = await Promise.all([
           getHeroes(),
           getEntities(),
+          getEntityTypes(),
         ]);
         setHeroes(heroesData || []);
         setEntities(entitiesData || []);
+        setTypes(typesData || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -34,9 +37,7 @@ export function WikiPage() {
 
   const allEntities = filter === 'all'
     ? entities
-    : filter === 'hero'
-      ? heroes
-      : entities.filter(e => e.type.toLowerCase() === filter.toLowerCase());
+    : entities.filter(e => e.type.toLowerCase() === filter.toLowerCase());
 
   // Generate mock stats for heroes
   const getHeroStats = (_hero: Entity) => ({
@@ -66,14 +67,21 @@ export function WikiPage() {
 
         {/* Filter Tabs */}
         <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {(['all', 'hero', 'villain', 'location'] as const).map((f) => (
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            onClick={() => setFilter('all')}
+            className={filter === 'all' ? 'bg-violet-600 hover:bg-violet-700' : 'border-slate-600 text-slate-300'}
+          >
+            All
+          </Button>
+          {types.map((t) => (
             <Button
-              key={f}
-              variant={filter === f ? 'default' : 'outline'}
-              onClick={() => setFilter(f)}
-              className={filter === f ? 'bg-violet-600 hover:bg-violet-700' : 'border-slate-600 text-slate-300'}
+              key={t.slug}
+              variant={filter === t.slug ? 'default' : 'outline'}
+              onClick={() => setFilter(t.slug)}
+              className={filter === t.slug ? 'bg-violet-600 hover:bg-violet-700' : 'border-slate-600 text-slate-300'}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}s
+              {t.name}
             </Button>
           ))}
         </div>
@@ -107,10 +115,10 @@ export function WikiPage() {
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-                  <Badge 
+                  <Badge
                     className="absolute top-3 right-3 bg-slate-900/80 text-slate-300"
                   >
-                    {entity.type}
+                    {types.find(t => t.slug === entity.type)?.name || entity.type}
                   </Badge>
                 </div>
                 <CardHeader className="pb-2">
@@ -164,7 +172,7 @@ export function WikiPage() {
                 {/* Type Badge */}
                 <div className="flex items-center gap-2">
                   <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/50">
-                    {selectedHero?.type}
+                    {types.find(t => t.slug === selectedHero?.type)?.name || selectedHero?.type}
                   </Badge>
                   {selectedHero?.slug && (
                     <span className="text-sm text-slate-500">#{selectedHero.slug}</span>
@@ -206,8 +214,8 @@ export function WikiPage() {
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-2">Origin</h3>
                   <p className="text-slate-300">
-                    Born in the hidden city of {selectedHero?.name || 'Unknown'}, 
-                    this {selectedHero?.type} has dedicated their life to protecting 
+                    Born in the hidden city of {selectedHero?.name || 'Unknown'},
+                    this {types.find(t => t.slug === selectedHero?.type)?.name || selectedHero?.type} has dedicated their life to protecting
                     the innocent and fighting against the forces of darkness.
                   </p>
                 </div>

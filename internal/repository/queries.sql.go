@@ -35,25 +35,25 @@ func (q *Queries) AddStoryItem(ctx context.Context, arg AddStoryItemParams) (Sto
 }
 
 const createEntity = `-- name: CreateEntity :one
-INSERT INTO entities (slug, name, type, description, base_prompt, avatar_url)
+INSERT INTO entities (slug, name, entity_type_id, description, base_prompt, avatar_url)
 VALUES (?, ?, ?, ?, ?, ?)
-RETURNING id, slug, name, type, description, avatar_url, created_at, base_prompt
+RETURNING id, slug, name, type, description, avatar_url, created_at, base_prompt, entity_type_id
 `
 
 type CreateEntityParams struct {
-	Slug        string         `json:"slug"`
-	Name        string         `json:"name"`
-	Type        string         `json:"type"`
-	Description sql.NullString `json:"description"`
-	BasePrompt  sql.NullString `json:"base_prompt"`
-	AvatarUrl   sql.NullString `json:"avatar_url"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	EntityTypeID sql.NullInt64  `json:"entity_type_id"`
+	Description  sql.NullString `json:"description"`
+	BasePrompt   sql.NullString `json:"base_prompt"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
 }
 
 func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Entity, error) {
 	row := q.db.QueryRowContext(ctx, createEntity,
 		arg.Slug,
 		arg.Name,
-		arg.Type,
+		arg.EntityTypeID,
 		arg.Description,
 		arg.BasePrompt,
 		arg.AvatarUrl,
@@ -68,6 +68,32 @@ func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Ent
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.BasePrompt,
+		&i.EntityTypeID,
+	)
+	return i, err
+}
+
+const createEntityType = `-- name: CreateEntityType :one
+INSERT INTO entity_types (slug, name, description)
+VALUES (?, ?, ?)
+RETURNING id, slug, name, description, created_at
+`
+
+type CreateEntityTypeParams struct {
+	Slug        string         `json:"slug"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) CreateEntityType(ctx context.Context, arg CreateEntityTypeParams) (EntityType, error) {
+	row := q.db.QueryRowContext(ctx, createEntityType, arg.Slug, arg.Name, arg.Description)
+	var i EntityType
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -204,6 +230,15 @@ func (q *Queries) DeleteEntity(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteEntityType = `-- name: DeleteEntityType :exec
+DELETE FROM entity_types WHERE id = ?
+`
+
+func (q *Queries) DeleteEntityType(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteEntityType, id)
+	return err
+}
+
 const deletePromptType = `-- name: DeletePromptType :exec
 DELETE FROM prompt_types WHERE id = ?
 `
@@ -232,12 +267,29 @@ func (q *Queries) DeleteStoryItem(ctx context.Context, id int64) error {
 }
 
 const getEntityByID = `-- name: GetEntityByID :one
-SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities WHERE id = ?
+SELECT e.id, e.slug, e.name, e.type, e.description, e.avatar_url, e.created_at, e.base_prompt, e.entity_type_id, et.name as type_name, et.slug as type_slug
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+WHERE e.id = ?
 `
 
-func (q *Queries) GetEntityByID(ctx context.Context, id int64) (Entity, error) {
+type GetEntityByIDRow struct {
+	ID           int64          `json:"id"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Type         string         `json:"type"`
+	Description  sql.NullString `json:"description"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+	BasePrompt   sql.NullString `json:"base_prompt"`
+	EntityTypeID sql.NullInt64  `json:"entity_type_id"`
+	TypeName     sql.NullString `json:"type_name"`
+	TypeSlug     sql.NullString `json:"type_slug"`
+}
+
+func (q *Queries) GetEntityByID(ctx context.Context, id int64) (GetEntityByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getEntityByID, id)
-	var i Entity
+	var i GetEntityByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Slug,
@@ -247,17 +299,37 @@ func (q *Queries) GetEntityByID(ctx context.Context, id int64) (Entity, error) {
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.BasePrompt,
+		&i.EntityTypeID,
+		&i.TypeName,
+		&i.TypeSlug,
 	)
 	return i, err
 }
 
 const getEntityBySlug = `-- name: GetEntityBySlug :one
-SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities WHERE slug = ?
+SELECT e.id, e.slug, e.name, e.type, e.description, e.avatar_url, e.created_at, e.base_prompt, e.entity_type_id, et.name as type_name, et.slug as type_slug 
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+WHERE e.slug = ?
 `
 
-func (q *Queries) GetEntityBySlug(ctx context.Context, slug string) (Entity, error) {
+type GetEntityBySlugRow struct {
+	ID           int64          `json:"id"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Type         string         `json:"type"`
+	Description  sql.NullString `json:"description"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+	BasePrompt   sql.NullString `json:"base_prompt"`
+	EntityTypeID sql.NullInt64  `json:"entity_type_id"`
+	TypeName     sql.NullString `json:"type_name"`
+	TypeSlug     sql.NullString `json:"type_slug"`
+}
+
+func (q *Queries) GetEntityBySlug(ctx context.Context, slug string) (GetEntityBySlugRow, error) {
 	row := q.db.QueryRowContext(ctx, getEntityBySlug, slug)
-	var i Entity
+	var i GetEntityBySlugRow
 	err := row.Scan(
 		&i.ID,
 		&i.Slug,
@@ -267,6 +339,43 @@ func (q *Queries) GetEntityBySlug(ctx context.Context, slug string) (Entity, err
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.BasePrompt,
+		&i.EntityTypeID,
+		&i.TypeName,
+		&i.TypeSlug,
+	)
+	return i, err
+}
+
+const getEntityTypeByID = `-- name: GetEntityTypeByID :one
+SELECT id, slug, name, description, created_at FROM entity_types WHERE id = ?
+`
+
+func (q *Queries) GetEntityTypeByID(ctx context.Context, id int64) (EntityType, error) {
+	row := q.db.QueryRowContext(ctx, getEntityTypeByID, id)
+	var i EntityType
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEntityTypeBySlug = `-- name: GetEntityTypeBySlug :one
+SELECT id, slug, name, description, created_at FROM entity_types WHERE slug = ?
+`
+
+func (q *Queries) GetEntityTypeBySlug(ctx context.Context, slug string) (EntityType, error) {
+	row := q.db.QueryRowContext(ctx, getEntityTypeBySlug, slug)
+	var i EntityType
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -672,18 +781,35 @@ func (q *Queries) ListAllStories(ctx context.Context) ([]Story, error) {
 }
 
 const listEntities = `-- name: ListEntities :many
-SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities ORDER BY name
+SELECT e.id, e.slug, e.name, e.type, e.description, e.avatar_url, e.created_at, e.base_prompt, e.entity_type_id, et.name as type_name, et.slug as type_slug
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+ORDER BY e.name
 `
 
-func (q *Queries) ListEntities(ctx context.Context) ([]Entity, error) {
+type ListEntitiesRow struct {
+	ID           int64          `json:"id"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Type         string         `json:"type"`
+	Description  sql.NullString `json:"description"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+	BasePrompt   sql.NullString `json:"base_prompt"`
+	EntityTypeID sql.NullInt64  `json:"entity_type_id"`
+	TypeName     sql.NullString `json:"type_name"`
+	TypeSlug     sql.NullString `json:"type_slug"`
+}
+
+func (q *Queries) ListEntities(ctx context.Context) ([]ListEntitiesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEntities)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Entity
+	var items []ListEntitiesRow
 	for rows.Next() {
-		var i Entity
+		var i ListEntitiesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Slug,
@@ -693,6 +819,9 @@ func (q *Queries) ListEntities(ctx context.Context) ([]Entity, error) {
 			&i.AvatarUrl,
 			&i.CreatedAt,
 			&i.BasePrompt,
+			&i.EntityTypeID,
+			&i.TypeName,
+			&i.TypeSlug,
 		); err != nil {
 			return nil, err
 		}
@@ -708,18 +837,36 @@ func (q *Queries) ListEntities(ctx context.Context) ([]Entity, error) {
 }
 
 const listEntitiesByType = `-- name: ListEntitiesByType :many
-SELECT id, slug, name, type, description, avatar_url, created_at, base_prompt FROM entities WHERE LOWER(type) = LOWER(?) ORDER BY name
+SELECT e.id, e.slug, e.name, e.type, e.description, e.avatar_url, e.created_at, e.base_prompt, e.entity_type_id, et.name as type_name, et.slug as type_slug
+FROM entities e
+JOIN entity_types et ON e.entity_type_id = et.id
+WHERE lower(et.slug) = lower(?)
+ORDER BY e.name
 `
 
-func (q *Queries) ListEntitiesByType(ctx context.Context, lower string) ([]Entity, error) {
+type ListEntitiesByTypeRow struct {
+	ID           int64          `json:"id"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Type         string         `json:"type"`
+	Description  sql.NullString `json:"description"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+	BasePrompt   sql.NullString `json:"base_prompt"`
+	EntityTypeID sql.NullInt64  `json:"entity_type_id"`
+	TypeName     string         `json:"type_name"`
+	TypeSlug     string         `json:"type_slug"`
+}
+
+func (q *Queries) ListEntitiesByType(ctx context.Context, lower string) ([]ListEntitiesByTypeRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEntitiesByType, lower)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Entity
+	var items []ListEntitiesByTypeRow
 	for rows.Next() {
-		var i Entity
+		var i ListEntitiesByTypeRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Slug,
@@ -729,6 +876,42 @@ func (q *Queries) ListEntitiesByType(ctx context.Context, lower string) ([]Entit
 			&i.AvatarUrl,
 			&i.CreatedAt,
 			&i.BasePrompt,
+			&i.EntityTypeID,
+			&i.TypeName,
+			&i.TypeSlug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEntityTypes = `-- name: ListEntityTypes :many
+SELECT id, slug, name, description, created_at FROM entity_types ORDER BY name
+`
+
+func (q *Queries) ListEntityTypes(ctx context.Context) ([]EntityType, error) {
+	rows, err := q.db.QueryContext(ctx, listEntityTypes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EntityType
+	for rows.Next() {
+		var i EntityType
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1015,29 +1198,29 @@ const updateEntity = `-- name: UpdateEntity :one
 UPDATE entities
 SET slug = COALESCE(?, slug),
     name = COALESCE(?, name),
-    type = COALESCE(?, type),
+    entity_type_id = COALESCE(?, entity_type_id),
     description = COALESCE(?, description),
     base_prompt = COALESCE(?, base_prompt),
     avatar_url = COALESCE(?, avatar_url)
 WHERE id = ?
-RETURNING id, slug, name, type, description, avatar_url, created_at, base_prompt
+RETURNING id, slug, name, type, description, avatar_url, created_at, base_prompt, entity_type_id
 `
 
 type UpdateEntityParams struct {
-	Slug        string         `json:"slug"`
-	Name        string         `json:"name"`
-	Type        string         `json:"type"`
-	Description sql.NullString `json:"description"`
-	BasePrompt  sql.NullString `json:"base_prompt"`
-	AvatarUrl   sql.NullString `json:"avatar_url"`
-	ID          int64          `json:"id"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	EntityTypeID sql.NullInt64  `json:"entity_type_id"`
+	Description  sql.NullString `json:"description"`
+	BasePrompt   sql.NullString `json:"base_prompt"`
+	AvatarUrl    sql.NullString `json:"avatar_url"`
+	ID           int64          `json:"id"`
 }
 
 func (q *Queries) UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Entity, error) {
 	row := q.db.QueryRowContext(ctx, updateEntity,
 		arg.Slug,
 		arg.Name,
-		arg.Type,
+		arg.EntityTypeID,
 		arg.Description,
 		arg.BasePrompt,
 		arg.AvatarUrl,
@@ -1053,6 +1236,39 @@ func (q *Queries) UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Ent
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.BasePrompt,
+		&i.EntityTypeID,
+	)
+	return i, err
+}
+
+const updateEntityType = `-- name: UpdateEntityType :one
+UPDATE entity_types
+SET slug = ?, name = ?, description = ?
+WHERE id = ?
+RETURNING id, slug, name, description, created_at
+`
+
+type UpdateEntityTypeParams struct {
+	Slug        string         `json:"slug"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	ID          int64          `json:"id"`
+}
+
+func (q *Queries) UpdateEntityType(ctx context.Context, arg UpdateEntityTypeParams) (EntityType, error) {
+	row := q.db.QueryRowContext(ctx, updateEntityType,
+		arg.Slug,
+		arg.Name,
+		arg.Description,
+		arg.ID,
+	)
+	var i EntityType
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
 	)
 	return i, err
 }

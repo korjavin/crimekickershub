@@ -32,11 +32,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { createEntity, updateEntity, deleteEntity, uploadMedia } from '@/lib/api';
+import { createEntity, updateEntity, deleteEntity, uploadMedia, getEntityTypes } from '@/lib/api';
 import type { Entity } from '@/lib/api-types';
 import { Plus, Search, Edit2, Trash2, Loader2, Upload, Image as ImageIcon } from 'lucide-react';
 
-const ENTITY_TYPES = ['Hero', 'Villain', 'Location', 'Artifact'] as const;
+
 
 interface EntityFormData {
   name: string;
@@ -47,10 +47,16 @@ interface EntityFormData {
   avatar_url: string | null;
 }
 
+interface EntityType {
+  id: number;
+  slug: string;
+  name: string;
+}
+
 const initialFormData: EntityFormData = {
   name: '',
   slug: '',
-  type: 'Hero',
+  type: '',
   description: '',
   base_prompt: '',
   avatar_url: null,
@@ -58,10 +64,11 @@ const initialFormData: EntityFormData = {
 
 export function EntitiesPage() {
   const [entities, setEntities] = useState<Entity[]>([]);
+  const [types, setTypes] = useState<EntityType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  
+
   // Sheet state
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
@@ -72,23 +79,37 @@ export function EntitiesPage() {
 
   // Load entities on mount
   useEffect(() => {
-    loadEntities();
+    loadData();
   }, []);
 
-  const loadEntities = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/entities');
-      if (response.ok) {
-        const data = await response.json();
-        setEntities(data || []);
+      const [entitiesData, typesData] = await Promise.all([
+        fetch('/api/entities').then(res => res.ok ? res.json() : []),
+        getEntityTypes()
+      ]);
+      setEntities(entitiesData || []);
+      setTypes(typesData || []);
+
+      // Set default type if not set
+      if (typesData && typesData.length > 0 && !initialFormData.type) {
+        initialFormData.type = typesData[0].slug;
+        // Also update form data if it's currently empty
+        if (!formData.type) {
+          setFormData(prev => ({ ...prev, type: typesData[0].slug }));
+        }
       }
     } catch (error) {
-      console.error('Failed to load entities:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  /* REMOVED OLD loadEntities func */
+
+
 
   // Generate slug from name
   const generateSlug = (name: string) => {
@@ -172,7 +193,7 @@ export function EntitiesPage() {
         await createEntity(apiData);
       }
       setSheetOpen(false);
-      await loadEntities();
+      await loadData();
     } catch (error) {
       console.error('Failed to save entity:', error);
       alert('Failed to save entity');
@@ -188,7 +209,7 @@ export function EntitiesPage() {
 
     try {
       await deleteEntity(entity.id.toString());
-      await loadEntities();
+      await loadData();
     } catch (error) {
       console.error('Failed to delete entity:', error);
       alert('Failed to delete entity');
@@ -197,23 +218,14 @@ export function EntitiesPage() {
 
   // Filter entities
   const filteredEntities = entities.filter(entity => {
-    const matchesSearch = 
+    const matchesSearch =
       entity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       entity.slug.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === 'all' || entity.type === typeFilter;
     return matchesSearch && matchesType;
   });
 
-  // Get type badge color
-  const getTypeBadgeVariant = (type: string) => {
-    switch (type) {
-      case 'Hero': return 'default';
-      case 'Villain': return 'destructive';
-      case 'Location': return 'secondary';
-      case 'Artifact': return 'outline';
-      default: return 'secondary';
-    }
-  };
+
 
   return (
     <div className="space-y-6">
@@ -243,8 +255,8 @@ export function EntitiesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              {ENTITY_TYPES.map(type => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
+              {types.map(type => (
+                <SelectItem key={type.slug} value={type.slug}>{type.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -302,8 +314,8 @@ export function EntitiesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getTypeBadgeVariant(entity.type) as any}>
-                        {entity.type}
+                      <Badge variant="secondary">
+                        {types.find(t => t.slug === entity.type)?.name || entity.type}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -429,8 +441,8 @@ export function EntitiesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ENTITY_TYPES.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    {types.map(type => (
+                      <SelectItem key={type.slug} value={type.slug}>{type.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

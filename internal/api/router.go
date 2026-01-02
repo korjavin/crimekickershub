@@ -130,7 +130,7 @@ func (r *Router) adminRoutes() {
 	r.mux.Handle("GET /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleListStoriesAdmin)))
 	r.mux.Handle("POST /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateStory)))
 	r.mux.Handle("GET /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetStory)))
-	r.mux.Handle("PUT /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStory)))           // Legacy/General update
+	r.mux.Handle("PUT /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStory))) // Legacy/General update
 	r.mux.Handle("DELETE /api/admin/stories/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteStory)))
 	r.mux.Handle("PUT /api/admin/stories/{id}/items", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateStoryItems))) // Sequence update
 	r.mux.Handle("POST /api/admin/stories/{id}/items", r.auth.RequireAdmin(http.HandlerFunc(r.handleAddStoryItem)))
@@ -141,6 +141,12 @@ func (r *Router) adminRoutes() {
 	r.mux.Handle("POST /api/admin/entities", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateEntity)))
 	r.mux.Handle("PUT /api/admin/entities/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateEntity)))
 	r.mux.Handle("DELETE /api/admin/entities/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteEntity)))
+
+	// Entity Types management (admin only)
+	r.mux.Handle("GET /api/admin/entity-types", r.auth.RequireAdmin(http.HandlerFunc(r.handleListEntityTypes)))
+	r.mux.Handle("POST /api/admin/entity-types", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateEntityType)))
+	r.mux.Handle("PUT /api/admin/entity-types/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateEntityType)))
+	r.mux.Handle("DELETE /api/admin/entity-types/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteEntityType)))
 
 	// Matrix view (admin only)
 	r.mux.Handle("GET /api/admin/matrix", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetMatrix)))
@@ -165,35 +171,40 @@ func (r *Router) handleHealth(w http.ResponseWriter, _ *http.Request) {
 }
 
 // handleListHeroes returns all heroes (entities of type 'hero')
+// handleListHeroes returns all heroes (entities of type 'hero')
+// handleListHeroes returns all heroes (entities of type 'hero')
 func (r *Router) handleListHeroes(w http.ResponseWriter, req *http.Request) {
 	entities, err := r.repo.ListEntitiesByType(req.Context(), "hero")
 	if err != nil {
 		http.Error(w, "Failed to list heroes: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, toEntityDTOs(entities))
+	respondJSON(w, r.toEntityDTOsFromListByTypeRows(entities))
 }
 
 // handleListEntities returns all entities (optionally filtered by type query param)
+// handleListEntities returns all entities (optionally filtered by type query param)
 func (r *Router) handleListEntities(w http.ResponseWriter, req *http.Request) {
 	// Check if filtering by type
-	entityType := req.URL.Query().Get("type")
-	var entities []repository.Entity
-	var err error
+	entityTypeSlug := req.URL.Query().Get("type")
 
-	if entityType != "" {
+	if entityTypeSlug != "" {
 		// Filter by type (case-insensitive)
-		entities, err = r.repo.ListEntitiesByType(req.Context(), entityType)
+		entities, err := r.repo.ListEntitiesByType(req.Context(), entityTypeSlug)
+		if err != nil {
+			http.Error(w, "Failed to list entities: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		respondJSON(w, r.toEntityDTOsFromListByTypeRows(entities))
 	} else {
 		// Return all entities
-		entities, err = r.repo.ListEntities(req.Context())
+		entities, err := r.repo.ListEntities(req.Context())
+		if err != nil {
+			http.Error(w, "Failed to list entities: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		respondJSON(w, r.toEntityDTOsFromListRows(entities))
 	}
-
-	if err != nil {
-		http.Error(w, "Failed to list entities: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	respondJSON(w, toEntityDTOs(entities))
 }
 
 // handleListStories returns all published stories
@@ -1128,6 +1139,7 @@ func (r *Router) handleDevLogin(w http.ResponseWriter, req *http.Request) {
 }
 
 // handleCreateEntity creates a new entity
+// handleCreateEntity creates a new entity
 func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
 	var input CreateEntityInput
 	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
@@ -1135,19 +1147,35 @@ func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Look up entity type by slug
+	entityType, err := r.repo.GetEntityTypeBySlug(req.Context(), input.Type)
+	if err != nil {
+		http.Error(w, "Invalid entity type: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	entity, err := r.repo.CreateEntity(req.Context(), repository.CreateEntityParams{
-		Slug:        input.Slug,
-		Name:        input.Name,
-		Type:        input.Type,
-		Description: sql.NullString{String: input.Description, Valid: input.Description != ""},
-		BasePrompt:  sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
-		AvatarUrl:   sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
+		Slug:         input.Slug,
+		Name:         input.Name,
+		EntityTypeID: sql.NullInt64{Int64: entityType.ID, Valid: true},
+		Description:  sql.NullString{String: input.Description, Valid: input.Description != ""},
+		BasePrompt:   sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
+		AvatarUrl:    sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
 	})
 	if err != nil {
 		http.Error(w, "Failed to create entity: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, toEntityDTO(entity))
+
+	// Fetch the full entity with joined type data to return proper DTO
+	fullEntity, err := r.repo.GetEntityByID(req.Context(), entity.ID)
+	if err != nil {
+		// Fallback to basic DTO if fetch fails (shouldn't happen)
+		respondJSON(w, toEntityDTO(entity))
+		return
+	}
+
+	respondJSON(w, r.toEntityDTOFromGetRow(fullEntity))
 }
 
 // handleUpdateEntity updates an existing entity
@@ -1184,10 +1212,21 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 	if name == nil {
 		name = &current.Name
 	}
-	typeStr := input.Type
-	if typeStr == nil {
-		typeStr = &current.Type
+
+	// Handle Type update
+	var entityTypeID sql.NullInt64
+	if input.Type != nil {
+		// Look up new type ID
+		et, err := r.repo.GetEntityTypeBySlug(req.Context(), *input.Type)
+		if err != nil {
+			http.Error(w, "Invalid entity type: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		entityTypeID = sql.NullInt64{Int64: et.ID, Valid: true}
+	} else {
+		entityTypeID = current.EntityTypeID
 	}
+
 	description := input.Description
 	if description == nil && current.Description.Valid {
 		description = &current.Description.String
@@ -1202,19 +1241,27 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 	}
 
 	entity, err := r.repo.UpdateEntity(req.Context(), repository.UpdateEntityParams{
-		Slug:        *slug,
-		Name:        *name,
-		Type:        *typeStr,
-		Description: sql.NullString{String: *description, Valid: description != nil && *description != ""},
-		BasePrompt:  sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
-		AvatarUrl:   sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
-		ID:          entityID,
+		Slug:         *slug,
+		Name:         *name,
+		EntityTypeID: entityTypeID,
+		Description:  sql.NullString{String: *description, Valid: description != nil && *description != ""},
+		BasePrompt:   sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
+		AvatarUrl:    sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
+		ID:           entityID,
 	})
 	if err != nil {
 		http.Error(w, "Failed to update entity: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, toEntityDTO(entity))
+
+	// Fetch the full entity with joined type data
+	fullEntity, err := r.repo.GetEntityByID(req.Context(), entity.ID)
+	if err != nil {
+		respondJSON(w, toEntityDTO(entity))
+		return
+	}
+
+	respondJSON(w, r.toEntityDTOFromGetRow(fullEntity))
 }
 
 // handleDeleteEntity deletes an entity
@@ -1347,7 +1394,105 @@ type EntityDTO struct {
 	CreatedAt   *string `json:"created_at"`
 }
 
+// toEntityDTOsFromListRows determines the type from the joined row
+func (r *Router) toEntityDTOsFromListRows(rows []repository.ListEntitiesRow) []EntityDTO {
+	dtos := make([]EntityDTO, len(rows))
+	for i, row := range rows {
+		dtos[i] = r.toEntityDTOFromListRow(row)
+	}
+	return dtos
+}
+
+func (r *Router) toEntityDTOFromListRow(row repository.ListEntitiesRow) EntityDTO {
+	dto := EntityDTO{
+		ID:   row.ID,
+		Slug: row.Slug,
+		Name: row.Name,
+		Type: row.TypeSlug.String, // Use joined type slug
+	}
+	// Fallback to legacy type if joined type is missing (e.g. data inconsistency)
+	if !row.TypeSlug.Valid {
+		dto.Type = row.Type
+	}
+
+	if row.Description.Valid {
+		dto.Description = &row.Description.String
+	}
+	if row.BasePrompt.Valid {
+		dto.BasePrompt = &row.BasePrompt.String
+	}
+	if row.AvatarUrl.Valid {
+		dto.AvatarURL = &row.AvatarUrl.String
+	}
+	if row.CreatedAt.Valid {
+		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		dto.CreatedAt = &timeStr
+	}
+	return dto
+}
+
+func (r *Router) toEntityDTOFromGetRow(row repository.GetEntityByIDRow) EntityDTO {
+	dto := EntityDTO{
+		ID:   row.ID,
+		Slug: row.Slug,
+		Name: row.Name,
+		Type: row.TypeSlug.String,
+	}
+	if !row.TypeSlug.Valid {
+		dto.Type = row.Type
+	}
+
+	if row.Description.Valid {
+		dto.Description = &row.Description.String
+	}
+	if row.BasePrompt.Valid {
+		dto.BasePrompt = &row.BasePrompt.String
+	}
+	if row.AvatarUrl.Valid {
+		dto.AvatarURL = &row.AvatarUrl.String
+	}
+	if row.CreatedAt.Valid {
+		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		dto.CreatedAt = &timeStr
+	}
+	return dto
+}
+
+// toEntityDTOsFromListByTypeRows for ListEntitiesByType query
+func (r *Router) toEntityDTOsFromListByTypeRows(rows []repository.ListEntitiesByTypeRow) []EntityDTO {
+	dtos := make([]EntityDTO, len(rows))
+	for i, row := range rows {
+		dtos[i] = r.toEntityDTOFromListByTypeRow(row)
+	}
+	return dtos
+}
+
+func (r *Router) toEntityDTOFromListByTypeRow(row repository.ListEntitiesByTypeRow) EntityDTO {
+	dto := EntityDTO{
+		ID:   row.ID,
+		Slug: row.Slug,
+		Name: row.Name,
+		Type: row.TypeSlug, // Use joined type slug, string
+	}
+
+	if row.Description.Valid {
+		dto.Description = &row.Description.String
+	}
+	if row.BasePrompt.Valid {
+		dto.BasePrompt = &row.BasePrompt.String
+	}
+	if row.AvatarUrl.Valid {
+		dto.AvatarURL = &row.AvatarUrl.String
+	}
+	if row.CreatedAt.Valid {
+		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		dto.CreatedAt = &timeStr
+	}
+	return dto
+}
+
 // toEntityDTO converts a repository.Entity to EntityDTO with proper null handling
+// Note: This uses the legacy Type field since Entity struct doesn't have the joined fields
 func toEntityDTO(e repository.Entity) EntityDTO {
 	dto := EntityDTO{
 		ID:   e.ID,
@@ -1466,6 +1611,116 @@ func toPromptTypeDTOs(promptTypes []repository.PromptType) []PromptTypeDTO {
 		dtos[i] = toPromptTypeDTO(pt)
 	}
 	return dtos
+}
+
+// EntityTypeDTO for API responses
+type EntityTypeDTO struct {
+	ID          int64   `json:"id"`
+	Slug        string  `json:"slug"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+}
+
+func toEntityTypeDTO(et repository.EntityType) EntityTypeDTO {
+	dto := EntityTypeDTO{
+		ID:   et.ID,
+		Slug: et.Slug,
+		Name: et.Name,
+	}
+	if et.Description.Valid {
+		dto.Description = &et.Description.String
+	}
+	return dto
+}
+
+func toEntityTypeDTOs(types []repository.EntityType) []EntityTypeDTO {
+	dtos := make([]EntityTypeDTO, len(types))
+	for i, t := range types {
+		dtos[i] = toEntityTypeDTO(t)
+	}
+	return dtos
+}
+
+// Entity Type Handlers
+
+func (r *Router) handleListEntityTypes(w http.ResponseWriter, req *http.Request) {
+	types, err := r.repo.ListEntityTypes(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list entity types: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if types == nil {
+		types = []repository.EntityType{}
+	}
+	respondJSON(w, toEntityTypeDTOs(types))
+}
+
+func (r *Router) handleCreateEntityType(w http.ResponseWriter, req *http.Request) {
+	var input struct {
+		Slug        string `json:"slug"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	et, err := r.repo.CreateEntityType(req.Context(), repository.CreateEntityTypeParams{
+		Slug:        input.Slug,
+		Name:        input.Name,
+		Description: sql.NullString{String: input.Description, Valid: input.Description != ""},
+	})
+	if err != nil {
+		http.Error(w, "Failed to create entity type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toEntityTypeDTO(et))
+}
+
+func (r *Router) handleUpdateEntityType(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input struct {
+		Slug        string `json:"slug"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	et, err := r.repo.UpdateEntityType(req.Context(), repository.UpdateEntityTypeParams{
+		Slug:        input.Slug,
+		Name:        input.Name,
+		Description: sql.NullString{String: input.Description, Valid: input.Description != ""},
+		ID:          id,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update entity type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toEntityTypeDTO(et))
+}
+
+func (r *Router) handleDeleteEntityType(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	err := r.repo.DeleteEntityType(req.Context(), id)
+	if err != nil {
+		http.Error(w, "Failed to delete entity type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, map[string]bool{"success": true})
 }
 
 // Helper functions

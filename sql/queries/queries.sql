@@ -1,22 +1,31 @@
 -- name: CreateEntity :one
-INSERT INTO entities (slug, name, type, description, base_prompt, avatar_url)
+INSERT INTO entities (slug, name, entity_type_id, description, base_prompt, avatar_url)
 VALUES (?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetEntityBySlug :one
-SELECT * FROM entities WHERE slug = ?;
+SELECT e.*, et.name as type_name, et.slug as type_slug 
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+WHERE e.slug = ?;
 
 -- name: GetEntityByID :one
-SELECT * FROM entities WHERE id = ?;
+SELECT e.*, et.name as type_name, et.slug as type_slug
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+WHERE e.id = ?;
 
 -- name: ListEntities :many
-SELECT * FROM entities ORDER BY name;
+SELECT e.*, et.name as type_name, et.slug as type_slug
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+ORDER BY e.name;
 
 -- name: UpdateEntity :one
 UPDATE entities
 SET slug = COALESCE(?, slug),
     name = COALESCE(?, name),
-    type = COALESCE(?, type),
+    entity_type_id = COALESCE(?, entity_type_id),
     description = COALESCE(?, description),
     base_prompt = COALESCE(?, base_prompt),
     avatar_url = COALESCE(?, avatar_url)
@@ -27,7 +36,34 @@ RETURNING *;
 DELETE FROM entities WHERE id = ?;
 
 -- name: ListEntitiesByType :many
-SELECT * FROM entities WHERE LOWER(type) = LOWER(?) ORDER BY name;
+SELECT e.*, et.name as type_name, et.slug as type_slug
+FROM entities e
+JOIN entity_types et ON e.entity_type_id = et.id
+WHERE lower(et.slug) = lower(?)
+ORDER BY e.name;
+
+-- name: ListEntityTypes :many
+SELECT * FROM entity_types ORDER BY name;
+
+-- name: CreateEntityType :one
+INSERT INTO entity_types (slug, name, description)
+VALUES (?, ?, ?)
+RETURNING *;
+
+-- name: UpdateEntityType :one
+UPDATE entity_types
+SET slug = ?, name = ?, description = ?
+WHERE id = ?
+RETURNING *;
+
+-- name: DeleteEntityType :exec
+DELETE FROM entity_types WHERE id = ?;
+
+-- name: GetEntityTypeBySlug :one
+SELECT * FROM entity_types WHERE slug = ?;
+
+-- name: GetEntityTypeByID :one
+SELECT * FROM entity_types WHERE id = ?;
 
 -- name: CreatePromptType :one
 INSERT INTO prompt_types (slug, description, template_text)

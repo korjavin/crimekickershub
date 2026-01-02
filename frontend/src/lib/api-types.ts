@@ -12,6 +12,13 @@ export interface Entity {
   created_at: string | null;
 }
 
+export interface EntityType {
+  id: number;
+  slug: string;
+  name: string;
+  description?: string;
+}
+
 export interface MediaAsset {
   id: number;
   type: string; // "image" or "video"
