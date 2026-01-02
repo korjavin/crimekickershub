@@ -8,7 +8,6 @@ import { getHeroes, getEntities, getEntityTypes } from '@/lib/api';
 import type { Entity } from '@/lib/api-types';
 
 export function WikiPage() {
-  const [heroes, setHeroes] = useState<Entity[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [types, setTypes] = useState<any[]>([]);
   const [selectedHero, setSelectedHero] = useState<Entity | null>(null);
@@ -18,12 +17,10 @@ export function WikiPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [heroesData, entitiesData, typesData] = await Promise.all([
-          getHeroes(),
+        const [entitiesData, typesData] = await Promise.all([
           getEntities(),
           getEntityTypes(),
         ]);
-        setHeroes(heroesData || []);
         setEntities(entitiesData || []);
         setTypes(typesData || []);
       } catch (error) {
