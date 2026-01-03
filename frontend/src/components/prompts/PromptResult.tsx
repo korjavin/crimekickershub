@@ -13,13 +13,13 @@ interface PromptResultProps {
   onSaved: () => void;
 }
 
-export function PromptResult({ 
-  prompt, 
-  promptTypes, 
-  entities, 
-  selectedEntityIds, 
+export function PromptResult({
+  prompt,
+  promptTypes,
+  entities,
+  selectedEntityIds,
   selectedTypeSlug,
-  onSaved 
+  onSaved
 }: PromptResultProps) {
   const [editedPrompt, setEditedPrompt] = useState(prompt);
   const [selectedType, setSelectedType] = useState<string>('');
@@ -78,9 +78,12 @@ export function PromptResult({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-lg bg-slate-50/50">
         <div>
-          <label className="text-sm font-medium mb-2 block">Generator Template</label>
+          <label className="text-sm font-medium mb-1.5 block">Generator Template</label>
+          <p className="text-xs text-muted-foreground mb-2">
+            The template type to associate this version with.
+          </p>
           <select
             className="w-full p-2 rounded border bg-background"
             value={selectedType}
@@ -96,14 +99,21 @@ export function PromptResult({
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Primary Subject</label>
+          <label className="text-sm font-medium mb-1.5 block">Primary Subject</label>
+          <p className="text-xs text-muted-foreground mb-2">
+            The main entity this prompt version belongs to (for history).
+          </p>
           <select
             className="w-full p-2 rounded border bg-background"
             value={selectedEntity || ''}
             onChange={(e) => setSelectedEntity(Number(e.target.value))}
           >
             <option value="">Select subject</option>
-            {entities.filter((e) => selectedEntityIds.includes(e.id)).map((entity) => (
+            {/* Show all entities if none selected, otherwise just selected ones */}
+            {(selectedEntityIds.length > 0
+              ? entities.filter((e) => selectedEntityIds.includes(e.id))
+              : entities
+            ).map((entity) => (
               <option key={entity.id} value={entity.id}>
                 {entity.name}
               </option>

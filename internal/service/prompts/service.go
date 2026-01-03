@@ -48,12 +48,12 @@ func (s *PromptService) ComposePrompt(ctx context.Context, entityIDs []int, type
 			return "", fmt.Errorf("failed to fetch entity %d: %w", entityID, err)
 		}
 
-		// Use the entity's description as the narrative
-		if entity.Description.Valid {
+		// Use the entity's base prompt (generator config) as the narrative
+		if entity.BasePrompt.Valid {
 			if strings.ToLower(entity.Type) == "location" {
-				locationNarratives = append(locationNarratives, entity.Description.String)
+				locationNarratives = append(locationNarratives, entity.BasePrompt.String)
 			} else {
-				characterNarratives = append(characterNarratives, entity.Description.String)
+				characterNarratives = append(characterNarratives, entity.BasePrompt.String)
 			}
 		}
 	}

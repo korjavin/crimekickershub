@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Entity, PromptType } from '@/lib/api-types';
-import { getEntities, getPromptTypes, composePrompt } from '@/lib/api';
+import { Badge } from '@/components/ui/badge';
+import { Search } from 'lucide-react';
+import type { Entity, PromptType, EntityType } from '@/lib/api-types';
+import { getEntities, getPromptTypes, getEntityTypes, composePrompt } from '@/lib/api';
 
 interface PromptMixerProps {
   onPromptGenerated: (prompt: string, entityIds: number[], typeSlug: string) => void;
@@ -13,32 +16,34 @@ interface PromptMixerProps {
 export function PromptMixer({ onPromptGenerated, isLoading: externalLoading }: PromptMixerProps) {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [promptTypes, setPromptTypes] = useState<PromptType[]>([]);
+  const [entityTypes, setEntityTypes] = useState<EntityType[]>([]);
   const [selectedEntities, setSelectedEntities] = useState<number[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedEntityTypeFilter, setSelectedEntityTypeFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoadingEntities, setIsLoadingEntities] = useState(true);
-  const [isLoadingTypes, setIsLoadingTypes] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
-      setIsLoadingEntities(true);
-      setIsLoadingTypes(true);
+      setIsLoadingData(true);
       setError(null);
-      
+
       try {
-        const [entitiesData, typesData] = await Promise.all([
+        const [entitiesData, typesData, entityTypesData] = await Promise.all([
           getEntities(),
           getPromptTypes(),
+          getEntityTypes(),
         ]);
         setEntities(entitiesData || []);
         setPromptTypes(typesData || []);
+        setEntityTypes(entityTypesData || []);
       } catch (err) {
         console.error('Failed to load data:', err);
         setError('Failed to load entities and templates. Please ensure you are logged in.');
       } finally {
-        setIsLoadingEntities(false);
-        setIsLoadingTypes(false);
+        setIsLoadingData(false);
       }
     }
     loadData();
@@ -72,12 +77,48 @@ export function PromptMixer({ onPromptGenerated, isLoading: externalLoading }: P
     }
   };
 
-  const locations = entities.filter((e) => e.type.toLowerCase() === 'location');
-  const heroes = entities.filter((e) => e.type.toLowerCase() === 'hero');
-  const villains = entities.filter((e) => e.type.toLowerCase() === 'villain');
+  const filteredEntities = useMemo(() => {
+    return entities.filter(entity => {
+      // Filter by type
+      if (selectedEntityTypeFilter !== 'all') {
+        const typeMatch = entity.type.toLowerCase() === selectedEntityTypeFilter.toLowerCase();
+
+        if (!typeMatch) return false;
+      }
+
+      // Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          entity.name.toLowerCase().includes(query) ||
+          (entity.description && entity.description.toLowerCase().includes(query))
+        );
+      }
+
+      return true;
+    });
+  }, [entities, selectedEntityTypeFilter, searchQuery]);
+
+  // Group entities by type for display if "all" is selected, otherwise just show list
+  const groupedEntities = useMemo(() => {
+    if (selectedEntityTypeFilter !== 'all') {
+      return { [selectedEntityTypeFilter]: filteredEntities };
+    }
+
+    // Group by entity type
+    const groups: Record<string, Entity[]> = {};
+    filteredEntities.forEach(entity => {
+      const type = entity.type || 'Other';
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(entity);
+    });
+    return groups;
+  }, [filteredEntities, selectedEntityTypeFilter]);
 
   const hasSelections = selectedEntities.length > 0 && selectedType;
-  const isLoading = isLoadingEntities || isLoadingTypes || externalLoading;
+  const isLoading = isLoadingData || externalLoading;
 
   return (
     <div className="space-y-6">
@@ -106,93 +147,95 @@ export function PromptMixer({ onPromptGenerated, isLoading: externalLoading }: P
       ) : (
         <>
           {/* Subject(s) & Location Selection */}
-          <div>
-            <h3 className="font-semibold mb-3">Subject(s) & Location</h3>
-            
-            {heroes.length === 0 && villains.length === 0 && locations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No subjects available. Create entities in the Entities page first.
-              </p>
-            ) : (
-              <>
-                {heroes.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="text-sm text-muted-foreground mb-2">Heroes</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {heroes.map((entity) => (
-                        <label
-                          key={entity.id}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            selectedEntities.includes(entity.id)
-                              ? 'border-primary bg-primary/10'
-                              : 'border-muted hover:border-muted-foreground/50'
-                          }`}
-                        >
-                          <Checkbox
-                            checked={selectedEntities.includes(entity.id)}
-                            onChange={() => handleEntityToggle(entity.id)}
-                          />
-                          <span className="text-sm">{entity.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Subject(s) & Location</h3>
+              <Badge variant="secondary" className="ml-2">
+                {selectedEntities.length} selected
+              </Badge>
+            </div>
 
-                {villains.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="text-sm text-muted-foreground mb-2">Villains</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {villains.map((entity) => (
-                        <label
-                          key={entity.id}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            selectedEntities.includes(entity.id)
-                              ? 'border-primary bg-primary/10'
-                              : 'border-muted hover:border-muted-foreground/50'
-                          }`}
-                        >
-                          <Checkbox
-                            checked={selectedEntities.includes(entity.id)}
-                            onChange={() => handleEntityToggle(entity.id)}
-                          />
-                          <span className="text-sm">{entity.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {/* Filters */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search entities..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              <Select
+                value={selectedEntityTypeFilter}
+                onValueChange={setSelectedEntityTypeFilter}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {entityTypes.map(type => (
+                    <SelectItem key={type.id} value={type.slug}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                  {/* Fallback for hardcoded types if not in DB yet */}
+                  {!entityTypes.find(t => t.slug === 'hero') && <SelectItem value="hero">Heroes</SelectItem>}
+                  {!entityTypes.find(t => t.slug === 'villain') && <SelectItem value="villain">Villains</SelectItem>}
+                  {!entityTypes.find(t => t.slug === 'location') && <SelectItem value="location">Locations</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {locations.length > 0 && (
-                  <div>
-                    <h4 className="text-sm text-muted-foreground mb-2">Locations</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {locations.map((entity) => (
+            {/* Entity List */}
+            <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4 border rounded-md p-2 bg-slate-50/50">
+              {Object.keys(groupedEntities).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No entities found matching your filters.
+                </div>
+              ) : (
+                Object.entries(groupedEntities).map(([type, typeEntities]) => (
+                  <div key={type} className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-slate-50/95 py-1 z-10 backdrop-blur">
+                      {type} ({typeEntities.length})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {typeEntities.map((entity) => (
                         <label
                           key={entity.id}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            selectedEntities.includes(entity.id)
-                              ? 'border-primary bg-primary/10'
-                              : 'border-muted hover:border-muted-foreground/50'
-                          }`}
+                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${selectedEntities.includes(entity.id)
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                            : 'border-muted bg-white hover:border-primary/50'
+                            }`}
                         >
                           <Checkbox
                             checked={selectedEntities.includes(entity.id)}
                             onChange={() => handleEntityToggle(entity.id)}
+                            className="mt-1"
                           />
-                          <span className="text-sm">{entity.name}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate" title={entity.name}>
+                              {entity.name}
+                            </div>
+                            {entity.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                {entity.description}
+                              </p>
+                            )}
+                          </div>
                         </label>
                       ))}
                     </div>
                   </div>
-                )}
-              </>
-            )}
+                ))
+              )}
+            </div>
           </div>
 
           {/* Generator Template Selection */}
-          <div>
-            <h3 className="font-semibold mb-3">Generator Template</h3>
+          <div className="space-y-3">
+            <h3 className="font-semibold">Generator Template</h3>
             {promptTypes.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No templates available. Create prompt types in the Prompt Types page first.
@@ -217,8 +260,7 @@ export function PromptMixer({ onPromptGenerated, isLoading: externalLoading }: P
           <Button
             onClick={handleGenerate}
             disabled={!hasSelections || isGenerating}
-            className="w-full"
-            size="lg"
+            className="w-full h-12 text-lg shadow-sm"
           >
             {isGenerating ? 'Mixing...' : '✨ Mix Prompt'}
           </Button>
