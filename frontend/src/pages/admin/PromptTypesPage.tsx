@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { createPromptType, updatePromptType, deletePromptType } from '@/lib/api';
 import type { PromptType } from '@/lib/api-types';
-import { Plus, Edit2, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2 } from 'lucide-react';
 
 interface PromptTypeFormData {
   slug: string;
@@ -34,7 +34,6 @@ export function PromptTypesPage() {
   const [editingType, setEditingType] = useState<PromptType | null>(null);
   const [formData, setFormData] = useState<PromptTypeFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
-  const [placeholderWarning, setPlaceholderWarning] = useState(false);
 
   // Load prompt types on mount
   useEffect(() => {
@@ -74,15 +73,11 @@ export function PromptTypesPage() {
 
   const handleTemplateChange = (template_text: string) => {
     setFormData(prev => ({ ...prev, template_text }));
-    const hasEntity = template_text.includes('{{ENTITY}}');
-    const hasLocation = template_text.includes('{{LOCATION}}');
-    setPlaceholderWarning(!hasEntity && !hasLocation);
   };
 
   const openCreateDialog = () => {
     setEditingType(null);
     setFormData(initialFormData);
-    setPlaceholderWarning(false);
     setDialogOpen(true);
   };
 
@@ -93,9 +88,6 @@ export function PromptTypesPage() {
       description: type.description || '',
       template_text: type.template_text,
     });
-    const hasEntity = type.template_text.includes('{{ENTITY}}');
-    const hasLocation = type.template_text.includes('{{LOCATION}}');
-    setPlaceholderWarning(!hasEntity && !hasLocation);
     setDialogOpen(true);
   };
 
@@ -278,16 +270,6 @@ export function PromptTypesPage() {
                 Use <code className="px-1 bg-muted rounded">{'{'}ENTITY{'}'}</code> for character description and <code className="px-1 bg-muted rounded">{'{'}LOCATION{'}'}</code> for location description
               </p>
             </div>
-
-            {/* Placeholder Warning */}
-            {placeholderWarning && (
-              <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
-                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Consider including <code className="px-1 bg-amber-200 dark:bg-amber-800 rounded">{'{'}ENTITY{'}'}</code> or <code className="px-1 bg-amber-200 dark:bg-amber-800 rounded">{'{'}LOCATION{'}'}</code> placeholder in your template
-                </p>
-              </div>
-            )}
           </div>
 
           <DialogFooter>
@@ -298,7 +280,8 @@ export function PromptTypesPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={saving || placeholderWarning}>
+            <Button onClick={handleSave} disabled={saving}>
+
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
