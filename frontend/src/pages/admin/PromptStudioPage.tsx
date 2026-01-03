@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PromptMixer } from '@/components/prompts/PromptMixer';
@@ -13,6 +13,24 @@ export function PromptStudioPage() {
   const [selectedEntityIds, setSelectedEntityIds] = useState<number[]>([]);
   const [selectedTypeSlug, setSelectedTypeSlug] = useState<string>('');
 
+  // Load data on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [entitiesData, typesData] = await Promise.all([
+        getEntities(),
+        getPromptTypes(),
+      ]);
+      setEntities(entitiesData || []);
+      setPromptTypes(typesData || []);
+    } catch (error) {
+      console.error('Failed to load prompt studio data:', error);
+    }
+  };
+
   const handlePromptGenerated = (prompt: string, ids: number[], typeSlug: string) => {
     setGeneratedPrompt(prompt);
     setSelectedEntityIds(ids);
@@ -23,11 +41,7 @@ export function PromptStudioPage() {
     setGeneratedPrompt('');
     setSelectedEntityIds([]);
     setSelectedTypeSlug('');
-    // Refresh entities and prompt types
-    Promise.all([getEntities(), getPromptTypes()]).then(([entitiesData, typesData]) => {
-      setEntities(entitiesData || []);
-      setPromptTypes(typesData || []);
-    });
+    loadData();
   };
 
   return (
