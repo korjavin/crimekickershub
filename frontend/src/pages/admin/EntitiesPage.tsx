@@ -125,7 +125,7 @@ export function EntitiesPage() {
     setFormData(prev => ({
       ...prev,
       name,
-      slug: prev.slug || generateSlug(name),
+      slug: generateSlug(name), // Always auto-gen
     }));
   };
 
@@ -426,15 +426,7 @@ export function EntitiesPage() {
                 />
               </div>
 
-              {/* Slug */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Slug</label>
-                <Input
-                  placeholder="e.g., windman"
-                  value={formData.slug}
-                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                />
-              </div>
+
 
               {/* Type */}
               <div className="space-y-2">

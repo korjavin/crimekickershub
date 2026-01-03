@@ -67,7 +67,7 @@ export function PromptTypesPage() {
     setFormData(prev => ({
       ...prev,
       description,
-      slug: prev.slug || generateSlug(description),
+      slug: generateSlug(description), // Always auto-gen
     }));
   };
 
@@ -243,18 +243,7 @@ export function PromptTypesPage() {
               </p>
             </div>
 
-            {/* Slug */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Slug *</label>
-              <Input
-                placeholder="e.g., video_sora_v1"
-                value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground">
-                Unique identifier (auto-generated from label if empty)
-              </p>
-            </div>
+
 
             {/* Template */}
             <div className="space-y-2">

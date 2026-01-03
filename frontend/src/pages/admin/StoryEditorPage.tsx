@@ -179,7 +179,7 @@ export function StoryEditorPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [newStoryTitle, setNewStoryTitle] = useState('');
-  const [newStorySlug, setNewStorySlug] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [addingMediaIds, setAddingMediaIds] = useState<Set<number>>(new Set());
@@ -249,6 +249,13 @@ export function StoryEditorPage() {
     }
   };
 
+  const generateSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
   const handleCreateStory = async () => {
     if (!newStoryTitle.trim()) return;
 
@@ -256,14 +263,14 @@ export function StoryEditorPage() {
       setIsLoading(true);
       const newStory = await createStory({
         title: newStoryTitle,
-        slug: newStorySlug || undefined,
+        slug: generateSlug(newStoryTitle),
       });
 
       await loadStories();
       setSelectedStoryId(String(newStory.id));
       setIsCreateDialogOpen(false);
       setNewStoryTitle('');
-      setNewStorySlug('');
+
       toast.success('Story created successfully');
     } catch (error) {
       console.error('Failed to create story:', error);
@@ -516,10 +523,10 @@ export function StoryEditorPage() {
   }, []);
 
   const finalFilteredMedia = filteredMedia.filter(media => {
-      if (selectedEntityId === 'all') return true;
-      if (!media.source_prompt_version_id) return false;
-      const entityId = promptVersionEntityMap[media.source_prompt_version_id];
-      return String(entityId) === selectedEntityId;
+    if (selectedEntityId === 'all') return true;
+    if (!media.source_prompt_version_id) return false;
+    const entityId = promptVersionEntityMap[media.source_prompt_version_id];
+    return String(entityId) === selectedEntityId;
   });
 
   return (
@@ -561,16 +568,7 @@ export function StoryEditorPage() {
                     placeholder="Enter story title"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Slug (optional)
-                  </label>
-                  <Input
-                    value={newStorySlug}
-                    onChange={(e) => setNewStorySlug(e.target.value)}
-                    placeholder="auto-generated if empty"
-                  />
-                </div>
+
               </div>
               <DialogFooter>
                 <Button
@@ -646,22 +644,22 @@ export function StoryEditorPage() {
               <h2 className="text-lg font-semibold">Media Library</h2>
               <div className="flex gap-2">
                 <div className="flex-1">
-                    <Input
-                        placeholder="Search media..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                  <Input
+                    placeholder="Search media..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
                 <Select value={selectedEntityId} onValueChange={setSelectedEntityId}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filter by Entity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Entities</SelectItem>
-                        {entities.map(e => (
-                            <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
-                        ))}
-                    </SelectContent>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by Entity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Entities</SelectItem>
+                    {entities.map(e => (
+                      <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
             </div>
@@ -714,12 +712,12 @@ export function StoryEditorPage() {
                 >
                   <div className="space-y-2">
                     {storyWithItems?.items.map((item) => (
-                        <SortableTimelineItem
+                      <SortableTimelineItem
                         key={item.id}
                         item={item}
                         onRemove={handleRemoveFromStory}
                         isRemoving={removingItemIds.has(item.id)}
-                        />
+                      />
                     ))}
                   </div>
                 </SortableContext>
@@ -737,40 +735,40 @@ export function StoryEditorPage() {
       {/* Preview Modal */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
-           <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
-              <h3 className="font-semibold">Mobile Preview</h3>
-              <Button variant="ghost" size="sm" onClick={() => setIsPreviewOpen(false)}>✕</Button>
-           </div>
-           <ScrollArea className="flex-1 bg-black">
-              <div className="flex flex-col">
-                  {storyWithItems?.items.map((item) => {
-                      const url = item.media?.url || '';
-                      if (!url) return null;
+          <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
+            <h3 className="font-semibold">Mobile Preview</h3>
+            <Button variant="ghost" size="sm" onClick={() => setIsPreviewOpen(false)}>✕</Button>
+          </div>
+          <ScrollArea className="flex-1 bg-black">
+            <div className="flex flex-col">
+              {storyWithItems?.items.map((item) => {
+                const url = item.media?.url || '';
+                if (!url) return null;
 
-                      return (
-                          <div key={item.id} className="w-full">
-                              {item.media?.type === 'video' || (item.media?.youtube_id) ? (
-                                  <div className="aspect-video w-full">
-                                      <iframe
-                                          src={item.media?.url}
-                                          className="w-full h-full"
-                                          title="Video"
-                                          allowFullScreen
-                                      />
-                                  </div>
-                              ) : (
-                                  <img
-                                      src={url}
-                                      alt="Comic Panel"
-                                      className="w-full h-auto block"
-                                      loading="lazy"
-                                  />
-                              )}
-                          </div>
-                      );
-                  })}
-              </div>
-           </ScrollArea>
+                return (
+                  <div key={item.id} className="w-full">
+                    {item.media?.type === 'video' || (item.media?.youtube_id) ? (
+                      <div className="aspect-video w-full">
+                        <iframe
+                          src={item.media?.url}
+                          className="w-full h-full"
+                          title="Video"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <img
+                        src={url}
+                        alt="Comic Panel"
+                        className="w-full h-auto block"
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

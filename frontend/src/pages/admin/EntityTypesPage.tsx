@@ -80,7 +80,7 @@ export function EntityTypesPage() {
         setFormData(prev => ({
             ...prev,
             name,
-            slug: prev.slug || generateSlug(name), // Only auto-gen if slug is empty
+            slug: generateSlug(name), // Always auto-gen
         }));
     };
 
@@ -101,8 +101,8 @@ export function EntityTypesPage() {
     };
 
     const handleSave = async () => {
-        if (!formData.name.trim() || !formData.slug.trim()) {
-            alert('Name and Slug are required');
+        if (!formData.name.trim()) {
+            alert('Name is required');
             return;
         }
 
@@ -255,14 +255,7 @@ export function EntityTypesPage() {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Slug *</label>
-                            <Input
-                                placeholder="e.g., hero"
-                                value={formData.slug}
-                                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                            />
-                        </div>
+
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Description</label>
