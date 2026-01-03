@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
 import { getDashboardActivity } from '@/lib/api';
 import { Link } from 'react-router-dom';
 import {
@@ -11,8 +11,7 @@ import {
     BookOpen,
     MessageSquare,
     Plus,
-    Upload,
-    Settings
+    Upload
 } from 'lucide-react';
 
 interface ActivityItem {
