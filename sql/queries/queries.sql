@@ -219,3 +219,22 @@ SELECT * FROM users ORDER BY created_at DESC;
 
 -- name: DeleteMediaAsset :exec
 DELETE FROM media_assets WHERE id = ?;
+
+-- name: ListRecentEntities :many
+SELECT e.*, et.name as type_name, et.slug as type_slug
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+ORDER BY e.created_at DESC LIMIT 10;
+
+-- name: ListRecentMedia :many
+SELECT * FROM media_assets ORDER BY created_at DESC LIMIT 10;
+
+-- name: ListRecentStories :many
+SELECT * FROM stories ORDER BY created_at DESC LIMIT 10;
+
+-- name: ListPromptHistory :many
+SELECT pv.*, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+FROM prompt_versions pv
+JOIN entities e ON pv.entity_id = e.id
+JOIN prompt_types pt ON pv.type_id = pt.id
+ORDER BY pv.created_at DESC;

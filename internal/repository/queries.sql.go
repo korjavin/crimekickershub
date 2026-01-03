@@ -985,6 +985,61 @@ func (q *Queries) ListMediaByStory(ctx context.Context, storyID int64) ([]MediaA
 	return items, nil
 }
 
+const listPromptHistory = `-- name: ListPromptHistory :many
+SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+FROM prompt_versions pv
+JOIN entities e ON pv.entity_id = e.id
+JOIN prompt_types pt ON pv.type_id = pt.id
+ORDER BY pv.created_at DESC
+`
+
+type ListPromptHistoryRow struct {
+	ID                  int64          `json:"id"`
+	EntityID            int64          `json:"entity_id"`
+	TypeID              int64          `json:"type_id"`
+	VersionNumber       int64          `json:"version_number"`
+	PromptText          string         `json:"prompt_text"`
+	TechnicalParamsJson sql.NullString `json:"technical_params_json"`
+	CreatedAt           sql.NullTime   `json:"created_at"`
+	EntityName          string         `json:"entity_name"`
+	TypeSlug            string         `json:"type_slug"`
+	TypeDescription     sql.NullString `json:"type_description"`
+}
+
+func (q *Queries) ListPromptHistory(ctx context.Context) ([]ListPromptHistoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPromptHistory)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPromptHistoryRow
+	for rows.Next() {
+		var i ListPromptHistoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntityID,
+			&i.TypeID,
+			&i.VersionNumber,
+			&i.PromptText,
+			&i.TechnicalParamsJson,
+			&i.CreatedAt,
+			&i.EntityName,
+			&i.TypeSlug,
+			&i.TypeDescription,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPromptTypes = `-- name: ListPromptTypes :many
 SELECT id, slug, description, template_text FROM prompt_types ORDER BY slug
 `
@@ -1128,6 +1183,98 @@ func (q *Queries) ListPublishedStories(ctx context.Context) ([]Story, error) {
 	return items, nil
 }
 
+const listRecentEntities = `-- name: ListRecentEntities :many
+SELECT e.id, e.slug, e.name, e.type, e.description, e.avatar_url, e.created_at, e.base_prompt, e.entity_type_id, e.avatar_thumbnail_url, et.name as type_name, et.slug as type_slug
+FROM entities e
+LEFT JOIN entity_types et ON e.entity_type_id = et.id
+ORDER BY e.created_at DESC LIMIT 10
+`
+
+type ListRecentEntitiesRow struct {
+	ID                 int64          `json:"id"`
+	Slug               string         `json:"slug"`
+	Name               string         `json:"name"`
+	Type               string         `json:"type"`
+	Description        sql.NullString `json:"description"`
+	AvatarUrl          sql.NullString `json:"avatar_url"`
+	CreatedAt          sql.NullTime   `json:"created_at"`
+	BasePrompt         sql.NullString `json:"base_prompt"`
+	EntityTypeID       sql.NullInt64  `json:"entity_type_id"`
+	AvatarThumbnailUrl sql.NullString `json:"avatar_thumbnail_url"`
+	TypeName           sql.NullString `json:"type_name"`
+	TypeSlug           sql.NullString `json:"type_slug"`
+}
+
+func (q *Queries) ListRecentEntities(ctx context.Context) ([]ListRecentEntitiesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRecentEntities)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRecentEntitiesRow
+	for rows.Next() {
+		var i ListRecentEntitiesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.Type,
+			&i.Description,
+			&i.AvatarUrl,
+			&i.CreatedAt,
+			&i.BasePrompt,
+			&i.EntityTypeID,
+			&i.AvatarThumbnailUrl,
+			&i.TypeName,
+			&i.TypeSlug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecentMedia = `-- name: ListRecentMedia :many
+SELECT id, type, r2_key, youtube_id, source_prompt_version_id, created_at FROM media_assets ORDER BY created_at DESC LIMIT 10
+`
+
+func (q *Queries) ListRecentMedia(ctx context.Context) ([]MediaAsset, error) {
+	rows, err := q.db.QueryContext(ctx, listRecentMedia)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MediaAsset
+	for rows.Next() {
+		var i MediaAsset
+		if err := rows.Scan(
+			&i.ID,
+			&i.Type,
+			&i.R2Key,
+			&i.YoutubeID,
+			&i.SourcePromptVersionID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRecentPromptVersions = `-- name: ListRecentPromptVersions :many
 SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
 FROM prompt_versions pv
@@ -1183,50 +1330,26 @@ func (q *Queries) ListRecentPromptVersions(ctx context.Context) ([]ListRecentPro
 	return items, nil
 }
 
-const listPromptHistory = `-- name: ListPromptHistory :many
-SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, 
-       CAST(COALESCE(e.name, 'Unknown Entity') AS TEXT) as entity_name, 
-       CAST(COALESCE(pt.slug, 'Unknown Type') AS TEXT) as type_slug, 
-       pt.description as type_description
-FROM prompt_versions pv
-LEFT JOIN entities e ON pv.entity_id = e.id
-LEFT JOIN prompt_types pt ON pv.type_id = pt.id
-ORDER BY pv.created_at DESC
+const listRecentStories = `-- name: ListRecentStories :many
+SELECT id, title, slug, cover_image_url, published, created_at FROM stories ORDER BY created_at DESC LIMIT 10
 `
 
-type ListPromptHistoryRow struct {
-	ID                  int64          `json:"id"`
-	EntityID            int64          `json:"entity_id"`
-	TypeID              int64          `json:"type_id"`
-	VersionNumber       int64          `json:"version_number"`
-	PromptText          string         `json:"prompt_text"`
-	TechnicalParamsJson sql.NullString `json:"technical_params_json"`
-	CreatedAt           sql.NullTime   `json:"created_at"`
-	EntityName          string         `json:"entity_name"`
-	TypeSlug            string         `json:"type_slug"`
-	TypeDescription     sql.NullString `json:"type_description"`
-}
-
-func (q *Queries) ListPromptHistory(ctx context.Context) ([]ListPromptHistoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPromptHistory)
+func (q *Queries) ListRecentStories(ctx context.Context) ([]Story, error) {
+	rows, err := q.db.QueryContext(ctx, listRecentStories)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPromptHistoryRow
+	var items []Story
 	for rows.Next() {
-		var i ListPromptHistoryRow
+		var i Story
 		if err := rows.Scan(
 			&i.ID,
-			&i.EntityID,
-			&i.TypeID,
-			&i.VersionNumber,
-			&i.PromptText,
-			&i.TechnicalParamsJson,
+			&i.Title,
+			&i.Slug,
+			&i.CoverImageUrl,
+			&i.Published,
 			&i.CreatedAt,
-			&i.EntityName,
-			&i.TypeSlug,
-			&i.TypeDescription,
 		); err != nil {
 			return nil, err
 		}

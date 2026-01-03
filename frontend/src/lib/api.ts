@@ -371,3 +371,9 @@ export async function getMatrixData() {
     versions: Record<string, { id: number; entity_id: number; type_id: number; version_number: number; prompt_text: string; created_at: string }>;
   }>('/admin/matrix');
 }
+
+// Dashboard API
+export async function getDashboardActivity() {
+  return fetchApi<any[]>('/admin/dashboard/activity');
+}
+

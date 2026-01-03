@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -152,6 +153,9 @@ func (r *Router) adminRoutes() {
 
 	// Matrix view (admin only)
 	r.mux.Handle("GET /api/admin/matrix", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetMatrix)))
+
+	// Dashboard activity (admin only)
+	r.mux.Handle("GET /api/admin/dashboard/activity", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetDashboardActivity)))
 }
 
 // Handler methods
@@ -1963,4 +1967,144 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// handleGetDashboardActivity returns a combined feed of recent activity
+func (r *Router) handleGetDashboardActivity(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+
+	// 1. Fetch recent entities
+	entities, err := r.repo.ListRecentEntities(ctx)
+	if err != nil {
+		log.Printf("Error fetching recent entities: %v", err)
+	}
+
+	// 2. Fetch recent prompt versions
+	prompts, err := r.repo.ListRecentPromptVersions(ctx)
+	if err != nil {
+		log.Printf("Error fetching recent prompts: %v", err)
+	}
+
+	// 3. Fetch recent stories
+	stories, err := r.repo.ListRecentStories(ctx)
+	if err != nil {
+		log.Printf("Error fetching recent stories: %v", err)
+	}
+
+	// 4. Fetch recent media
+	mediaAssets, err := r.repo.ListRecentMedia(ctx)
+	if err != nil {
+		log.Printf("Error fetching recent media: %v", err)
+	}
+
+	// Combine into ActivityItems
+	var activities []ActivityItem
+
+	// Process Entities
+	for _, e := range entities {
+		ts := ""
+		if e.CreatedAt.Valid {
+			ts = e.CreatedAt.Time.Format(time.RFC3339)
+		}
+		item := ActivityItem{
+			ID:        e.ID,
+			Type:      "entity",
+			Title:     e.Name,
+			Subtitle:  "Created new entity (" + e.TypeSlug.String + ")",
+			CreatedAt: ts,
+			Link:      "/admin/entities",
+		}
+		activities = append(activities, item)
+	}
+
+	// Process Prompts
+	for _, p := range prompts {
+		ts := ""
+		if p.CreatedAt.Valid {
+			ts = p.CreatedAt.Time.Format(time.RFC3339)
+		}
+		item := ActivityItem{
+			ID:        p.ID,
+			Type:      "prompt",
+			Title:     fmt.Sprintf("%s - %s", p.EntityName, p.TypeSlug),
+			Subtitle:  fmt.Sprintf("v%d: %s...", p.VersionNumber, truncateText(p.PromptText, 30)),
+			CreatedAt: ts,
+			Link:      "/admin/matrix",
+		}
+		activities = append(activities, item)
+	}
+
+	// Process Stories
+	for _, s := range stories {
+		ts := ""
+		if s.CreatedAt.Valid {
+			ts = s.CreatedAt.Time.Format(time.RFC3339)
+		}
+		status := "Draft"
+		if s.Published.Bool {
+			status = "Published"
+		}
+		item := ActivityItem{
+			ID:        s.ID,
+			Type:      "story",
+			Title:     s.Title,
+			Subtitle:  status,
+			CreatedAt: ts,
+			Link:      "/admin/stories",
+		}
+		activities = append(activities, item)
+	}
+
+	// Process Media
+	for _, m := range mediaAssets {
+		ts := ""
+		if m.CreatedAt.Valid {
+			ts = m.CreatedAt.Time.Format(time.RFC3339)
+		}
+		title := "Media Asset"
+		if m.Type == "image" {
+			title = "Image Upload"
+		} else if m.Type == "video" {
+			title = "Video Link"
+		}
+
+		item := ActivityItem{
+			ID:        m.ID,
+			Type:      "media",
+			Title:     title,
+			Subtitle:  m.Type,
+			CreatedAt: ts,
+			Link:      "/admin/media",
+		}
+		activities = append(activities, item)
+	}
+
+	// Sort by CreatedAt descending
+	sort.Slice(activities, func(i, j int) bool {
+		return activities[i].CreatedAt > activities[j].CreatedAt
+	})
+
+	// Limit to 50
+	if len(activities) > 50 {
+		activities = activities[:50]
+	}
+
+	respondJSON(w, activities)
+}
+
+// ActivityItem represents a generic activity feed item
+type ActivityItem struct {
+	ID        int64  `json:"id"`
+	Type      string `json:"type"` // "entity", "prompt", "media", "story"
+	Title     string `json:"title"`
+	Subtitle  string `json:"subtitle,omitempty"`
+	CreatedAt string `json:"created_at"`
+	Link      string `json:"link"`
+}
+
+func truncateText(s string, max int) string {
+	if len(s) > max {
+		return s[:max]
+	}
+	return s
 }

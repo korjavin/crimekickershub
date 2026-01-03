@@ -16,6 +16,7 @@ import { EntityTypesPage } from './pages/admin/EntityTypesPage';
 import { PromptTypesPage } from './pages/admin/PromptTypesPage';
 import { PromptMatrixPage } from './pages/admin/PromptMatrixPage';
 import { StoryEditorPage } from './pages/admin/StoryEditorPage';
+import { DashboardPage } from './pages/admin/DashboardPage';
 import { Toaster } from './components/ui/toast';
 
 function App() {
@@ -44,7 +45,7 @@ function App() {
               </RequireAuth>
             }
           >
-            <Route path="/admin" element={<div className="p-4"><h1 className="text-2xl font-bold">Dashboard</h1></div>} />
+            <Route path="/admin" element={<DashboardPage />} />
             <Route path="/admin/prompts" element={<PromptStudioPage />} />
             <Route path="/admin/matrix" element={<PromptMatrixPage />} />
             <Route path="/admin/media" element={<MediaPage />} />
