@@ -1264,14 +1264,22 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 		avatarThumbnailURL = &current.AvatarThumbnailUrl.String
 	}
 
+	// Helper to safely get string value
+	getString := func(s *string) string {
+		if s == nil {
+			return ""
+		}
+		return *s
+	}
+
 	entity, err := r.repo.UpdateEntity(req.Context(), repository.UpdateEntityParams{
 		Slug:               *slug,
 		Name:               *name,
 		EntityTypeID:       entityTypeID,
-		Description:        sql.NullString{String: *description, Valid: description != nil && *description != ""},
-		BasePrompt:         sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
-		AvatarUrl:          sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
-		AvatarThumbnailUrl: sql.NullString{String: *avatarThumbnailURL, Valid: avatarThumbnailURL != nil && *avatarThumbnailURL != ""},
+		Description:        sql.NullString{String: getString(description), Valid: description != nil && *description != ""},
+		BasePrompt:         sql.NullString{String: getString(basePrompt), Valid: basePrompt != nil && *basePrompt != ""},
+		AvatarUrl:          sql.NullString{String: getString(avatarURL), Valid: avatarURL != nil && *avatarURL != ""},
+		AvatarThumbnailUrl: sql.NullString{String: getString(avatarThumbnailURL), Valid: avatarThumbnailURL != nil && *avatarThumbnailURL != ""},
 		ID:                 entityID,
 	})
 	if err != nil {
