@@ -38,7 +38,7 @@ export function HomePage() {
       <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
         {/* Background gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-violet-900/40 via-slate-900/80 to-indigo-900/40" />
-        
+
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/20 rounded-full blur-3xl animate-pulse" />
@@ -192,7 +192,7 @@ export function HomePage() {
                     <div className="aspect-square relative overflow-hidden">
                       {hero.avatar_url ? (
                         <img
-                          src={hero.avatar_url}
+                          src={hero.avatar_thumbnail_url || hero.avatar_url}
                           alt={hero.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />

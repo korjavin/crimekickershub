@@ -1384,14 +1384,15 @@ type UpdatePromptTypeInput struct {
 
 // EntityDTO is a Data Transfer Object for Entity with proper JSON serialization
 type EntityDTO struct {
-	ID          int64   `json:"id"`
-	Slug        string  `json:"slug"`
-	Name        string  `json:"name"`
-	Type        string  `json:"type"`
-	Description *string `json:"description"`
-	BasePrompt  *string `json:"base_prompt"`
-	AvatarURL   *string `json:"avatar_url"`
-	CreatedAt   *string `json:"created_at"`
+	ID                 int64   `json:"id"`
+	Slug               string  `json:"slug"`
+	Name               string  `json:"name"`
+	Type               string  `json:"type"`
+	Description        *string `json:"description"`
+	BasePrompt         *string `json:"base_prompt"`
+	AvatarURL          *string `json:"avatar_url"`
+	AvatarThumbnailURL *string `json:"avatar_thumbnail_url"`
+	CreatedAt          *string `json:"created_at"`
 }
 
 // toEntityDTOsFromListRows determines the type from the joined row
@@ -1424,6 +1425,9 @@ func (r *Router) toEntityDTOFromListRow(row repository.ListEntitiesRow) EntityDT
 	if row.AvatarUrl.Valid {
 		dto.AvatarURL = &row.AvatarUrl.String
 	}
+	if row.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &row.AvatarThumbnailUrl.String
+	}
 	if row.CreatedAt.Valid {
 		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
 		dto.CreatedAt = &timeStr
@@ -1450,6 +1454,9 @@ func (r *Router) toEntityDTOFromGetRow(row repository.GetEntityByIDRow) EntityDT
 	}
 	if row.AvatarUrl.Valid {
 		dto.AvatarURL = &row.AvatarUrl.String
+	}
+	if row.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &row.AvatarThumbnailUrl.String
 	}
 	if row.CreatedAt.Valid {
 		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
@@ -1484,6 +1491,9 @@ func (r *Router) toEntityDTOFromListByTypeRow(row repository.ListEntitiesByTypeR
 	if row.AvatarUrl.Valid {
 		dto.AvatarURL = &row.AvatarUrl.String
 	}
+	if row.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &row.AvatarThumbnailUrl.String
+	}
 	if row.CreatedAt.Valid {
 		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
 		dto.CreatedAt = &timeStr
@@ -1508,6 +1518,9 @@ func toEntityDTO(e repository.Entity) EntityDTO {
 	}
 	if e.AvatarUrl.Valid {
 		dto.AvatarURL = &e.AvatarUrl.String
+	}
+	if e.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &e.AvatarThumbnailUrl.String
 	}
 	if e.CreatedAt.Valid {
 		timeStr := e.CreatedAt.Time.Format("2006-01-02T15:04:05Z")

@@ -102,7 +102,7 @@ export function WikiPage() {
                 <div className="aspect-square relative overflow-hidden">
                   {entity.avatar_url ? (
                     <img
-                      src={entity.avatar_url}
+                      src={entity.avatar_thumbnail_url || entity.avatar_url}
                       alt={entity.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
@@ -155,6 +155,8 @@ export function WikiPage() {
                 <div className="aspect-video relative rounded-lg overflow-hidden">
                   {selectedHero?.avatar_url ? (
                     <img
+                      // Use full resolution for the detailed view if needed, but thumbnail is likely fine for this size too.
+                      // Let's stick to full url for the "Hero" detailed view as it might be larger
                       src={selectedHero.avatar_url}
                       alt={selectedHero.name}
                       className="w-full h-full object-cover"

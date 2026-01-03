@@ -46,7 +46,7 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
   const [loading, setLoading] = useState(true);
   const [selectedEntities, setSelectedEntities] = useState<Set<number>>(new Set());
   const [selectedType, setSelectedType] = useState<string>('');
-  
+
   // Editor dialog state
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingCell, setEditingCell] = useState<{ entity: Entity; type: PromptType } | null>(null);
@@ -85,11 +85,11 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
 
   const handleCellClick = async (entity: Entity, type: PromptType) => {
     setEditingCell({ entity, type });
-    
+
     // Load existing prompt text if version exists
     const key = `${entity.id}_${type.id}`;
     const existingVersion = data?.versions[key];
-    
+
     if (existingVersion) {
       setEditorText(existingVersion.prompt_text);
       setSelectedVersion(existingVersion.id);
@@ -97,7 +97,7 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
       setEditorText('');
       setSelectedVersion(null);
     }
-    
+
     await loadVersionHistory(entity.id, type.id);
     setEditorOpen(true);
   };
@@ -266,7 +266,7 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
                   <div className="flex items-center gap-2">
                     {entity.avatar_url ? (
                       <img
-                        src={entity.avatar_url}
+                        src={entity.avatar_thumbnail_url || entity.avatar_url}
                         alt={entity.name}
                         className="w-8 h-8 rounded-full object-cover"
                       />

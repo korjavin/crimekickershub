@@ -45,6 +45,7 @@ interface EntityFormData {
   description: string;
   base_prompt: string;
   avatar_url: string | null;
+  avatar_thumbnail_url: string | null;
 }
 
 interface EntityType {
@@ -60,6 +61,7 @@ const initialFormData: EntityFormData = {
   description: '',
   base_prompt: '',
   avatar_url: null,
+  avatar_thumbnail_url: null,
 };
 
 export function EntitiesPage() {
@@ -139,6 +141,8 @@ export function EntitiesPage() {
       setFormData(prev => ({
         ...prev,
         avatar_url: result.url,
+        // If the backend returns a thumbnail_url, use it. Otherwise fall back to the main URL.
+        avatar_thumbnail_url: result.thumbnail_url || result.url,
       }));
     } catch (error) {
       console.error('Failed to upload avatar:', error);
@@ -164,6 +168,7 @@ export function EntitiesPage() {
       description: entity.description || '',
       base_prompt: entity.base_prompt || '',
       avatar_url: entity.avatar_url,
+      avatar_thumbnail_url: entity.avatar_thumbnail_url,
     });
     setAvatarFile(null);
     setSheetOpen(true);
@@ -185,6 +190,7 @@ export function EntitiesPage() {
         description: formData.description || undefined,
         base_prompt: formData.base_prompt || undefined,
         avatar_url: formData.avatar_url || undefined,
+        avatar_thumbnail_url: formData.avatar_thumbnail_url || undefined,
       };
 
       if (editingEntity) {
@@ -297,7 +303,7 @@ export function EntitiesPage() {
                     <TableCell>
                       {entity.avatar_url ? (
                         <img
-                          src={entity.avatar_url}
+                          src={entity.avatar_thumbnail_url || entity.avatar_url}
                           alt={entity.name}
                           className="w-10 h-10 rounded-full object-cover"
                         />
