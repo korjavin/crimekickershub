@@ -251,3 +251,40 @@ func (s *MediaService) generateAndUploadThumbnail(ctx context.Context, fileBytes
 
 	return nil
 }
+
+// DeleteAsset deletes a media asset and its associated R2 files
+func (s *MediaService) DeleteAsset(ctx context.Context, id int64) error {
+	// 1. Get asset to find R2 key
+	asset, err := s.repo.GetMediaAsset(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get asset: %w", err)
+	}
+
+	// 2. Delete from database first
+	if err := s.repo.DeleteMediaAsset(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete asset from database: %w", err)
+	}
+
+	// 3. If it's an image, delete files from R2
+	// We do this after DB deletion so if DB fails, we still have the file (dangling file is better than missing file ref)
+	if asset.Type == MediaTypeImage && asset.R2Key.Valid {
+		// Delete original
+		if err := s.r2.DeleteObject(ctx, asset.R2Key.String); err != nil {
+			fmt.Printf("WARNING: Failed to delete object %s from R2: %v\n", asset.R2Key.String, err)
+		}
+
+		// Try to delete thumbnail (file_thumb.ext) using same logic as creation
+		// This is a best-effort guess since we don't store the thumbnail key explicitly
+		ext := filepath.Ext(asset.R2Key.String)
+		name := strings.TrimSuffix(asset.R2Key.String, ext)
+		// Try both jpg and png extensions for thumbnail since we default to jpg but might have png
+		thumbKeyJpg := fmt.Sprintf("%s_thumb.jpg", name)
+		thumbKeyPng := fmt.Sprintf("%s_thumb.png", name)
+
+		// Fire and forget deletions for thumbnails
+		_ = s.r2.DeleteObject(ctx, thumbKeyJpg)
+		_ = s.r2.DeleteObject(ctx, thumbKeyPng)
+	}
+
+	return nil
+}

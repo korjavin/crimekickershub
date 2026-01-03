@@ -244,6 +244,15 @@ func (q *Queries) DeleteEntityType(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteMediaAsset = `-- name: DeleteMediaAsset :exec
+DELETE FROM media_assets WHERE id = ?
+`
+
+func (q *Queries) DeleteMediaAsset(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteMediaAsset, id)
+	return err
+}
+
 const deletePromptType = `-- name: DeletePromptType :exec
 DELETE FROM prompt_types WHERE id = ?
 `
