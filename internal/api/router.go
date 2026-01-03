@@ -108,6 +108,7 @@ func (r *Router) adminRoutes() {
 	// Prompts management (admin only)
 	r.mux.Handle("GET /api/admin/prompts", r.auth.RequireAdmin(http.HandlerFunc(r.handleListPromptVersions)))
 	r.mux.Handle("GET /api/admin/prompts/recent", r.auth.RequireAdmin(http.HandlerFunc(r.handleListRecentPromptVersions)))
+	r.mux.Handle("GET /api/admin/prompts/history", r.auth.RequireAdmin(http.HandlerFunc(r.handleListPromptHistory)))
 	r.mux.Handle("GET /api/admin/prompts/types", r.auth.RequireAdmin(http.HandlerFunc(r.handleListPromptTypes)))
 	r.mux.Handle("POST /api/admin/prompts/types", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreatePromptType)))
 	r.mux.Handle("PUT /api/admin/prompts/types/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdatePromptType)))
