@@ -1184,10 +1184,13 @@ func (q *Queries) ListRecentPromptVersions(ctx context.Context) ([]ListRecentPro
 }
 
 const listPromptHistory = `-- name: ListPromptHistory :many
-SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, 
+       CAST(COALESCE(e.name, 'Unknown Entity') AS TEXT) as entity_name, 
+       CAST(COALESCE(pt.slug, 'Unknown Type') AS TEXT) as type_slug, 
+       pt.description as type_description
 FROM prompt_versions pv
-JOIN entities e ON pv.entity_id = e.id
-JOIN prompt_types pt ON pv.type_id = pt.id
+LEFT JOIN entities e ON pv.entity_id = e.id
+LEFT JOIN prompt_types pt ON pv.type_id = pt.id
 ORDER BY pv.created_at DESC
 `
 

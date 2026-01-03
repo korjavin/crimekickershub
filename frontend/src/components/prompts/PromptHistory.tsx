@@ -178,6 +178,15 @@ export function PromptHistory() {
 
                 <div className="flex gap-2 items-center">
                     <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadHistory}
+                        disabled={loading}
+                    >
+                        <Loader2 className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                    <Button
                         variant={diffMode ? "secondary" : "outline"}
                         onClick={() => {
                             setDiffMode(!diffMode);
