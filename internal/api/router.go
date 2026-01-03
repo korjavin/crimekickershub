@@ -1155,12 +1155,14 @@ func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
 	}
 
 	entity, err := r.repo.CreateEntity(req.Context(), repository.CreateEntityParams{
-		Slug:         input.Slug,
-		Name:         input.Name,
-		EntityTypeID: sql.NullInt64{Int64: entityType.ID, Valid: true},
-		Description:  sql.NullString{String: input.Description, Valid: input.Description != ""},
-		BasePrompt:   sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
-		AvatarUrl:    sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
+		Slug:               input.Slug,
+		Name:               input.Name,
+		Type:               input.Type,
+		EntityTypeID:       sql.NullInt64{Int64: entityType.ID, Valid: true},
+		Description:        sql.NullString{String: input.Description, Valid: input.Description != ""},
+		BasePrompt:         sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
+		AvatarUrl:          sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
+		AvatarThumbnailUrl: sql.NullString{String: input.AvatarThumbnailURL, Valid: input.AvatarThumbnailURL != ""},
 	})
 	if err != nil {
 		http.Error(w, "Failed to create entity: "+err.Error(), http.StatusInternalServerError)
@@ -1239,15 +1241,20 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 	if avatarURL == nil && current.AvatarUrl.Valid {
 		avatarURL = &current.AvatarUrl.String
 	}
+	avatarThumbnailURL := input.AvatarThumbnailURL
+	if avatarThumbnailURL == nil && current.AvatarThumbnailUrl.Valid {
+		avatarThumbnailURL = &current.AvatarThumbnailUrl.String
+	}
 
 	entity, err := r.repo.UpdateEntity(req.Context(), repository.UpdateEntityParams{
-		Slug:         *slug,
-		Name:         *name,
-		EntityTypeID: entityTypeID,
-		Description:  sql.NullString{String: *description, Valid: description != nil && *description != ""},
-		BasePrompt:   sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
-		AvatarUrl:    sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
-		ID:           entityID,
+		Slug:               *slug,
+		Name:               *name,
+		EntityTypeID:       entityTypeID,
+		Description:        sql.NullString{String: *description, Valid: description != nil && *description != ""},
+		BasePrompt:         sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
+		AvatarUrl:          sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
+		AvatarThumbnailUrl: sql.NullString{String: *avatarThumbnailURL, Valid: avatarThumbnailURL != nil && *avatarThumbnailURL != ""},
+		ID:                 entityID,
 	})
 	if err != nil {
 		http.Error(w, "Failed to update entity: "+err.Error(), http.StatusInternalServerError)
@@ -1350,22 +1357,24 @@ type UpdateStoryInput struct {
 
 // CreateEntityInput is the input for creating an entity
 type CreateEntityInput struct {
-	Name        string `json:"name"`
-	Slug        string `json:"slug"`
-	Type        string `json:"type"`
-	Description string `json:"description,omitempty"`
-	BasePrompt  string `json:"base_prompt,omitempty"`
-	AvatarURL   string `json:"avatar_url,omitempty"`
+	Name               string `json:"name"`
+	Slug               string `json:"slug"`
+	Type               string `json:"type"`
+	Description        string `json:"description,omitempty"`
+	BasePrompt         string `json:"base_prompt,omitempty"`
+	AvatarURL          string `json:"avatar_url,omitempty"`
+	AvatarThumbnailURL string `json:"avatar_thumbnail_url,omitempty"`
 }
 
 // UpdateEntityInput is the input for updating an entity
 type UpdateEntityInput struct {
-	Name        *string `json:"name,omitempty"`
-	Slug        *string `json:"slug,omitempty"`
-	Type        *string `json:"type,omitempty"`
-	Description *string `json:"description,omitempty"`
-	BasePrompt  *string `json:"base_prompt,omitempty"`
-	AvatarURL   *string `json:"avatar_url,omitempty"`
+	Name               *string `json:"name,omitempty"`
+	Slug               *string `json:"slug,omitempty"`
+	Type               *string `json:"type,omitempty"`
+	Description        *string `json:"description,omitempty"`
+	BasePrompt         *string `json:"base_prompt,omitempty"`
+	AvatarURL          *string `json:"avatar_url,omitempty"`
+	AvatarThumbnailURL *string `json:"avatar_thumbnail_url,omitempty"`
 }
 
 // CreatePromptTypeInput is the input for creating a prompt type
@@ -1384,14 +1393,15 @@ type UpdatePromptTypeInput struct {
 
 // EntityDTO is a Data Transfer Object for Entity with proper JSON serialization
 type EntityDTO struct {
-	ID          int64   `json:"id"`
-	Slug        string  `json:"slug"`
-	Name        string  `json:"name"`
-	Type        string  `json:"type"`
-	Description *string `json:"description"`
-	BasePrompt  *string `json:"base_prompt"`
-	AvatarURL   *string `json:"avatar_url"`
-	CreatedAt   *string `json:"created_at"`
+	ID                 int64   `json:"id"`
+	Slug               string  `json:"slug"`
+	Name               string  `json:"name"`
+	Type               string  `json:"type"`
+	Description        *string `json:"description"`
+	BasePrompt         *string `json:"base_prompt"`
+	AvatarURL          *string `json:"avatar_url"`
+	AvatarThumbnailURL *string `json:"avatar_thumbnail_url"`
+	CreatedAt          *string `json:"created_at"`
 }
 
 // toEntityDTOsFromListRows determines the type from the joined row
@@ -1424,6 +1434,9 @@ func (r *Router) toEntityDTOFromListRow(row repository.ListEntitiesRow) EntityDT
 	if row.AvatarUrl.Valid {
 		dto.AvatarURL = &row.AvatarUrl.String
 	}
+	if row.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &row.AvatarThumbnailUrl.String
+	}
 	if row.CreatedAt.Valid {
 		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
 		dto.CreatedAt = &timeStr
@@ -1450,6 +1463,9 @@ func (r *Router) toEntityDTOFromGetRow(row repository.GetEntityByIDRow) EntityDT
 	}
 	if row.AvatarUrl.Valid {
 		dto.AvatarURL = &row.AvatarUrl.String
+	}
+	if row.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &row.AvatarThumbnailUrl.String
 	}
 	if row.CreatedAt.Valid {
 		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
@@ -1484,6 +1500,9 @@ func (r *Router) toEntityDTOFromListByTypeRow(row repository.ListEntitiesByTypeR
 	if row.AvatarUrl.Valid {
 		dto.AvatarURL = &row.AvatarUrl.String
 	}
+	if row.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &row.AvatarThumbnailUrl.String
+	}
 	if row.CreatedAt.Valid {
 		timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
 		dto.CreatedAt = &timeStr
@@ -1508,6 +1527,9 @@ func toEntityDTO(e repository.Entity) EntityDTO {
 	}
 	if e.AvatarUrl.Valid {
 		dto.AvatarURL = &e.AvatarUrl.String
+	}
+	if e.AvatarThumbnailUrl.Valid {
+		dto.AvatarThumbnailURL = &e.AvatarThumbnailUrl.String
 	}
 	if e.CreatedAt.Valid {
 		timeStr := e.CreatedAt.Time.Format("2006-01-02T15:04:05Z")

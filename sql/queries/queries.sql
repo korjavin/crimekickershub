@@ -1,6 +1,6 @@
 -- name: CreateEntity :one
-INSERT INTO entities (slug, name, entity_type_id, description, base_prompt, avatar_url)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO entities (slug, name, type, entity_type_id, description, base_prompt, avatar_url, avatar_thumbnail_url)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetEntityBySlug :one
@@ -28,7 +28,8 @@ SET slug = COALESCE(?, slug),
     entity_type_id = COALESCE(?, entity_type_id),
     description = COALESCE(?, description),
     base_prompt = COALESCE(?, base_prompt),
-    avatar_url = COALESCE(?, avatar_url)
+    avatar_url = COALESCE(?, avatar_url),
+    avatar_thumbnail_url = COALESCE(?, avatar_thumbnail_url)
 WHERE id = ?
 RETURNING *;
 

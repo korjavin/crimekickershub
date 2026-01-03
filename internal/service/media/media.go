@@ -1,15 +1,22 @@
 package media
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"crimekickershub/internal/repository"
 	"crimekickershub/internal/storage"
+
+	"github.com/nfnt/resize"
 )
 
 // MediaType constants
@@ -54,14 +61,27 @@ func (s *MediaService) RegisterAsset(ctx context.Context, input RegisterAssetInp
 		if input.File == nil {
 			return nil, fmt.Errorf("file is required for image uploads")
 		}
-		// Upload to R2
-		url, err := s.r2.UploadImage(ctx, input.File, input.Filename)
+
+		// Read all bytes to process
+		fileBytes, err := io.ReadAll(input.File)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %w", err)
+		}
+
+		// Upload original
+		url, err := s.r2.UploadImage(ctx, bytes.NewReader(fileBytes), input.Filename)
 		if err != nil {
 			return nil, fmt.Errorf("failed to upload image: %w", err)
 		}
 		publicURL = url
-		// Extract R2 key from URL (remove public domain prefix)
+		// Extract R2 key from URL
 		r2Key = sql.NullString{String: extractR2Key(publicURL, s.r2), Valid: true}
+
+		// Generate and upload thumbnail
+		if err := s.generateAndUploadThumbnail(ctx, fileBytes, input.Filename); err != nil {
+			// Log error but don't fail the request (soft failure)
+			fmt.Printf("WARNING: Failed to generate thumbnail for %s: %v\n", input.Filename, err)
+		}
 
 	case MediaTypeVideo:
 		if input.YouTubeURL == "" {
@@ -186,4 +206,48 @@ func (s *MediaService) GetAsset(ctx context.Context, id int64) (*repository.Medi
 		return nil, err
 	}
 	return &asset, nil
+}
+
+// generateAndUploadThumbnail resizes the image and uploads a thumbnail version
+func (s *MediaService) generateAndUploadThumbnail(ctx context.Context, fileBytes []byte, originalFilename string) error {
+	// Decode image
+	img, format, err := image.Decode(bytes.NewReader(fileBytes))
+	if err != nil {
+		return fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Resize to max 256x256
+	thumbnail := resize.Thumbnail(256, 256, img, resize.Lanczos3)
+
+	// Encode to buffer
+	var buf bytes.Buffer
+	var ext string
+	if format == "png" {
+		err = png.Encode(&buf, thumbnail)
+		ext = ".png" // Explicitly use .png for PNGs
+	} else {
+		// Default to JPEG for everything else (including jpg, jpeg, gif, etc if decoded)
+		// Note: helper only imports jpeg/png, so others might list as registered but we only handle these explicit encodes
+		// For safety we might want to default to jpg
+		err = jpeg.Encode(&buf, thumbnail, nil)
+		ext = ".jpg"
+	}
+	if err != nil {
+		return fmt.Errorf("failed to encode thumbnail: %w", err)
+	}
+
+	// Construct thumbnail filename: name_thumb.ext
+	// Utilize filepath.Ext to be safe, though we determined ext above for the OUTPUT format.
+	// We want to preserve the original basename.
+	extOriginal := filepath.Ext(originalFilename)
+	name := strings.TrimSuffix(originalFilename, extOriginal)
+	thumbFilename := fmt.Sprintf("%s_thumb%s", name, ext)
+
+	// Upload thumbnail
+	_, err = s.r2.UploadImage(ctx, &buf, thumbFilename)
+	if err != nil {
+		return fmt.Errorf("failed to upload thumbnail: %w", err)
+	}
+
+	return nil
 }

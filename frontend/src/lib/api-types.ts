@@ -9,6 +9,7 @@ export interface Entity {
   description: string | null;
   base_prompt: string | null;
   avatar_url: string | null;
+  avatar_thumbnail_url: string | null;
   created_at: string | null;
 }
 

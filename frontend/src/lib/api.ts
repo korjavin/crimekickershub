@@ -20,7 +20,7 @@ export async function getEntities() {
 }
 
 // Entity Admin APIs
-export async function createEntity(data: { name: string; slug: string; type: string; description?: string; base_prompt?: string; avatar_url?: string }) {
+export async function createEntity(data: { name: string; slug: string; type: string; description?: string; base_prompt?: string; avatar_url?: string; avatar_thumbnail_url?: string }) {
   const response = await fetch(`${API_BASE}/admin/entities`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,7 +32,7 @@ export async function createEntity(data: { name: string; slug: string; type: str
   return response.json();
 }
 
-export async function updateEntity(id: string, data: { name?: string; slug?: string; type?: string; description?: string; base_prompt?: string; avatar_url?: string }) {
+export async function updateEntity(id: string, data: { name?: string; slug?: string; type?: string; description?: string; base_prompt?: string; avatar_url?: string; avatar_thumbnail_url?: string }) {
   const response = await fetch(`${API_BASE}/admin/entities/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -112,48 +112,52 @@ export async function listMedia() {
   return fetchApi<any[]>('/admin/media');
 }
 
+import { resizeImage } from './image-utils';
+
 export async function uploadMedia(file: File, promptVersionId?: string) {
-  // Step 1: Get presigned URL from backend
-  const presignedResponse = await fetch(`${API_BASE}/admin/upload/presigned`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      filename: file.name,
-      contentType: file.type,
-    }),
+  // 1. Generate thumbnail
+  const thumbnailBlob = await resizeImage(file, 256, 256);
+  const thumbnailFile = new File([thumbnailBlob], file.name.replace(/(\.[\w\d_-]+)$/i, '_thumb$1'), {
+    type: thumbnailBlob.type,
   });
 
-  if (!presignedResponse.ok) {
-    throw new Error(`Failed to get upload URL: ${presignedResponse.status}`);
-  }
+  // 2. Get presigned URLs for BOTH files
+  const [mainPresigned, thumbPresigned] = await Promise.all([
+    fetch(`${API_BASE}/admin/upload/presigned`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, contentType: file.type }),
+    }).then(r => r.json()),
+    fetch(`${API_BASE}/admin/upload/presigned`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: thumbnailFile.name, contentType: thumbnailFile.type }),
+    }).then(r => r.json()),
+  ]);
 
-  const { uploadURL, key, publicURL } = await presignedResponse.json();
+  // 3. Upload BOTH to R2 in parallel
+  await Promise.all([
+    fetch(mainPresigned.uploadURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    }).then(r => { if (!r.ok) throw new Error(`Main upload failed: ${r.status}`) }),
+    fetch(thumbPresigned.uploadURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': thumbnailFile.type },
+      body: thumbnailBlob,
+    }).then(r => { if (!r.ok) throw new Error(`Thumbnail upload failed: ${r.status}`) })
+  ]);
 
-  // Step 2: Upload directly to R2 using presigned URL
-  const uploadResponse = await fetch(uploadURL, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': file.type,
-    },
-    body: file,
-  });
-
-  if (!uploadResponse.ok) {
-    throw new Error(`Upload to R2 failed: ${uploadResponse.status}`);
-  }
-
-  // Step 3: Register the asset in database
+  // 4. Register asset with BOTH URLs
   const registerResponse = await fetch(`${API_BASE}/admin/assets`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       type: 'image',
-      r2Key: key,
-      url: publicURL,
+      r2Key: mainPresigned.key,
+      url: mainPresigned.publicURL,
+      thumbnail_url: thumbPresigned.publicURL, // Pass thumbnail URL
       promptVersionId: promptVersionId ? parseInt(promptVersionId) : undefined,
     }),
   });
@@ -162,7 +166,9 @@ export async function uploadMedia(file: File, promptVersionId?: string) {
     throw new Error(`Failed to register asset: ${registerResponse.status}`);
   }
 
-  return registerResponse.json();
+  // Combine the response with our thumbnail URL so the UI can use it immediately
+  const result = await registerResponse.json();
+  return { ...result, thumbnail_url: thumbPresigned.publicURL };
 }
 
 // Prompt Version APIs (for dropdown)
