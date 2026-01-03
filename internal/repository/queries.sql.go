@@ -1183,6 +1183,61 @@ func (q *Queries) ListRecentPromptVersions(ctx context.Context) ([]ListRecentPro
 	return items, nil
 }
 
+const listPromptHistory = `-- name: ListPromptHistory :many
+SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
+FROM prompt_versions pv
+JOIN entities e ON pv.entity_id = e.id
+JOIN prompt_types pt ON pv.type_id = pt.id
+ORDER BY pv.created_at DESC
+`
+
+type ListPromptHistoryRow struct {
+	ID                  int64          `json:"id"`
+	EntityID            int64          `json:"entity_id"`
+	TypeID              int64          `json:"type_id"`
+	VersionNumber       int64          `json:"version_number"`
+	PromptText          string         `json:"prompt_text"`
+	TechnicalParamsJson sql.NullString `json:"technical_params_json"`
+	CreatedAt           sql.NullTime   `json:"created_at"`
+	EntityName          string         `json:"entity_name"`
+	TypeSlug            string         `json:"type_slug"`
+	TypeDescription     sql.NullString `json:"type_description"`
+}
+
+func (q *Queries) ListPromptHistory(ctx context.Context) ([]ListPromptHistoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPromptHistory)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPromptHistoryRow
+	for rows.Next() {
+		var i ListPromptHistoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntityID,
+			&i.TypeID,
+			&i.VersionNumber,
+			&i.PromptText,
+			&i.TechnicalParamsJson,
+			&i.CreatedAt,
+			&i.EntityName,
+			&i.TypeSlug,
+			&i.TypeDescription,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
 SELECT id, email, google_id, role, created_at FROM users ORDER BY created_at DESC
 `

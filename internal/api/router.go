@@ -513,21 +513,80 @@ func (r *Router) handleListPromptVersions(w http.ResponseWriter, req *http.Reque
 }
 
 // handleListRecentPromptVersions returns the 10 most recent prompt versions
+// RecentPromptVersionDTO flattening the joined fields
+type RecentPromptVersionDTO struct {
+	ID                  int64   `json:"id"`
+	EntityID            int64   `json:"entity_id"`
+	TypeID              int64   `json:"type_id"`
+	VersionNumber       int64   `json:"version_number"`
+	PromptText          string  `json:"prompt_text"`
+	TechnicalParamsJson *string `json:"technical_params_json"`
+	CreatedAt           *string `json:"created_at"`
+	EntityName          string  `json:"entity_name"`
+	TypeSlug            string  `json:"type_slug"`
+}
+
 func (r *Router) handleListRecentPromptVersions(w http.ResponseWriter, req *http.Request) {
-	// For now, just return the last 10 from ListAllPromptVersions
-	versions, err := r.repo.ListAllPromptVersions(req.Context())
+	rows, err := r.repo.ListRecentPromptVersions(req.Context())
 	if err != nil {
 		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if versions == nil {
-		versions = []repository.PromptVersion{}
+
+	dtos := make([]RecentPromptVersionDTO, len(rows))
+	for i, row := range rows {
+		dto := RecentPromptVersionDTO{
+			ID:            row.ID,
+			EntityID:      row.EntityID,
+			TypeID:        row.TypeID,
+			VersionNumber: row.VersionNumber,
+			PromptText:    row.PromptText,
+			EntityName:    row.EntityName,
+			TypeSlug:      row.TypeSlug,
+		}
+		if row.TechnicalParamsJson.Valid {
+			dto.TechnicalParamsJson = &row.TechnicalParamsJson.String
+		}
+		if row.CreatedAt.Valid {
+			timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+			dto.CreatedAt = &timeStr
+		}
+		dtos[i] = dto
 	}
-	// Return last 10 (they're already ordered by created_at DESC from the query)
-	if len(versions) > 10 {
-		versions = versions[:10]
+
+	respondJSON(w, dtos)
+}
+
+// handleListPromptHistory returns the full history of prompt versions
+func (r *Router) handleListPromptHistory(w http.ResponseWriter, req *http.Request) {
+	rows, err := r.repo.ListPromptHistory(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list prompt history: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-	respondJSON(w, versions)
+
+	dtos := make([]RecentPromptVersionDTO, len(rows))
+	for i, row := range rows {
+		dto := RecentPromptVersionDTO{
+			ID:            row.ID,
+			EntityID:      row.EntityID,
+			TypeID:        row.TypeID,
+			VersionNumber: row.VersionNumber,
+			PromptText:    row.PromptText,
+			EntityName:    row.EntityName,
+			TypeSlug:      row.TypeSlug,
+		}
+		if row.TechnicalParamsJson.Valid {
+			dto.TechnicalParamsJson = &row.TechnicalParamsJson.String
+		}
+		if row.CreatedAt.Valid {
+			timeStr := row.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+			dto.CreatedAt = &timeStr
+		}
+		dtos[i] = dto
+	}
+
+	respondJSON(w, dtos)
 }
 
 // handleUploadMedia handles file upload to R2

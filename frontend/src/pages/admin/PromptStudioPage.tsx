@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PromptMixer } from '@/components/prompts/PromptMixer';
 import { PromptResult } from '@/components/prompts/PromptResult';
+import { PromptHistory } from '@/components/prompts/PromptHistory';
 import { getEntities, getPromptTypes } from '@/lib/api';
 import type { Entity, PromptType } from '@/lib/api-types';
 
@@ -57,6 +58,7 @@ export function PromptStudioPage() {
         <TabsList>
           <TabsTrigger value="mixer">Prompt Mixer</TabsTrigger>
           <TabsTrigger value="result">Result Editor</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mixer" className="space-y-4">
@@ -95,6 +97,12 @@ export function PromptStudioPage() {
               selectedTypeSlug={selectedTypeSlug}
               onSaved={handleSaved}
             />
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <Card className="p-6">
+            <PromptHistory />
           </Card>
         </TabsContent>
       </Tabs>

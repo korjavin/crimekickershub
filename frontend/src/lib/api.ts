@@ -331,6 +331,10 @@ export async function getPromptVersions() {
   return fetchApi<any[]>('/admin/prompts');
 }
 
+export async function listPromptHistory() {
+  return fetchApi<any[]>('/admin/prompts/history');
+}
+
 export async function composePrompt(input: { entity_ids: number[]; type_slug: string; extra_params_json?: string }) {
   const response = await fetch(`${API_BASE}/admin/prompts/compose`, {
     method: 'POST',
