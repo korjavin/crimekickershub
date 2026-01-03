@@ -1155,12 +1155,13 @@ func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
 	}
 
 	entity, err := r.repo.CreateEntity(req.Context(), repository.CreateEntityParams{
-		Slug:         input.Slug,
-		Name:         input.Name,
-		EntityTypeID: sql.NullInt64{Int64: entityType.ID, Valid: true},
-		Description:  sql.NullString{String: input.Description, Valid: input.Description != ""},
-		BasePrompt:   sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
-		AvatarUrl:    sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
+		Slug:               input.Slug,
+		Name:               input.Name,
+		EntityTypeID:       sql.NullInt64{Int64: entityType.ID, Valid: true},
+		Description:        sql.NullString{String: input.Description, Valid: input.Description != ""},
+		BasePrompt:         sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
+		AvatarUrl:          sql.NullString{String: input.AvatarURL, Valid: input.AvatarURL != ""},
+		AvatarThumbnailUrl: sql.NullString{String: input.AvatarThumbnailURL, Valid: input.AvatarThumbnailURL != ""},
 	})
 	if err != nil {
 		http.Error(w, "Failed to create entity: "+err.Error(), http.StatusInternalServerError)
@@ -1239,15 +1240,20 @@ func (r *Router) handleUpdateEntity(w http.ResponseWriter, req *http.Request) {
 	if avatarURL == nil && current.AvatarUrl.Valid {
 		avatarURL = &current.AvatarUrl.String
 	}
+	avatarThumbnailURL := input.AvatarThumbnailURL
+	if avatarThumbnailURL == nil && current.AvatarThumbnailUrl.Valid {
+		avatarThumbnailURL = &current.AvatarThumbnailUrl.String
+	}
 
 	entity, err := r.repo.UpdateEntity(req.Context(), repository.UpdateEntityParams{
-		Slug:         *slug,
-		Name:         *name,
-		EntityTypeID: entityTypeID,
-		Description:  sql.NullString{String: *description, Valid: description != nil && *description != ""},
-		BasePrompt:   sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
-		AvatarUrl:    sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
-		ID:           entityID,
+		Slug:               *slug,
+		Name:               *name,
+		EntityTypeID:       entityTypeID,
+		Description:        sql.NullString{String: *description, Valid: description != nil && *description != ""},
+		BasePrompt:         sql.NullString{String: *basePrompt, Valid: basePrompt != nil && *basePrompt != ""},
+		AvatarUrl:          sql.NullString{String: *avatarURL, Valid: avatarURL != nil && *avatarURL != ""},
+		AvatarThumbnailUrl: sql.NullString{String: *avatarThumbnailURL, Valid: avatarThumbnailURL != nil && *avatarThumbnailURL != ""},
+		ID:                 entityID,
 	})
 	if err != nil {
 		http.Error(w, "Failed to update entity: "+err.Error(), http.StatusInternalServerError)
@@ -1350,22 +1356,24 @@ type UpdateStoryInput struct {
 
 // CreateEntityInput is the input for creating an entity
 type CreateEntityInput struct {
-	Name        string `json:"name"`
-	Slug        string `json:"slug"`
-	Type        string `json:"type"`
-	Description string `json:"description,omitempty"`
-	BasePrompt  string `json:"base_prompt,omitempty"`
-	AvatarURL   string `json:"avatar_url,omitempty"`
+	Name               string `json:"name"`
+	Slug               string `json:"slug"`
+	Type               string `json:"type"`
+	Description        string `json:"description,omitempty"`
+	BasePrompt         string `json:"base_prompt,omitempty"`
+	AvatarURL          string `json:"avatar_url,omitempty"`
+	AvatarThumbnailURL string `json:"avatar_thumbnail_url,omitempty"`
 }
 
 // UpdateEntityInput is the input for updating an entity
 type UpdateEntityInput struct {
-	Name        *string `json:"name,omitempty"`
-	Slug        *string `json:"slug,omitempty"`
-	Type        *string `json:"type,omitempty"`
-	Description *string `json:"description,omitempty"`
-	BasePrompt  *string `json:"base_prompt,omitempty"`
-	AvatarURL   *string `json:"avatar_url,omitempty"`
+	Name               *string `json:"name,omitempty"`
+	Slug               *string `json:"slug,omitempty"`
+	Type               *string `json:"type,omitempty"`
+	Description        *string `json:"description,omitempty"`
+	BasePrompt         *string `json:"base_prompt,omitempty"`
+	AvatarURL          *string `json:"avatar_url,omitempty"`
+	AvatarThumbnailURL *string `json:"avatar_thumbnail_url,omitempty"`
 }
 
 // CreatePromptTypeInput is the input for creating a prompt type
