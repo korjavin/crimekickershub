@@ -510,7 +510,25 @@ func (r *Router) handleListPromptVersions(w http.ResponseWriter, req *http.Reque
 	if versions == nil {
 		versions = []repository.PromptVersion{}
 	}
-	respondJSON(w, versions)
+	dtos := make([]map[string]interface{}, len(versions))
+	for i, v := range versions {
+		dto := map[string]interface{}{
+			"id":             v.ID,
+			"entity_id":      v.EntityID,
+			"type_id":        v.TypeID,
+			"version_number": v.VersionNumber,
+			"prompt_text":    v.PromptText,
+			"created_at":     nil,
+		}
+		if v.CreatedAt.Valid {
+			dto["created_at"] = v.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
+		}
+		if v.TechnicalParamsJson.Valid {
+			dto["technical_params_json"] = v.TechnicalParamsJson.String
+		}
+		dtos[i] = dto
+	}
+	respondJSON(w, dtos)
 }
 
 // handleListRecentPromptVersions returns the 10 most recent prompt versions
@@ -1407,7 +1425,10 @@ func (r *Router) handleGetMatrix(w http.ResponseWriter, req *http.Request) {
 			"type_id":        v.TypeID,
 			"version_number": v.VersionNumber,
 			"prompt_text":    v.PromptText,
-			"created_at":     v.CreatedAt,
+			"created_at":     nil,
+		}
+		if v.CreatedAt.Valid {
+			versionMap[key]["created_at"] = v.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
 		}
 	}
 
