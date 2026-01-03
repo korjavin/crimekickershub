@@ -1412,8 +1412,8 @@ func (r *Router) handleGetMatrix(w http.ResponseWriter, req *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"entities": entities,
-		"types":    promptTypes,
+		"entities": r.toEntityDTOsFromListRows(entities),
+		"types":    toPromptTypeDTOs(promptTypes),
 		"versions": versionMap,
 	}
 
