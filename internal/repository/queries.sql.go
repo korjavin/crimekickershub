@@ -35,14 +35,15 @@ func (q *Queries) AddStoryItem(ctx context.Context, arg AddStoryItemParams) (Sto
 }
 
 const createEntity = `-- name: CreateEntity :one
-INSERT INTO entities (slug, name, entity_type_id, description, base_prompt, avatar_url, avatar_thumbnail_url)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO entities (slug, name, type, entity_type_id, description, base_prompt, avatar_url, avatar_thumbnail_url)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, slug, name, type, description, avatar_url, created_at, base_prompt, entity_type_id, avatar_thumbnail_url
 `
 
 type CreateEntityParams struct {
 	Slug               string         `json:"slug"`
 	Name               string         `json:"name"`
+	Type               string         `json:"type"`
 	EntityTypeID       sql.NullInt64  `json:"entity_type_id"`
 	Description        sql.NullString `json:"description"`
 	BasePrompt         sql.NullString `json:"base_prompt"`
@@ -54,6 +55,7 @@ func (q *Queries) CreateEntity(ctx context.Context, arg CreateEntityParams) (Ent
 	row := q.db.QueryRowContext(ctx, createEntity,
 		arg.Slug,
 		arg.Name,
+		arg.Type,
 		arg.EntityTypeID,
 		arg.Description,
 		arg.BasePrompt,

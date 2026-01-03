@@ -1157,6 +1157,7 @@ func (r *Router) handleCreateEntity(w http.ResponseWriter, req *http.Request) {
 	entity, err := r.repo.CreateEntity(req.Context(), repository.CreateEntityParams{
 		Slug:               input.Slug,
 		Name:               input.Name,
+		Type:               input.Type,
 		EntityTypeID:       sql.NullInt64{Int64: entityType.ID, Valid: true},
 		Description:        sql.NullString{String: input.Description, Valid: input.Description != ""},
 		BasePrompt:         sql.NullString{String: input.BasePrompt, Valid: input.BasePrompt != ""},
