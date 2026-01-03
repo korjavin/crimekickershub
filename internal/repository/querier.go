@@ -18,6 +18,7 @@ type Querier interface {
 	CreateStory(ctx context.Context, arg CreateStoryParams) (Story, error)
 	DeleteEntity(ctx context.Context, id int64) error
 	DeleteEntityType(ctx context.Context, id int64) error
+	DeleteMediaAsset(ctx context.Context, id int64) error
 	DeletePromptType(ctx context.Context, id int64) error
 	DeleteStory(ctx context.Context, id int64) error
 	DeleteStoryItem(ctx context.Context, id int64) error

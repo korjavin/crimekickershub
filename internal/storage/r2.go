@@ -133,6 +133,23 @@ func (c *R2Client) UploadImage(ctx context.Context, file io.Reader, filename str
 	return c.publicURL + "/" + filename, nil
 }
 
+// DeleteObject deletes an object from R2
+func (c *R2Client) DeleteObject(ctx context.Context, key string) error {
+	if c.client == nil {
+		return fmt.Errorf("R2 storage is not available")
+	}
+
+	_, err := c.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete from R2: %w", err)
+	}
+
+	return nil
+}
+
 // UploadImageFromPath uploads a file from the filesystem
 func (c *R2Client) UploadImageFromPath(ctx context.Context, filepath string) (string, error) {
 	file, err := os.Open(filepath)

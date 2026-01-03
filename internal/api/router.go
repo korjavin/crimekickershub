@@ -122,6 +122,7 @@ func (r *Router) adminRoutes() {
 
 	// Media management (admin only)
 	r.mux.Handle("GET /api/admin/media", r.auth.RequireAdmin(http.HandlerFunc(r.handleListMedia)))
+	r.mux.Handle("DELETE /api/admin/media/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteMedia)))
 
 	// Assets management (admin only)
 	r.mux.Handle("POST /api/admin/assets", r.auth.RequireAdmin(http.HandlerFunc(r.handleRegisterAsset)))
@@ -751,6 +752,23 @@ func (r *Router) handleListMedia(w http.ResponseWriter, req *http.Request) {
 		assets = []repository.MediaAsset{}
 	}
 	respondJSON(w, r.toMediaAssetDTOs(assets))
+}
+
+// handleDeleteMedia deletes a media asset
+func (r *Router) handleDeleteMedia(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "Media asset ID is required", http.StatusBadRequest)
+		return
+	}
+
+	err := r.media.DeleteAsset(req.Context(), id)
+	if err != nil {
+		http.Error(w, "Failed to delete media asset: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]bool{"success": true})
 }
 
 // handleListStoriesAdmin returns all stories (for admin)

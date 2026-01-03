@@ -24,7 +24,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { listMedia, listRecentPromptVersions, uploadMedia, getEntities } from '@/lib/api';
+import { listMedia, listRecentPromptVersions, uploadMedia, getEntities, deleteMedia } from '@/lib/api';
 import type { MediaAsset, PromptVersion, Entity } from '@/lib/api-types';
 import { Upload, FileImage, Search, Loader2, Copy, Clock, Link2, Eye } from 'lucide-react';
 
@@ -35,13 +35,13 @@ export function MediaPage() {
   const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [entityFilter, setEntityFilter] = useState<string>('all');
-  
+
   // Upload modal state
   const [metadataModalOpen, setMetadataModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedPromptVersionId, setSelectedPromptVersionId] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
-  
+
   // Detail sheet state
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null);
@@ -86,7 +86,7 @@ export function MediaPage() {
 
     const files = Array.from(e.dataTransfer.files);
     const validFiles = files.filter(file => file.type.startsWith('image/'));
-    
+
     if (validFiles.length > 0) {
       openMetadataModal(validFiles[0]);
     }
@@ -119,10 +119,10 @@ export function MediaPage() {
         ? selectedPromptVersionId
         : undefined;
       await uploadMedia(selectedFile, promptVersionId);
-      
+
       setMetadataModalOpen(false);
       await loadData();
-      
+
       setSelectedFile(null);
       setSelectedPromptVersionId('');
     } catch (error) {
@@ -180,7 +180,7 @@ export function MediaPage() {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         asset.type?.toLowerCase().includes(query) ||
         asset.r2_key?.toLowerCase().includes(query) ||
         asset.youtube_id?.toLowerCase().includes(query);
@@ -215,7 +215,7 @@ export function MediaPage() {
       </div>
 
       {/* Upload Zone */}
-      <Card 
+      <Card
         className={`
           border-2 border-dashed p-8 text-center transition-colors
           ${dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
@@ -232,7 +232,7 @@ export function MediaPage() {
           `}>
             <Upload className={`w-8 h-8 ${dragActive ? 'text-primary' : 'text-muted-foreground'}`} />
           </div>
-          
+
           <div>
             <p className="text-lg font-medium">
               {dragActive ? 'Drop your image here' : 'Drag & drop images here'}
@@ -250,7 +250,7 @@ export function MediaPage() {
             id="file-upload"
             onChange={handleFileSelect}
           />
-          
+
           <Button
             variant="outline"
             onClick={() => document.getElementById('file-upload')?.click()}
@@ -294,8 +294,8 @@ export function MediaPage() {
       {/* Media Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {filteredAssets.map((asset) => (
-          <Card 
-            key={asset.id} 
+          <Card
+            key={asset.id}
             className="overflow-hidden group cursor-pointer"
             onClick={() => openDetailSheet(asset)}
           >
@@ -312,7 +312,7 @@ export function MediaPage() {
                   <FileImage className="w-12 h-12 text-muted-foreground" />
                 </div>
               )}
-              
+
               {/* Type badge */}
               <div className="absolute top-2 left-2">
                 <Badge variant="secondary" className="capitalize">
@@ -343,7 +343,7 @@ export function MediaPage() {
                   })()}
                 </div>
               )}
-              
+
               {asset.created_at && (
                 <p className="text-xs text-muted-foreground">
                   {formatTimeAgo(asset.created_at)}
@@ -470,7 +470,7 @@ export function MediaPage() {
                     {selectedAsset.type}
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Uploaded</span>
                   <span className="text-sm">
@@ -481,7 +481,7 @@ export function MediaPage() {
                 {selectedAsset.youtube_id && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">YouTube</span>
-                    <a 
+                    <a
                       href={`https://youtu.be/${selectedAsset.youtube_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -503,7 +503,7 @@ export function MediaPage() {
                   {(() => {
                     const version = recentVersions.find(v => v.id === selectedAsset.source_prompt_version_id);
                     if (!version) return null;
-                    
+
                     return (
                       <div className="p-3 bg-muted rounded-lg space-y-2">
                         <div className="flex items-center justify-between">
@@ -537,11 +537,16 @@ export function MediaPage() {
                 <Button
                   variant="destructive"
                   className="w-full"
-                  onClick={() => {
+                  onClick={async () => {
                     if (confirm('Delete this media asset?')) {
-                      // TODO: Implement delete
-                      console.log('Delete asset:', selectedAsset.id);
-                      setDetailSheetOpen(false);
+                      try {
+                        await deleteMedia(selectedAsset.id);
+                        setDetailSheetOpen(false);
+                        loadData(); // Refresh list
+                      } catch (error) {
+                        console.error('Failed to delete asset:', error);
+                        alert('Failed to delete asset');
+                      }
                     }
                   }}
                 >

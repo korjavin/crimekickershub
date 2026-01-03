@@ -216,3 +216,6 @@ UPDATE users SET role = ? WHERE id = ?;
 
 -- name: ListUsers :many
 SELECT * FROM users ORDER BY created_at DESC;
+
+-- name: DeleteMediaAsset :exec
+DELETE FROM media_assets WHERE id = ?;

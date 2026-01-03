@@ -112,6 +112,16 @@ export async function listMedia() {
   return fetchApi<any[]>('/admin/media');
 }
 
+export async function deleteMedia(id: number) {
+  const response = await fetch(`${API_BASE}/admin/media/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 import { resizeImage } from './image-utils';
 
 export async function uploadMedia(file: File, promptVersionId?: string) {
