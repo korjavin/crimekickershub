@@ -133,205 +133,207 @@ export function PromptHistory({ onCreateVersion }: PromptHistoryProps) {
             setSelectedVersionA(selectedVersionB);
             setSelectedVersionB(id);
         }
-        const toggleExpand = (id: number) => {
-            const newSet = new Set(expandedIds);
-            if (newSet.has(id)) {
-                newSet.delete(id);
-            } else {
-                newSet.add(id);
-            }
-            setExpandedIds(newSet);
-        };
+    };
 
-        if (loading) {
-            return (
-                <div className="flex justify-center p-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                </div>
-            );
+    const toggleExpand = (id: number) => {
+        const newSet = new Set(expandedIds);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
         }
+        setExpandedIds(newSet);
+    };
 
+    if (loading) {
         return (
-            <div className="space-y-6">
-                {/* Filters */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                    <div className="flex gap-2 flex-1 w-full sm:w-auto">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search history..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-8"
-                            />
-                        </div>
+            <div className="flex justify-center p-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
 
-                        <Select value={selectedTypeFilter} onValueChange={setSelectedTypeFilter}>
-                            <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                {filterOptions.types.map(t => (
-                                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        <Select value={selectedEntityFilter} onValueChange={setSelectedEntityFilter}>
-                            <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="Subject" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Subjects</SelectItem>
-                                {filterOptions.entities.map(e => (
-                                    <SelectItem key={e} value={e}>{e}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+    return (
+        <div className="space-y-6">
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                <div className="flex gap-2 flex-1 w-full sm:w-auto">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search history..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-8"
+                        />
                     </div>
 
-                    <div className="flex gap-2 items-center">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={loadHistory}
-                            disabled={loading}
-                        >
-                            <Loader2 className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </Button>
-                        <Button
-                            variant={diffMode ? "secondary" : "outline"}
-                            onClick={() => {
-                                setDiffMode(!diffMode);
-                                setDiffResult(null);
-                                setSelectedVersionA(null);
-                                setSelectedVersionB(null);
-                            }}
-                            size="sm"
-                        >
-                            <GitCompare className="w-4 h-4 mr-2" />
-                            {diffMode ? 'Exit Diff Mode' : 'Compare Versions'}
-                        </Button>
-                    </div>
+                    <Select value={selectedTypeFilter} onValueChange={setSelectedTypeFilter}>
+                        <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            {filterOptions.types.map(t => (
+                                <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={selectedEntityFilter} onValueChange={setSelectedEntityFilter}>
+                        <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="Subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Subjects</SelectItem>
+                            {filterOptions.entities.map(e => (
+                                <SelectItem key={e} value={e}>{e}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
-                {diffMode && (
-                    <Card className="p-4 bg-slate-50 border-dashed">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="space-y-1">
-                                <h3 className="font-semibold text-sm">Compare Prompts</h3>
-                                <p className="text-xs text-muted-foreground">Select two versions from the list below to verify changes.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Badge variant={selectedVersionA ? "default" : "outline"}>
-                                    {selectedVersionA ? `Version #${selectedVersionA}` : "Select A"}
-                                </Badge>
-                                <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                                <Badge variant={selectedVersionB ? "default" : "outline"}>
-                                    {selectedVersionB ? `Version #${selectedVersionB}` : "Select B"}
-                                </Badge>
-                                <Button
-                                    size="sm"
-                                    disabled={!selectedVersionA || !selectedVersionB || loadingDiff}
-                                    onClick={handleCompare}
-                                >
-                                    {loadingDiff ? <Loader2 className="w-3 h-3 animate-spin" /> : "Run Diff"}
-                                </Button>
-                            </div>
+                <div className="flex gap-2 items-center">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadHistory}
+                        disabled={loading}
+                    >
+                        <Loader2 className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                    <Button
+                        variant={diffMode ? "secondary" : "outline"}
+                        onClick={() => {
+                            setDiffMode(!diffMode);
+                            setDiffResult(null);
+                            setSelectedVersionA(null);
+                            setSelectedVersionB(null);
+                        }}
+                        size="sm"
+                    >
+                        <GitCompare className="w-4 h-4 mr-2" />
+                        {diffMode ? 'Exit Diff Mode' : 'Compare Versions'}
+                    </Button>
+                </div>
+            </div>
+
+            {diffMode && (
+                <Card className="p-4 bg-slate-50 border-dashed">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="space-y-1">
+                            <h3 className="font-semibold text-sm">Compare Prompts</h3>
+                            <p className="text-xs text-muted-foreground">Select two versions from the list below to verify changes.</p>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <Badge variant={selectedVersionA ? "default" : "outline"}>
+                                {selectedVersionA ? `Version #${selectedVersionA}` : "Select A"}
+                            </Badge>
+                            <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                            <Badge variant={selectedVersionB ? "default" : "outline"}>
+                                {selectedVersionB ? `Version #${selectedVersionB}` : "Select B"}
+                            </Badge>
+                            <Button
+                                size="sm"
+                                disabled={!selectedVersionA || !selectedVersionB || loadingDiff}
+                                onClick={handleCompare}
+                            >
+                                {loadingDiff ? <Loader2 className="w-3 h-3 animate-spin" /> : "Run Diff"}
+                            </Button>
+                        </div>
+                    </div>
 
-                        {diffResult && (
-                            <div className="mt-4 p-4 bg-background rounded border font-mono text-sm whitespace-pre-wrap max-h-[400px] overflow-auto">
-                                {diffResult}
-                            </div>
-                        )}
-                    </Card>
-                )}
+                    {diffResult && (
+                        <div className="mt-4 p-4 bg-background rounded border font-mono text-sm whitespace-pre-wrap max-h-[400px] overflow-auto">
+                            {diffResult}
+                        </div>
+                    )}
+                </Card>
+            )}
 
-                {/* List */}
-                <div className="grid gap-3">
-                    {filteredHistory.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">No history found matching filters.</div>
-                    ) : (
-                        filteredHistory.map((version) => {
-                            const entityName = (version as any).entity_name || version.entity?.name;
-                            const typeSlug = (version as any).type_slug || version.type?.slug;
-                            const isSelected = selectedVersionA === version.id || selectedVersionB === version.id;
+            {/* List */}
+            <div className="grid gap-3">
+                {filteredHistory.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">No history found matching filters.</div>
+                ) : (
+                    filteredHistory.map((version) => {
+                        const entityName = (version as any).entity_name || version.entity?.name;
+                        const typeSlug = (version as any).type_slug || version.type?.slug;
+                        const isSelected = selectedVersionA === version.id || selectedVersionB === version.id;
 
-                            return (
-                                <div
-                                    key={version.id}
-                                    className={`
+                        return (
+                            <div
+                                key={version.id}
+                                className={`
                   group relative flex flex-col sm:flex-row gap-4 p-4 rounded-lg border bg-card transition-all
                   ${diffMode ? 'cursor-pointer hover:border-primary/50' : ''}
                   ${isSelected ? 'border-primary ring-1 ring-primary bg-primary/5' : ''}
                 `}
-                                    onClick={() => diffMode && toggleDiffSelection(version.id)}
-                                >
-                                    <div className="flex-1 min-w-0 space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="outline">v{version.version_number}</Badge>
-                                            <span className="font-medium">{entityName}</span>
-                                            <span className="text-muted-foreground">/</span>
-                                            <span className="font-mono text-xs text-muted-foreground">{typeSlug}</span>
-                                            <span className="ml-auto text-xs text-muted-foreground">
-                                                {version.created_at ? new Date(version.created_at).toLocaleString() : 'Unknown date'}
-                                            </span>
-                                        </div>
-                                        <div
-                                            className={`text-sm text-foreground/80 font-mono bg-muted/30 p-2 rounded cursor-pointer transition-all ${expandedIds.has(version.id) ? '' : 'line-clamp-2'}`}
+                                onClick={() => diffMode && toggleDiffSelection(version.id)}
+                            >
+                                <div className="flex-1 min-w-0 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline">v{version.version_number}</Badge>
+                                        <span className="font-medium">{entityName}</span>
+                                        <span className="text-muted-foreground">/</span>
+                                        <span className="font-mono text-xs text-muted-foreground">{typeSlug}</span>
+                                        <span className="ml-auto text-xs text-muted-foreground">
+                                            {version.created_at ? new Date(version.created_at).toLocaleString() : 'Unknown date'}
+                                        </span>
+                                    </div>
+                                    <div
+                                        className={`text-sm text-foreground/80 font-mono bg-muted/30 p-2 rounded cursor-pointer transition-all ${expandedIds.has(version.id) ? '' : 'line-clamp-2'}`}
+                                        onClick={(e) => {
+                                            if (!diffMode) {
+                                                e.stopPropagation();
+                                                toggleExpand(version.id);
+                                            }
+                                        }}
+                                    >
+                                        {version.prompt_text}
+                                    </div>
+                                    {!diffMode && (
+                                        <button
+                                            className="text-xs text-muted-foreground hover:text-foreground mt-1 underline"
                                             onClick={(e) => {
-                                                if (!diffMode) {
-                                                    e.stopPropagation();
-                                                    toggleExpand(version.id);
-                                                }
+                                                e.stopPropagation();
+                                                toggleExpand(version.id);
                                             }}
                                         >
-                                            {version.prompt_text}
-                                        </div>
-                                        {!diffMode && (
-                                            <button
-                                                className="text-xs text-muted-foreground hover:text-foreground mt-1 underline"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleExpand(version.id);
-                                                }}
-                                            >
-                                                {expandedIds.has(version.id) ? 'Show Less' : 'Show More'}
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {!diffMode && (
-                                        <div className="flex items-center">
-                                            <Button variant="ghost" size="sm" onClick={() => {
-                                                // Could add "Restore" or "Copy" functionality here
-                                                navigator.clipboard.writeText(version.prompt_text);
-                                            }}>
-                                                Copy
-                                            </Button>
-                                            {onCreateVersion && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="ml-2"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onCreateVersion(version);
-                                                    }}
-                                                >
-                                                    Create New Version
-                                                </Button>
-                                            )}
-                                        </div>
+                                            {expandedIds.has(version.id) ? 'Show Less' : 'Show More'}
+                                        </button>
                                     )}
                                 </div>
-                            );
-                        })
-                    )}
-                </div>
+
+                                {!diffMode && (
+                                    <div className="flex items-center">
+                                        <Button variant="ghost" size="sm" onClick={() => {
+                                            // Could add "Restore" or "Copy" functionality here
+                                            navigator.clipboard.writeText(version.prompt_text);
+                                        }}>
+                                            Copy
+                                        </Button>
+                                        {onCreateVersion && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="ml-2"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onCreateVersion(version);
+                                                }}
+                                            >
+                                                Create New Version
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
+                )}
             </div>
-        );
-    }
+        </div>
+    );
+}
