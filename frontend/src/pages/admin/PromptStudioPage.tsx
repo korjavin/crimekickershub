@@ -5,7 +5,7 @@ import { PromptMixer } from '@/components/prompts/PromptMixer';
 import { PromptResult } from '@/components/prompts/PromptResult';
 import { PromptHistory } from '@/components/prompts/PromptHistory';
 import { getEntities, getPromptTypes } from '@/lib/api';
-import type { Entity, PromptType } from '@/lib/api-types';
+import type { Entity, PromptType, PromptVersion } from '@/lib/api-types';
 
 export function PromptStudioPage() {
   const [generatedPrompt, setGeneratedPrompt] = useState('');
@@ -13,6 +13,7 @@ export function PromptStudioPage() {
   const [promptTypes, setPromptTypes] = useState<PromptType[]>([]);
   const [selectedEntityIds, setSelectedEntityIds] = useState<number[]>([]);
   const [selectedTypeSlug, setSelectedTypeSlug] = useState<string>('');
+  const [activeTab, setActiveTab] = useState('mixer');
 
   // Load data on mount
   useEffect(() => {
@@ -36,6 +37,7 @@ export function PromptStudioPage() {
     setGeneratedPrompt(prompt);
     setSelectedEntityIds(ids);
     setSelectedTypeSlug(typeSlug);
+    setActiveTab('result'); // Switch to results tab explicitly when generating
   };
 
   const handleSaved = () => {
@@ -43,6 +45,19 @@ export function PromptStudioPage() {
     setSelectedEntityIds([]);
     setSelectedTypeSlug('');
     loadData();
+    setActiveTab('history'); // Switch to history after saving
+  };
+
+  const handleCreateVersion = (version: PromptVersion) => {
+    // Determine the type slug from the version object
+    // The version object might have nested type object or just type_slug depending on API response structure
+    // Based on PromptHistory code: const typeSlug = (version as any).type_slug || version.type?.slug;
+    const typeSlug = (version as any).type_slug || version.type?.slug || '';
+
+    setGeneratedPrompt(version.prompt_text);
+    setSelectedEntityIds([version.entity_id]);
+    setSelectedTypeSlug(typeSlug);
+    setActiveTab('result');
   };
 
   return (
@@ -54,7 +69,7 @@ export function PromptStudioPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="mixer" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="mixer">Prompt Mixer</TabsTrigger>
           <TabsTrigger value="result">Result Editor</TabsTrigger>
@@ -102,7 +117,7 @@ export function PromptStudioPage() {
 
         <TabsContent value="history" className="space-y-4">
           <Card className="p-6">
-            <PromptHistory />
+            <PromptHistory onCreateVersion={handleCreateVersion} />
           </Card>
         </TabsContent>
       </Tabs>

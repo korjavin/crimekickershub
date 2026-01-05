@@ -14,7 +14,11 @@ import { listPromptHistory, getPromptDiff } from '@/lib/api';
 import type { PromptVersion } from '@/lib/api-types';
 import { Search, GitCompare, ArrowRight, Loader2 } from 'lucide-react';
 
-export function PromptHistory() {
+interface PromptHistoryProps {
+    onCreateVersion?: (version: PromptVersion) => void;
+}
+
+export function PromptHistory({ onCreateVersion }: PromptHistoryProps) {
     const [history, setHistory] = useState<PromptVersion[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -278,6 +282,19 @@ export function PromptHistory() {
                                         }}>
                                             Copy
                                         </Button>
+                                        {onCreateVersion && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="ml-2"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onCreateVersion(version);
+                                                }}
+                                            >
+                                                Create New Version
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </div>
