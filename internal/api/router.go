@@ -23,6 +23,7 @@ import (
 
 // Router holds all dependencies for the API
 type Router struct {
+	db           *sql.DB
 	mux          *http.ServeMux
 	prompts      *prompts.PromptService
 	media        *media.MediaService
@@ -36,6 +37,7 @@ type Router struct {
 func NewRouter(db *sql.DB, r2 *storage.R2Client, auth *auth.GoogleOAuth2, frontendPath string) *Router {
 	repo := repository.New(db)
 	r := &Router{
+		db:           db,
 		mux:          http.NewServeMux(),
 		prompts:      prompts.NewPromptService(repo),
 		media:        media.NewMediaService(db, r2),
@@ -1123,16 +1125,49 @@ func (r *Router) handleUpdateStoryItems(w http.ResponseWriter, req *http.Request
 		return
 	}
 
+	// Start transaction
+	tx, err := r.db.Begin()
+	if err != nil {
+		http.Error(w, "Failed to start transaction: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	qtx := r.repo.WithTx(tx)
+
 	// Update sort order for each item
+	// Strategy: To avoid unique constraint violation on (story_id, sort_order),
+	// we first move all items to a temporary negative sort order, then move to final.
+
+	// Pass 1: Set to negative temporary values
 	for i, itemID := range input.ItemIDs {
-		err := r.repo.UpdateStoryItemSortOrder(req.Context(), repository.UpdateStoryItemSortOrderParams{
+		// specific logic: -1 * (index + 1000) to ensure uniqueness and negative sign
+		tempOrder := int64(-1 * (i + 1000))
+		err := qtx.UpdateStoryItemSortOrder(req.Context(), repository.UpdateStoryItemSortOrderParams{
+			SortOrder: tempOrder,
+			ID:        itemID,
+		})
+		if err != nil {
+			http.Error(w, "Failed to set temp sort order: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Pass 2: Set to final values
+	for i, itemID := range input.ItemIDs {
+		err := qtx.UpdateStoryItemSortOrder(req.Context(), repository.UpdateStoryItemSortOrderParams{
 			SortOrder: int64(i),
 			ID:        itemID,
 		})
 		if err != nil {
-			http.Error(w, "Failed to update item sort order: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to set final sort order: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "Failed to commit transaction: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Return updated story
@@ -1413,7 +1448,7 @@ func (r *Router) handleGetMatrix(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Get all prompt versions with details
-	versions, err := r.repo.ListAllPromptVersions(req.Context())
+	versions, err := r.repo.ListLatestPromptVersionsMatrix(req.Context())
 	if err != nil {
 		http.Error(w, "Failed to list prompt versions: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -238,3 +238,14 @@ FROM prompt_versions pv
 JOIN entities e ON pv.entity_id = e.id
 JOIN prompt_types pt ON pv.type_id = pt.id
 ORDER BY pv.created_at DESC;
+
+-- name: ListLatestPromptVersionsMatrix :many
+SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.created_at
+FROM prompt_versions pv
+INNER JOIN (
+    SELECT entity_id, type_id, MAX(version_number) as max_version
+    FROM prompt_versions
+    GROUP BY entity_id, type_id
+) latest ON pv.entity_id = latest.entity_id 
+        AND pv.type_id = latest.type_id 
+        AND pv.version_number = latest.max_version;

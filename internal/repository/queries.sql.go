@@ -948,6 +948,57 @@ func (q *Queries) ListEntityTypes(ctx context.Context) ([]EntityType, error) {
 	return items, nil
 }
 
+const listLatestPromptVersionsMatrix = `-- name: ListLatestPromptVersionsMatrix :many
+SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.created_at
+FROM prompt_versions pv
+INNER JOIN (
+    SELECT entity_id, type_id, MAX(version_number) as max_version
+    FROM prompt_versions
+    GROUP BY entity_id, type_id
+) latest ON pv.entity_id = latest.entity_id 
+        AND pv.type_id = latest.type_id 
+        AND pv.version_number = latest.max_version
+`
+
+type ListLatestPromptVersionsMatrixRow struct {
+	ID            int64        `json:"id"`
+	EntityID      int64        `json:"entity_id"`
+	TypeID        int64        `json:"type_id"`
+	VersionNumber int64        `json:"version_number"`
+	PromptText    string       `json:"prompt_text"`
+	CreatedAt     sql.NullTime `json:"created_at"`
+}
+
+func (q *Queries) ListLatestPromptVersionsMatrix(ctx context.Context) ([]ListLatestPromptVersionsMatrixRow, error) {
+	rows, err := q.db.QueryContext(ctx, listLatestPromptVersionsMatrix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLatestPromptVersionsMatrixRow
+	for rows.Next() {
+		var i ListLatestPromptVersionsMatrixRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntityID,
+			&i.TypeID,
+			&i.VersionNumber,
+			&i.PromptText,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMediaByStory = `-- name: ListMediaByStory :many
 SELECT ma.id, ma.type, ma.r2_key, ma.youtube_id, ma.source_prompt_version_id, ma.created_at FROM media_assets ma
 JOIN story_items si ON ma.id = si.media_asset_id

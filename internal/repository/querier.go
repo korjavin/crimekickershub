@@ -44,6 +44,7 @@ type Querier interface {
 	ListEntities(ctx context.Context) ([]ListEntitiesRow, error)
 	ListEntitiesByType(ctx context.Context, lower string) ([]ListEntitiesByTypeRow, error)
 	ListEntityTypes(ctx context.Context) ([]EntityType, error)
+	ListLatestPromptVersionsMatrix(ctx context.Context) ([]ListLatestPromptVersionsMatrixRow, error)
 	ListMediaByStory(ctx context.Context, storyID int64) ([]MediaAsset, error)
 	ListPromptHistory(ctx context.Context) ([]ListPromptHistoryRow, error)
 	ListPromptTypes(ctx context.Context) ([]PromptType, error)
