@@ -1094,6 +1094,10 @@ func (q *Queries) ListMediaByStory(ctx context.Context, storyID int64) ([]MediaA
 			&i.YoutubeID,
 			&i.SourcePromptVersionID,
 			&i.CreatedAt,
+			&i.Title,
+			&i.Description,
+			&i.TextContent,
+			&i.EntityID,
 		); err != nil {
 			return nil, err
 		}
