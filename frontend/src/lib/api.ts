@@ -181,9 +181,21 @@ export async function uploadMedia(file: File, promptVersionId?: string) {
   return { ...result, thumbnail_url: thumbPresigned.publicURL };
 }
 
-export async function createTextSlide(data: { title: string; description: string; text_content: string }) {
+export async function createTextSlide(data: { title: string; description?: string; text_content: string; entity_id?: number }) {
   const response = await fetch(`${API_BASE}/admin/media/text`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updateTextSlide(id: number, data: { title?: string; description?: string; text_content?: string; entity_id?: number | null }) {
+  const response = await fetch(`${API_BASE}/admin/media/text/${id}`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
