@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
 import {
   listStoriesAdmin,
   getStory,
@@ -50,7 +51,9 @@ import {
   addStoryItem,
   deleteStoryItem,
   getEntities,
+  getEntities,
   listPromptVersions,
+  createTextSlide,
 } from '@/lib/api';
 import type { Story, StoryItem, MediaAsset, StoryWithItems, Entity } from '@/lib/api-types';
 
@@ -99,12 +102,20 @@ function SortableTimelineItem({ item, onRemove, isRemoving }: SortableTimelineIt
       <span className="text-sm text-muted-foreground w-6">
         {item.sort_order + 1}
       </span>
-      {thumbnailUrl && (
+      {thumbnailUrl ? (
         <img
           src={thumbnailUrl}
           alt=""
           className="w-16 h-12 object-cover rounded"
         />
+      ) : item.media?.type === 'text' ? (
+        <div className="w-16 h-12 bg-muted p-1 text-[10px] overflow-hidden rounded border">
+          <div className="font-bold truncate">{item.media.title}</div>
+        </div>
+      ) : (
+        <div className="w-16 h-12 bg-muted flex items-center justify-center rounded">
+          ?
+        </div>
       )}
       <div className="flex-1 min-w-0">
         <Badge variant="secondary" className="mb-1">
@@ -145,6 +156,11 @@ function MediaGridItem({ media, onAdd, isAdding }: MediaGridItemProps) {
           alt=""
           className="w-full h-24 object-cover"
         />
+      ) : media.type === 'text' ? (
+        <div className="w-full h-24 bg-muted p-2 text-xs overflow-hidden">
+          <div className="font-bold truncate">{media.title}</div>
+          <div className="text-muted-foreground line-clamp-3">{media.text_content}</div>
+        </div>
       ) : (
         <div className="w-full h-24 bg-muted flex items-center justify-center">
           No preview
@@ -179,6 +195,13 @@ export function StoryEditorPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [newStoryTitle, setNewStoryTitle] = useState('');
+
+  // Text Slide State
+  const [isTextSlideDialogOpen, setIsTextSlideDialogOpen] = useState(false);
+  const [textSlideTitle, setTextSlideTitle] = useState('');
+  const [textSlideDescription, setTextSlideDescription] = useState('');
+  const [textSlideContent, setTextSlideContent] = useState('');
+  const [isCreatingTextSlide, setIsCreatingTextSlide] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -357,6 +380,37 @@ export function StoryEditorPage() {
         next.delete(item.id);
         return next;
       });
+    }
+  };
+
+  const handleCreateTextSlide = async () => {
+    if (!textSlideTitle.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
+    try {
+      setIsCreatingTextSlide(true);
+      const newSlide = await createTextSlide({
+        title: textSlideTitle,
+        description: textSlideDescription,
+        text_content: textSlideContent
+      });
+
+      setAvailableMedia(prev => [newSlide, ...prev]);
+      setIsTextSlideDialogOpen(false);
+
+      // Reset form
+      setTextSlideTitle('');
+      setTextSlideDescription('');
+      setTextSlideContent('');
+
+      toast.success("Text slide created");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create text slide");
+    } finally {
+      setIsCreatingTextSlide(false);
     }
   };
 
@@ -661,6 +715,50 @@ export function StoryEditorPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                </Select>
+                 <Dialog open={isTextSlideDialogOpen} onOpenChange={setIsTextSlideDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary"> + Text Slide</Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                      <DialogTitle>Create Text Slide</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Title (Required)</label>
+                        <Input 
+                          placeholder="e.g., Chapter 1, Scene Setting" 
+                          value={textSlideTitle}
+                          onChange={e => setTextSlideTitle(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-sm font-medium">Description (Optional)</label>
+                         <Input 
+                            placeholder="Short description for internal use"
+                            value={textSlideDescription}
+                            onChange={e => setTextSlideDescription(e.target.value)}
+                         />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Content (Markdown supported)</label>
+                        <textarea
+                          className="flex min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="# A New Beginning..."
+                          value={textSlideContent}
+                          onChange={e => setTextSlideContent(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsTextSlideDialogOpen(false)}>Cancel</Button>
+                      <Button onClick={handleCreateTextSlide} disabled={isCreatingTextSlide || !textSlideTitle.trim()}>
+                        {isCreatingTextSlide ? 'Creating...' : 'Create Slide'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
             <ScrollArea className="flex-1 p-4">
@@ -682,95 +780,109 @@ export function StoryEditorPage() {
             </ScrollArea>
           </Card>
 
-          {/* Right Column: Timeline */}
-          <Card className="flex flex-col h-full overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                Story Timeline
-                {storyWithItems && (
-                  <span className="text-muted-foreground font-normal ml-2">
-                    ({storyWithItems.items.length} frames)
-                  </span>
-                )}
-              </h2>
-              <Button
-                onClick={handleSaveOrder}
-                disabled={isSaving || !storyWithItems?.items.length}
-              >
-                {isSaving ? 'Saving...' : 'Save Order'}
-              </Button>
-            </div>
-            <ScrollArea className="flex-1 p-4 bg-muted/20">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={storyWithItems?.items.map((item) => item.id) || []}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {storyWithItems?.items.map((item) => (
-                      <SortableTimelineItem
-                        key={item.id}
-                        item={item}
-                        onRemove={handleRemoveFromStory}
-                        isRemoving={removingItemIds.has(item.id)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-              {(!storyWithItems?.items || storyWithItems.items.length === 0) && (
-                <div className="text-center text-muted-foreground py-8">
-                  No frames yet. Add media from the left panel.
-                </div>
-              )}
-            </ScrollArea>
-          </Card>
+          {/* Right Column: Timeline */ }
+  <Card className="flex flex-col h-full overflow-hidden">
+    <div className="p-4 border-b flex items-center justify-between">
+      <h2 className="text-lg font-semibold">
+        Story Timeline
+        {storyWithItems && (
+          <span className="text-muted-foreground font-normal ml-2">
+            ({storyWithItems.items.length} frames)
+          </span>
+        )}
+      </h2>
+      <Button
+        onClick={handleSaveOrder}
+        disabled={isSaving || !storyWithItems?.items.length}
+      >
+        {isSaving ? 'Saving...' : 'Save Order'}
+      </Button>
+    </div>
+    <ScrollArea className="flex-1 p-4 bg-muted/20">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={storyWithItems?.items.map((item) => item.id) || []}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+            {storyWithItems?.items.map((item) => (
+              <SortableTimelineItem
+                key={item.id}
+                item={item}
+                onRemove={handleRemoveFromStory}
+                isRemoving={removingItemIds.has(item.id)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+      {(!storyWithItems?.items || storyWithItems.items.length === 0) && (
+        <div className="text-center text-muted-foreground py-8">
+          No frames yet. Add media from the left panel.
         </div>
       )}
+    </ScrollArea>
+  </Card>
+        </div >
+      )
+}
 
-      {/* Preview Modal */}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
-            <h3 className="font-semibold">Mobile Preview</h3>
-            <Button variant="ghost" size="sm" onClick={() => setIsPreviewOpen(false)}>✕</Button>
-          </div>
-          <ScrollArea className="flex-1 bg-black">
-            <div className="flex flex-col">
-              {storyWithItems?.items.map((item) => {
-                const url = item.media?.url || '';
-                if (!url) return null;
-
-                return (
-                  <div key={item.id} className="w-full">
-                    {item.media?.type === 'video' || (item.media?.youtube_id) ? (
-                      <div className="aspect-video w-full">
-                        <iframe
-                          src={item.media?.url}
-                          className="w-full h-full"
-                          title="Video"
-                          allowFullScreen
-                        />
-                      </div>
-                    ) : (
-                      <img
-                        src={url}
-                        alt="Comic Panel"
-                        className="w-full h-auto block"
-                        loading="lazy"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+{/* Preview Modal */ }
+<Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+  <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+    <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
+      <h3 className="font-semibold">Mobile Preview</h3>
+      <Button variant="ghost" size="sm" onClick={() => setIsPreviewOpen(false)}>✕</Button>
     </div>
+    <ScrollArea className="flex-1 bg-black">
+      <div className="flex flex-col">
+        {storyWithItems?.items.map((item) => {
+          const url = item.media?.url || '';
+
+          if (item.media?.type === 'text') {
+            return (
+              <div key={item.id} className="w-full bg-white p-6 text-black min-h-[50vh] flex flex-col items-center justify-center text-center">
+                <div className="prose prose-lg max-w-none">
+                  {/* Simple rendering for preview, markdown rendering ideally in real reader */}
+                  <h1 className="text-3xl font-bold mb-4">{item.media.title}</h1>
+                  <div className="whitespace-pre-wrap">{item.media.text_content}</div>
+                </div>
+              </div>
+            );
+          }
+
+          if (!url) return null;
+
+          return (
+            <div key={item.id} className="w-full">
+              {item.media?.type === 'video' || (item.media?.youtube_id) ? (
+                <div className="aspect-video w-full">
+                  <iframe
+                    src={item.media?.url}
+                    className="w-full h-full"
+                    title="Video"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <img
+                  src={url}
+                  alt="Comic Panel"
+                  className="w-full h-auto block"
+                  loading="lazy"
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </ScrollArea>
+  </DialogContent>
+</Dialog>
+    </div >
   );
 }

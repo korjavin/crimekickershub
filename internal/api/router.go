@@ -130,6 +130,7 @@ func (r *Router) adminRoutes() {
 
 	// Assets management (admin only)
 	r.mux.Handle("POST /api/admin/assets", r.auth.RequireAdmin(http.HandlerFunc(r.handleRegisterAsset)))
+	r.mux.Handle("POST /api/admin/media/text", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateTextSlide)))
 
 	// Stories management (admin only)
 	r.mux.Handle("GET /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleListStoriesAdmin)))
@@ -741,6 +742,38 @@ func (r *Router) handleRegisterAsset(w http.ResponseWriter, req *http.Request) {
 
 	dto := r.toMediaAssetDTO(asset)
 	respondJSON(w, dto)
+}
+
+// handleCreateTextSlide creates a new text slide
+func (r *Router) handleCreateTextSlide(w http.ResponseWriter, req *http.Request) {
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		TextContent string `json:"text_content"`
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if input.Title == "" {
+		http.Error(w, "Title is required", http.StatusBadRequest)
+		return
+	}
+
+	asset, err := r.media.RegisterAsset(req.Context(), media.RegisterAssetInput{
+		Type:        media.MediaTypeText,
+		Title:       input.Title,
+		Description: input.Description,
+		TextContent: input.TextContent,
+	})
+	if err != nil {
+		http.Error(w, "Failed to create text slide: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, r.toMediaAssetDTO(*asset))
 }
 
 // nullInt64Ptr converts *int64 to sql.NullInt64
@@ -1704,6 +1737,10 @@ type MediaAssetDTO struct {
 	// Computed fields
 	URL          *string `json:"url"`
 	ThumbnailURL *string `json:"thumbnail_url"`
+	// Text slide fields
+	Title       *string `json:"title,omitempty"`
+	Description *string `json:"description,omitempty"`
+	TextContent *string `json:"text_content,omitempty"`
 }
 
 // toMediaAssetDTO converts a repository.MediaAsset to MediaAssetDTO
@@ -1737,6 +1774,15 @@ func (r *Router) toMediaAssetDTO(asset repository.MediaAsset) MediaAssetDTO {
 	if asset.CreatedAt.Valid {
 		timeStr := asset.CreatedAt.Time.Format("2006-01-02T15:04:05Z")
 		dto.CreatedAt = &timeStr
+	}
+	if asset.Title.Valid {
+		dto.Title = &asset.Title.String
+	}
+	if asset.Description.Valid {
+		dto.Description = &asset.Description.String
+	}
+	if asset.TextContent.Valid {
+		dto.TextContent = &asset.TextContent.String
 	}
 
 	return dto

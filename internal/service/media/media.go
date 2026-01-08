@@ -23,6 +23,7 @@ import (
 const (
 	MediaTypeImage = "image"
 	MediaTypeVideo = "video"
+	MediaTypeText  = "text"
 )
 
 // MediaService handles media asset operations
@@ -41,20 +42,30 @@ func NewMediaService(db *sql.DB, r2 *storage.R2Client) *MediaService {
 
 // RegisterAssetInput represents input for registering a media asset
 type RegisterAssetInput struct {
-	Type            string `json:"type"` // "image" or "video"
+	Type            string `json:"type"` // "image", "video", or "text"
 	File            io.Reader
 	Filename        string
 	YouTubeURL      string `json:"youtube_url"`
 	PromptVersionID *int64 `json:"prompt_version_id"`
+	// Text slide fields
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	TextContent string `json:"text_content"`
 }
 
 // RegisterAsset registers a new media asset in the database
 // For images: uploads to R2 and stores the key
 // For videos: parses YouTube URL and stores the video ID
+// For text: stores content directly
 func (s *MediaService) RegisterAsset(ctx context.Context, input RegisterAssetInput) (*repository.MediaAsset, error) {
 	var r2Key sql.NullString
 	var youtubeID sql.NullString
 	var publicURL string
+
+	// Text slide fields
+	var title sql.NullString
+	var description sql.NullString
+	var textContent sql.NullString
 
 	switch input.Type {
 	case MediaTypeImage:
@@ -95,8 +106,16 @@ func (s *MediaService) RegisterAsset(ctx context.Context, input RegisterAssetInp
 		youtubeID = sql.NullString{String: videoID, Valid: true}
 		publicURL = input.YouTubeURL
 
+	case MediaTypeText:
+		if input.Title == "" {
+			return nil, fmt.Errorf("title is required for text slides")
+		}
+		title = sql.NullString{String: input.Title, Valid: true}
+		description = sql.NullString{String: input.Description, Valid: input.Description != ""}
+		textContent = sql.NullString{String: input.TextContent, Valid: input.TextContent != ""}
+
 	default:
-		return nil, fmt.Errorf("invalid media type: %s (must be 'image' or 'video')", input.Type)
+		return nil, fmt.Errorf("invalid media type: %s (must be 'image', 'video' or 'text')", input.Type)
 	}
 
 	// Create media asset in database
@@ -105,6 +124,9 @@ func (s *MediaService) RegisterAsset(ctx context.Context, input RegisterAssetInp
 		R2Key:                 r2Key,
 		YoutubeID:             youtubeID,
 		SourcePromptVersionID: nullInt64(input.PromptVersionID),
+		Title:                 title,
+		Description:           description,
+		TextContent:           textContent,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create media asset: %w", err)

@@ -68,6 +68,16 @@ export const ComicReader = ({ items }: ComicReaderProps) => {
                   ></iframe>
                 </div>
               )}
+              {item.type === 'text' && (
+                <div className="w-full bg-white text-black p-8 min-h-[300px] flex flex-col justify-center items-center text-center">
+                  {/* Fallback simple rendering since we don't have a markdown library installed yet */}
+                  <div className="prose prose-lg max-w-none">
+                    <div className="whitespace-pre-wrap font-serif text-lg leading-relaxed">
+                      {item.text_content}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Panel number badge */}
               <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-mono px-2 py-1 rounded backdrop-blur-sm">

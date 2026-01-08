@@ -22,7 +22,7 @@ export interface EntityType {
 
 export interface MediaAsset {
   id: number;
-  type: string; // "image" or "video"
+  type: string; // "image", "video", or "text"
   r2_key: string | null; // For images
   youtube_id: string | null; // For videos
   source_prompt_version_id: number | null;
@@ -30,6 +30,10 @@ export interface MediaAsset {
   // Computed fields for frontend
   url?: string;
   thumbnail_url?: string;
+  // Text slide fields
+  title?: string;
+  description?: string;
+  text_content?: string;
 }
 
 export interface Story {
@@ -56,9 +60,10 @@ export interface StoryWithItems extends Story {
 
 // Public comic reader types (simplified from backend PublicStoryResponse)
 export interface PublicStoryItem {
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'text';
   url?: string;
   youtube_id?: string;
+  text_content?: string;
   aspect_ratio?: string;
 }
 

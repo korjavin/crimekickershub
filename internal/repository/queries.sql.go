@@ -104,9 +104,9 @@ func (q *Queries) CreateEntityType(ctx context.Context, arg CreateEntityTypePara
 }
 
 const createMediaAsset = `-- name: CreateMediaAsset :one
-INSERT INTO media_assets (type, r2_key, youtube_id, source_prompt_version_id)
-VALUES (?, ?, ?, ?)
-RETURNING id, type, r2_key, youtube_id, source_prompt_version_id, created_at
+INSERT INTO media_assets (type, r2_key, youtube_id, source_prompt_version_id, title, description, text_content)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+RETURNING id, type, r2_key, youtube_id, source_prompt_version_id, created_at, title, description, text_content
 `
 
 type CreateMediaAssetParams struct {
@@ -114,6 +114,9 @@ type CreateMediaAssetParams struct {
 	R2Key                 sql.NullString `json:"r2_key"`
 	YoutubeID             sql.NullString `json:"youtube_id"`
 	SourcePromptVersionID sql.NullInt64  `json:"source_prompt_version_id"`
+	Title                 sql.NullString `json:"title"`
+	Description           sql.NullString `json:"description"`
+	TextContent           sql.NullString `json:"text_content"`
 }
 
 func (q *Queries) CreateMediaAsset(ctx context.Context, arg CreateMediaAssetParams) (MediaAsset, error) {
@@ -122,6 +125,9 @@ func (q *Queries) CreateMediaAsset(ctx context.Context, arg CreateMediaAssetPara
 		arg.R2Key,
 		arg.YoutubeID,
 		arg.SourcePromptVersionID,
+		arg.Title,
+		arg.Description,
+		arg.TextContent,
 	)
 	var i MediaAsset
 	err := row.Scan(
@@ -131,6 +137,9 @@ func (q *Queries) CreateMediaAsset(ctx context.Context, arg CreateMediaAssetPara
 		&i.YoutubeID,
 		&i.SourcePromptVersionID,
 		&i.CreatedAt,
+		&i.Title,
+		&i.Description,
+		&i.TextContent,
 	)
 	return i, err
 }
@@ -472,7 +481,7 @@ func (q *Queries) GetLatestPromptVersionForMatrix(ctx context.Context, arg GetLa
 }
 
 const getMediaAsset = `-- name: GetMediaAsset :one
-SELECT id, type, r2_key, youtube_id, source_prompt_version_id, created_at FROM media_assets WHERE id = ?
+SELECT id, type, r2_key, youtube_id, source_prompt_version_id, created_at, title, description, text_content FROM media_assets WHERE id = ?
 `
 
 func (q *Queries) GetMediaAsset(ctx context.Context, id int64) (MediaAsset, error) {
@@ -485,6 +494,9 @@ func (q *Queries) GetMediaAsset(ctx context.Context, id int64) (MediaAsset, erro
 		&i.YoutubeID,
 		&i.SourcePromptVersionID,
 		&i.CreatedAt,
+		&i.Title,
+		&i.Description,
+		&i.TextContent,
 	)
 	return i, err
 }
@@ -614,7 +626,8 @@ const getStoryWithItems = `-- name: GetStoryWithItems :one
 SELECT
     s.id AS s_id, s.title AS s_title, s.slug AS s_slug, s.cover_image_url, s.published, s.created_at,
     si.id AS si_id, si.sort_order,
-    ma.id AS ma_id, ma.type AS ma_type, ma.r2_key, ma.youtube_id, ma.source_prompt_version_id, ma.created_at AS ma_created_at
+    ma.id AS ma_id, ma.type AS ma_type, ma.r2_key, ma.youtube_id, ma.source_prompt_version_id, ma.created_at AS ma_created_at,
+    ma.title AS ma_title, ma.description AS ma_description, ma.text_content AS ma_text_content
 FROM stories s
 LEFT JOIN story_items si ON s.id = si.story_id
 LEFT JOIN media_assets ma ON si.media_asset_id = ma.id
@@ -637,6 +650,9 @@ type GetStoryWithItemsRow struct {
 	YoutubeID             sql.NullString `json:"youtube_id"`
 	SourcePromptVersionID sql.NullInt64  `json:"source_prompt_version_id"`
 	MaCreatedAt           sql.NullTime   `json:"ma_created_at"`
+	MaTitle               sql.NullString `json:"ma_title"`
+	MaDescription         sql.NullString `json:"ma_description"`
+	MaTextContent         sql.NullString `json:"ma_text_content"`
 }
 
 func (q *Queries) GetStoryWithItems(ctx context.Context, id int64) (GetStoryWithItemsRow, error) {
@@ -657,6 +673,9 @@ func (q *Queries) GetStoryWithItems(ctx context.Context, id int64) (GetStoryWith
 		&i.YoutubeID,
 		&i.SourcePromptVersionID,
 		&i.MaCreatedAt,
+		&i.MaTitle,
+		&i.MaDescription,
+		&i.MaTextContent,
 	)
 	return i, err
 }
@@ -696,7 +715,7 @@ func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID string) (User,
 }
 
 const listAllMediaAssets = `-- name: ListAllMediaAssets :many
-SELECT id, type, r2_key, youtube_id, source_prompt_version_id, created_at FROM media_assets ORDER BY created_at DESC
+SELECT id, type, r2_key, youtube_id, source_prompt_version_id, created_at, title, description, text_content FROM media_assets ORDER BY created_at DESC
 `
 
 func (q *Queries) ListAllMediaAssets(ctx context.Context) ([]MediaAsset, error) {
@@ -715,6 +734,9 @@ func (q *Queries) ListAllMediaAssets(ctx context.Context) ([]MediaAsset, error) 
 			&i.YoutubeID,
 			&i.SourcePromptVersionID,
 			&i.CreatedAt,
+			&i.Title,
+			&i.Description,
+			&i.TextContent,
 		); err != nil {
 			return nil, err
 		}

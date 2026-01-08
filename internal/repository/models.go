@@ -36,6 +36,9 @@ type MediaAsset struct {
 	YoutubeID             sql.NullString `json:"youtube_id"`
 	SourcePromptVersionID sql.NullInt64  `json:"source_prompt_version_id"`
 	CreatedAt             sql.NullTime   `json:"created_at"`
+	Title                 sql.NullString `json:"title"`
+	Description           sql.NullString `json:"description"`
+	TextContent           sql.NullString `json:"text_content"`
 }
 
 type PromptType struct {

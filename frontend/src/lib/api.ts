@@ -181,6 +181,18 @@ export async function uploadMedia(file: File, promptVersionId?: string) {
   return { ...result, thumbnail_url: thumbPresigned.publicURL };
 }
 
+export async function createTextSlide(data: { title: string; description: string; text_content: string }) {
+  const response = await fetch(`${API_BASE}/admin/media/text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // Prompt Version APIs (for dropdown)
 export async function listPromptVersions() {
   return fetchApi<any[]>('/admin/prompts');
