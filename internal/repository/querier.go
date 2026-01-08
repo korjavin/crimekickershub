@@ -58,6 +58,7 @@ type Querier interface {
 	ListUsers(ctx context.Context) ([]User, error)
 	UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Entity, error)
 	UpdateEntityType(ctx context.Context, arg UpdateEntityTypeParams) (EntityType, error)
+	UpdateMediaAsset(ctx context.Context, arg UpdateMediaAssetParams) (MediaAsset, error)
 	UpdatePromptType(ctx context.Context, arg UpdatePromptTypeParams) error
 	UpdateStory(ctx context.Context, arg UpdateStoryParams) (Story, error)
 	UpdateStoryItemSortOrder(ctx context.Context, arg UpdateStoryItemSortOrderParams) error
