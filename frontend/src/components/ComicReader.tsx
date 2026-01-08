@@ -1,4 +1,5 @@
 import type { PublicStoryItem } from '@/lib/api-types';
+import ReactMarkdown from 'react-markdown';
 
 interface ComicReaderProps {
   items: PublicStoryItem[];
@@ -69,13 +70,39 @@ export const ComicReader = ({ items }: ComicReaderProps) => {
                 </div>
               )}
               {item.type === 'text' && (
-                <div className="w-full bg-white text-black p-8 min-h-[300px] flex flex-col justify-center items-center text-center">
-                  {/* Fallback simple rendering since we don't have a markdown library installed yet */}
-                  <div className="prose prose-lg max-w-none">
-                    <div className="whitespace-pre-wrap font-serif text-lg leading-relaxed">
-                      {item.text_content}
-                    </div>
+                <div className="w-full bg-[#1a1a1a] text-[#e0e0e0] p-8 min-h-[400px] flex flex-col justify-center items-center text-center font-serif relative overflow-hidden">
+                  {/* Decorative background elements */}
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50" />
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50" />
+
+                  {/* Title */}
+                  {item.title && (
+                    <h2 className="text-2xl font-sans font-bold mb-6 tracking-widest uppercase text-white/90 drop-shadow-md">
+                      {item.title}
+                    </h2>
+                  )}
+
+                  {/* Content */}
+                  <div className="prose prose-invert prose-lg max-w-none w-full">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-lg text-gray-300" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="text-white font-bold" {...props} />,
+                        em: ({ node, ...props }) => <em className="text-gray-100 italic" {...props} />,
+                        h1: ({ node, ...props }) => <h3 className="text-xl font-sans font-bold mt-4 mb-2 text-white" {...props} />,
+                        h2: ({ node, ...props }) => <h4 className="text-lg font-sans font-bold mt-3 mb-2 text-gray-200" {...props} />,
+                        blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-white/30 pl-4 italic text-gray-400 my-4" {...props} />,
+                      }}
+                    >
+                      {item.text_content || ''}
+                    </ReactMarkdown>
                   </div>
+
+                  {/* Decorative corner accents */}
+                  <div className="absolute top-4 left-4 w-3 h-3 border-t border-l border-white/20" />
+                  <div className="absolute top-4 right-4 w-3 h-3 border-t border-r border-white/20" />
+                  <div className="absolute bottom-4 left-4 w-3 h-3 border-b border-l border-white/20" />
+                  <div className="absolute bottom-4 right-4 w-3 h-3 border-b border-r border-white/20" />
                 </div>
               )}
 

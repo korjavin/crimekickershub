@@ -65,6 +65,7 @@ export interface PublicStoryItem {
   url?: string;
   youtube_id?: string;
   text_content?: string;
+  title?: string;
   aspect_ratio?: string;
 }
 
