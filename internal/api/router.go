@@ -887,10 +887,26 @@ func (r *Router) handleAddStoryItem(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Calculate correct sort order
+	// Ideally we could do this in SQL via subquery, but for now we'll fetch items and find max
+	currentItems, err := r.repo.GetStoryItems(req.Context(), storyID)
+	if err != nil {
+		http.Error(w, "Failed to fetch current items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nextSortOrder := int64(1)
+	if len(currentItems) > 0 {
+		for _, item := range currentItems {
+			if item.SortOrder >= nextSortOrder {
+				nextSortOrder = item.SortOrder + 1
+			}
+		}
+	}
 	item, err := r.repo.AddStoryItem(req.Context(), repository.AddStoryItemParams{
 		StoryID:      storyID,
 		MediaAssetID: input.MediaAssetID,
-		SortOrder:    input.SortOrder,
+		SortOrder:    nextSortOrder,
 	})
 	if err != nil {
 		http.Error(w, "Failed to add story item: "+err.Error(), http.StatusInternalServerError)
