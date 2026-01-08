@@ -630,6 +630,13 @@ export function StoryEditorPage() {
 
   const finalFilteredMedia = filteredMedia.filter(media => {
     if (selectedEntityId === 'all') return true;
+
+    // Check direct entity binding (e.g. text slides)
+    if (media.entity_id) {
+      return String(media.entity_id) === selectedEntityId;
+    }
+
+    // Check prompt version binding
     if (!media.source_prompt_version_id) return false;
     const entityId = promptVersionEntityMap[media.source_prompt_version_id];
     return String(entityId) === selectedEntityId;

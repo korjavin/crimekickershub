@@ -244,8 +244,13 @@ export function MediaPage() {
     // Entity filter
     if (entityFilter !== 'all') {
       const entityId = parseInt(entityFilter);
-      // Check if asset is linked to this entity via prompt version
-      if (asset.source_prompt_version_id) {
+
+      // Check direct binding first (text slides)
+      if (asset.entity_id) {
+        if (asset.entity_id !== entityId) return false;
+      }
+      // Check prompt version binding (generated media)
+      else if (asset.source_prompt_version_id) {
         const version = recentVersions.find(v => v.id === asset.source_prompt_version_id);
         if (version && (version as any).entity_id !== entityId) {
           return false;
