@@ -118,15 +118,24 @@ WHERE entity_id = ? AND type_id = ?
 ORDER BY version_number DESC;
 
 -- name: CreateMediaAsset :one
-INSERT INTO media_assets (type, r2_key, youtube_id, source_prompt_version_id)
-VALUES (?, ?, ?, ?)
+INSERT INTO media_assets (type, r2_key, youtube_id, source_prompt_version_id, title, description, text_content, entity_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING *;
+
+-- name: UpdateMediaAsset :one
+UPDATE media_assets
+SET title = COALESCE(?, title),
+    description = COALESCE(?, description),
+    text_content = COALESCE(?, text_content),
+    entity_id = COALESCE(?, entity_id)
+WHERE id = ?
 RETURNING *;
 
 -- name: GetMediaAsset :one
 SELECT * FROM media_assets WHERE id = ?;
 
 -- name: ListMediaByStory :many
-SELECT ma.* FROM media_assets ma
+SELECT ma.id, ma.type, ma.r2_key, ma.youtube_id, ma.source_prompt_version_id, ma.created_at, ma.title, ma.description, ma.text_content, ma.entity_id FROM media_assets ma
 JOIN story_items si ON ma.id = si.media_asset_id
 WHERE si.story_id = ?
 ORDER BY si.sort_order;
