@@ -302,10 +302,12 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 
 	// Build response
 	type PublicStoryItemResponse struct {
-		Type        string `json:"type"`
-		URL         string `json:"url,omitempty"`
-		YoutubeID   string `json:"youtube_id,omitempty"`
-		AspectRatio string `json:"aspect_ratio,omitempty"` // Placeholder for now
+		Type        string  `json:"type"`
+		URL         string  `json:"url,omitempty"`
+		YoutubeID   string  `json:"youtube_id,omitempty"`
+		TextContent *string `json:"text_content,omitempty"`
+		Title       *string `json:"title,omitempty"`
+		AspectRatio string  `json:"aspect_ratio,omitempty"` // Placeholder for now
 	}
 
 	type PublicStoryResponse struct {
@@ -330,6 +332,9 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 		} else if mediaDTO.URL != nil {
 			itemResp.URL = *mediaDTO.URL
 			itemResp.AspectRatio = "1:1" // Default/Placeholder for images
+		} else if mediaDTO.Type == "text" {
+			itemResp.TextContent = mediaDTO.TextContent
+			itemResp.Title = mediaDTO.Title
 		}
 
 		response.Items = append(response.Items, itemResp)
