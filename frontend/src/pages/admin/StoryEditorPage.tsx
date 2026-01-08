@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Textarea } from '@/components/ui/textarea';
+
 import {
   listStoriesAdmin,
   getStory,
@@ -50,7 +50,6 @@ import {
   getYouTubeThumbnail,
   addStoryItem,
   deleteStoryItem,
-  getEntities,
   getEntities,
   listPromptVersions,
   createTextSlide,
@@ -715,8 +714,7 @@ export function StoryEditorPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                </Select>
-                 <Dialog open={isTextSlideDialogOpen} onOpenChange={setIsTextSlideDialogOpen}>
+                <Dialog open={isTextSlideDialogOpen} onOpenChange={setIsTextSlideDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="secondary"> + Text Slide</Button>
                   </DialogTrigger>
@@ -727,19 +725,19 @@ export function StoryEditorPage() {
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Title (Required)</label>
-                        <Input 
-                          placeholder="e.g., Chapter 1, Scene Setting" 
+                        <Input
+                          placeholder="e.g., Chapter 1, Scene Setting"
                           value={textSlideTitle}
                           onChange={e => setTextSlideTitle(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                         <label className="text-sm font-medium">Description (Optional)</label>
-                         <Input 
-                            placeholder="Short description for internal use"
-                            value={textSlideDescription}
-                            onChange={e => setTextSlideDescription(e.target.value)}
-                         />
+                        <label className="text-sm font-medium">Description (Optional)</label>
+                        <Input
+                          placeholder="Short description for internal use"
+                          value={textSlideDescription}
+                          onChange={e => setTextSlideDescription(e.target.value)}
+                        />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Content (Markdown supported)</label>
@@ -780,109 +778,109 @@ export function StoryEditorPage() {
             </ScrollArea>
           </Card>
 
-          {/* Right Column: Timeline */ }
-  <Card className="flex flex-col h-full overflow-hidden">
-    <div className="p-4 border-b flex items-center justify-between">
-      <h2 className="text-lg font-semibold">
-        Story Timeline
-        {storyWithItems && (
-          <span className="text-muted-foreground font-normal ml-2">
-            ({storyWithItems.items.length} frames)
-          </span>
-        )}
-      </h2>
-      <Button
-        onClick={handleSaveOrder}
-        disabled={isSaving || !storyWithItems?.items.length}
-      >
-        {isSaving ? 'Saving...' : 'Save Order'}
-      </Button>
-    </div>
-    <ScrollArea className="flex-1 p-4 bg-muted/20">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={storyWithItems?.items.map((item) => item.id) || []}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-2">
-            {storyWithItems?.items.map((item) => (
-              <SortableTimelineItem
-                key={item.id}
-                item={item}
-                onRemove={handleRemoveFromStory}
-                isRemoving={removingItemIds.has(item.id)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
-      {(!storyWithItems?.items || storyWithItems.items.length === 0) && (
-        <div className="text-center text-muted-foreground py-8">
-          No frames yet. Add media from the left panel.
-        </div>
-      )}
-    </ScrollArea>
-  </Card>
+          {/* Right Column: Timeline */}
+          <Card className="flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="text-lg font-semibold">
+                Story Timeline
+                {storyWithItems && (
+                  <span className="text-muted-foreground font-normal ml-2">
+                    ({storyWithItems.items.length} frames)
+                  </span>
+                )}
+              </h2>
+              <Button
+                onClick={handleSaveOrder}
+                disabled={isSaving || !storyWithItems?.items.length}
+              >
+                {isSaving ? 'Saving...' : 'Save Order'}
+              </Button>
+            </div>
+            <ScrollArea className="flex-1 p-4 bg-muted/20">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={storyWithItems?.items.map((item) => item.id) || []}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {storyWithItems?.items.map((item) => (
+                      <SortableTimelineItem
+                        key={item.id}
+                        item={item}
+                        onRemove={handleRemoveFromStory}
+                        isRemoving={removingItemIds.has(item.id)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+              {(!storyWithItems?.items || storyWithItems.items.length === 0) && (
+                <div className="text-center text-muted-foreground py-8">
+                  No frames yet. Add media from the left panel.
+                </div>
+              )}
+            </ScrollArea>
+          </Card>
         </div >
       )
-}
+      }
 
-{/* Preview Modal */ }
-<Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-  <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
-    <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
-      <h3 className="font-semibold">Mobile Preview</h3>
-      <Button variant="ghost" size="sm" onClick={() => setIsPreviewOpen(false)}>✕</Button>
-    </div>
-    <ScrollArea className="flex-1 bg-black">
-      <div className="flex flex-col">
-        {storyWithItems?.items.map((item) => {
-          const url = item.media?.url || '';
+      {/* Preview Modal */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-md h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
+            <h3 className="font-semibold">Mobile Preview</h3>
+            <Button variant="ghost" size="sm" onClick={() => setIsPreviewOpen(false)}>✕</Button>
+          </div>
+          <ScrollArea className="flex-1 bg-black">
+            <div className="flex flex-col">
+              {storyWithItems?.items.map((item) => {
+                const url = item.media?.url || '';
 
-          if (item.media?.type === 'text') {
-            return (
-              <div key={item.id} className="w-full bg-white p-6 text-black min-h-[50vh] flex flex-col items-center justify-center text-center">
-                <div className="prose prose-lg max-w-none">
-                  {/* Simple rendering for preview, markdown rendering ideally in real reader */}
-                  <h1 className="text-3xl font-bold mb-4">{item.media.title}</h1>
-                  <div className="whitespace-pre-wrap">{item.media.text_content}</div>
-                </div>
-              </div>
-            );
-          }
+                if (item.media?.type === 'text') {
+                  return (
+                    <div key={item.id} className="w-full bg-white p-6 text-black min-h-[50vh] flex flex-col items-center justify-center text-center">
+                      <div className="prose prose-lg max-w-none">
+                        {/* Simple rendering for preview, markdown rendering ideally in real reader */}
+                        <h1 className="text-3xl font-bold mb-4">{item.media.title}</h1>
+                        <div className="whitespace-pre-wrap">{item.media.text_content}</div>
+                      </div>
+                    </div>
+                  );
+                }
 
-          if (!url) return null;
+                if (!url) return null;
 
-          return (
-            <div key={item.id} className="w-full">
-              {item.media?.type === 'video' || (item.media?.youtube_id) ? (
-                <div className="aspect-video w-full">
-                  <iframe
-                    src={item.media?.url}
-                    className="w-full h-full"
-                    title="Video"
-                    allowFullScreen
-                  />
-                </div>
-              ) : (
-                <img
-                  src={url}
-                  alt="Comic Panel"
-                  className="w-full h-auto block"
-                  loading="lazy"
-                />
-              )}
+                return (
+                  <div key={item.id} className="w-full">
+                    {item.media?.type === 'video' || (item.media?.youtube_id) ? (
+                      <div className="aspect-video w-full">
+                        <iframe
+                          src={item.media?.url}
+                          className="w-full h-full"
+                          title="Video"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <img
+                        src={url}
+                        alt="Comic Panel"
+                        className="w-full h-auto block"
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-    </ScrollArea>
-  </DialogContent>
-</Dialog>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }
