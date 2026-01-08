@@ -39,6 +39,7 @@ type MediaAsset struct {
 	Title                 sql.NullString `json:"title"`
 	Description           sql.NullString `json:"description"`
 	TextContent           sql.NullString `json:"text_content"`
+	EntityID              sql.NullInt64  `json:"entity_id"`
 }
 
 type PromptType struct {

@@ -34,6 +34,7 @@ export interface MediaAsset {
   title?: string;
   description?: string;
   text_content?: string;
+  entity_id?: number | null;
 }
 
 export interface Story {

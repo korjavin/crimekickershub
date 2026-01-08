@@ -51,6 +51,7 @@ type RegisterAssetInput struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	TextContent string `json:"text_content"`
+	EntityID    *int64 `json:"entity_id"`
 }
 
 // RegisterAsset registers a new media asset in the database
@@ -127,6 +128,7 @@ func (s *MediaService) RegisterAsset(ctx context.Context, input RegisterAssetInp
 		Title:                 title,
 		Description:           description,
 		TextContent:           textContent,
+		EntityID:              nullInt64(input.EntityID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create media asset: %w", err)
@@ -309,4 +311,48 @@ func (s *MediaService) DeleteAsset(ctx context.Context, id int64) error {
 	}
 
 	return nil
+}
+
+// UpdateAssetInput represents input for updating a media asset
+type UpdateAssetInput struct {
+	ID          int64
+	Title       *string
+	Description *string
+	TextContent *string
+	EntityID    *int64
+}
+
+// UpdateAsset updates an existing media asset
+func (s *MediaService) UpdateAsset(ctx context.Context, input UpdateAssetInput) (*repository.MediaAsset, error) {
+	// Prepare params
+	params := repository.UpdateMediaAssetParams{
+		ID: input.ID,
+	}
+
+	if input.Title != nil {
+		params.Title = sql.NullString{String: *input.Title, Valid: true}
+	}
+	if input.Description != nil {
+		params.Description = sql.NullString{String: *input.Description, Valid: true}
+	} // Note: Empty description is valid update
+
+	if input.TextContent != nil {
+		params.TextContent = sql.NullString{String: *input.TextContent, Valid: true}
+	}
+
+	if input.EntityID != nil {
+		if *input.EntityID == 0 {
+			// treat 0 as clearing the entity binding
+			params.EntityID = sql.NullInt64{Valid: false}
+		} else {
+			params.EntityID = sql.NullInt64{Int64: *input.EntityID, Valid: true}
+		}
+	}
+
+	asset, err := s.repo.UpdateMediaAsset(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update media asset: %w", err)
+	}
+
+	return &asset, nil
 }

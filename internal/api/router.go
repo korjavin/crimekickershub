@@ -131,6 +131,7 @@ func (r *Router) adminRoutes() {
 	// Assets management (admin only)
 	r.mux.Handle("POST /api/admin/assets", r.auth.RequireAdmin(http.HandlerFunc(r.handleRegisterAsset)))
 	r.mux.Handle("POST /api/admin/media/text", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateTextSlide)))
+	r.mux.Handle("PUT /api/admin/media/text/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateTextSlide)))
 
 	// Stories management (admin only)
 	r.mux.Handle("GET /api/admin/stories", r.auth.RequireAdmin(http.HandlerFunc(r.handleListStoriesAdmin)))
@@ -750,6 +751,7 @@ func (r *Router) handleCreateTextSlide(w http.ResponseWriter, req *http.Request)
 		Title       string `json:"title"`
 		Description string `json:"description"`
 		TextContent string `json:"text_content"`
+		EntityID    *int64 `json:"entity_id"`
 	}
 
 	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
@@ -767,9 +769,44 @@ func (r *Router) handleCreateTextSlide(w http.ResponseWriter, req *http.Request)
 		Title:       input.Title,
 		Description: input.Description,
 		TextContent: input.TextContent,
+		EntityID:    input.EntityID,
 	})
 	if err != nil {
 		http.Error(w, "Failed to create text slide: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, r.toMediaAssetDTO(*asset))
+}
+
+func (r *Router) handleUpdateTextSlide(w http.ResponseWriter, req *http.Request) {
+	id, err := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if err != nil || id == 0 {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var input struct {
+		Title       *string `json:"title"`
+		Description *string `json:"description"`
+		TextContent *string `json:"text_content"`
+		EntityID    *int64  `json:"entity_id"`
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	asset, err := r.media.UpdateAsset(req.Context(), media.UpdateAssetInput{
+		ID:          id,
+		Title:       input.Title,
+		Description: input.Description,
+		TextContent: input.TextContent,
+		EntityID:    input.EntityID,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update text slide: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -1741,6 +1778,7 @@ type MediaAssetDTO struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty"`
 	TextContent *string `json:"text_content,omitempty"`
+	EntityID    *int64  `json:"entity_id,omitempty"`
 }
 
 // toMediaAssetDTO converts a repository.MediaAsset to MediaAssetDTO
@@ -1783,6 +1821,9 @@ func (r *Router) toMediaAssetDTO(asset repository.MediaAsset) MediaAssetDTO {
 	}
 	if asset.TextContent.Valid {
 		dto.TextContent = &asset.TextContent.String
+	}
+	if asset.EntityID.Valid {
+		dto.EntityID = &asset.EntityID.Int64
 	}
 
 	return dto

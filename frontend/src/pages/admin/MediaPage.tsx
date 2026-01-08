@@ -24,7 +24,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { listMedia, listRecentPromptVersions, uploadMedia, getEntities, deleteMedia } from '@/lib/api';
+import { listMedia, listRecentPromptVersions, uploadMedia, getEntities, deleteMedia, updateTextSlide } from '@/lib/api';
 import type { MediaAsset, PromptVersion, Entity } from '@/lib/api-types';
 import { Upload, FileImage, Search, Loader2, Copy, Clock, Link2, Eye } from 'lucide-react';
 
@@ -46,6 +46,15 @@ export function MediaPage() {
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  // Text Slide Edit State
+  const [isTextSlideDialogOpen, setIsTextSlideDialogOpen] = useState(false);
+  const [textSlideTitle, setTextSlideTitle] = useState('');
+  const [textSlideDescription, setTextSlideDescription] = useState('');
+  const [textSlideContent, setTextSlideContent] = useState('');
+  const [textSlideEntityId, setTextSlideEntityId] = useState<string>('0');
+  const [isCreatingTextSlide, setIsCreatingTextSlide] = useState(false);
+  const [editingTextSlideId, setEditingTextSlideId] = useState<number | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -152,6 +161,49 @@ export function MediaPage() {
     }
   };
 
+  const handleUpdateTextSlide = async () => {
+    if (!editingTextSlideId || !textSlideTitle.trim()) return;
+
+    try {
+      setIsCreatingTextSlide(true);
+      const entityId = textSlideEntityId !== '0' ? parseInt(textSlideEntityId) : undefined;
+
+      const updatedSlide = await updateTextSlide(editingTextSlideId, {
+        title: textSlideTitle,
+        description: textSlideDescription,
+        text_content: textSlideContent,
+        entity_id: entityId || 0,
+      });
+
+      // Update local state
+      setMediaAssets(prev => prev.map(m => m.id === editingTextSlideId ? updatedSlide : m));
+
+      // Update selected asset if open
+      if (selectedAsset?.id === editingTextSlideId) {
+        setSelectedAsset(updatedSlide);
+      }
+
+      setIsTextSlideDialogOpen(false);
+      setEditingTextSlideId(null);
+      alert("Text slide updated"); // simpler toast
+    } catch (error) {
+      console.error("Failed to update text slide:", error);
+      alert("Failed to update text slide");
+    } finally {
+      setIsCreatingTextSlide(false);
+    }
+  };
+
+  const openEditSlideDialog = (asset: MediaAsset) => {
+    setTextSlideTitle(asset.title || '');
+    setTextSlideDescription(asset.description || '');
+    setTextSlideContent(asset.text_content || '');
+    setTextSlideEntityId(asset.entity_id ? String(asset.entity_id) : '0');
+    setEditingTextSlideId(asset.id);
+    setIsTextSlideDialogOpen(true);
+    setDetailSheetOpen(false); // Close detail sheet
+  };
+
   // Format time ago
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -183,7 +235,9 @@ export function MediaPage() {
       const matchesSearch =
         asset.type?.toLowerCase().includes(query) ||
         asset.r2_key?.toLowerCase().includes(query) ||
-        asset.youtube_id?.toLowerCase().includes(query);
+        asset.youtube_id?.toLowerCase().includes(query) ||
+        asset.title?.toLowerCase().includes(query) ||
+        asset.text_content?.toLowerCase().includes(query);
       if (!matchesSearch) return false;
     }
 
@@ -307,6 +361,11 @@ export function MediaPage() {
                   alt={`Media ${asset.id}`}
                   className="w-full h-full object-cover"
                 />
+              ) : asset.type === 'text' ? (
+                <div className="w-full h-full bg-muted p-3 text-xs overflow-hidden flex flex-col">
+                  {asset.title && <div className="font-bold truncate mb-1 text-sm">{asset.title}</div>}
+                  <div className="text-muted-foreground line-clamp-6">{asset.text_content}</div>
+                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <FileImage className="w-12 h-12 text-muted-foreground" />
@@ -455,6 +514,17 @@ export function MediaPage() {
                     alt=""
                     className="w-full h-full object-contain"
                   />
+                ) : selectedAsset.type === 'text' ? (
+                  <div className="w-full h-full bg-muted p-6 overflow-y-auto">
+                    <h3 className="font-bold text-lg mb-2">{selectedAsset.title}</h3>
+                    <div className="text-muted-foreground whitespace-pre-wrap">{selectedAsset.text_content}</div>
+                    {selectedAsset.description && (
+                      <div className="mt-4 pt-4 border-t text-sm text-muted-foreground">
+                        <span className="font-semibold block mb-1">Internal Description:</span>
+                        {selectedAsset.description}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <FileImage className="w-16 h-16 text-muted-foreground" />
@@ -532,8 +602,18 @@ export function MediaPage() {
                 </div>
               )}
 
-              {/* Delete button */}
-              <div className="pt-4 border-t">
+              {/* Delete button */
+               /* Edit button for text slides */}
+              <div className="pt-4 border-t flex flex-col gap-2">
+                {selectedAsset.type === 'text' && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => openEditSlideDialog(selectedAsset)}
+                  >
+                    Edit Slide
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
                   className="w-full"
@@ -557,6 +637,66 @@ export function MediaPage() {
           )}
         </SheetContent>
       </Sheet>
-    </div>
+
+      {/* Edit Text Slide Modal */}
+      <Dialog open={isTextSlideDialogOpen} onOpenChange={setIsTextSlideDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Text Slide</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="edit-title">Title</label>
+              <Input
+                id="edit-title"
+                value={textSlideTitle}
+                onChange={(e) => setTextSlideTitle(e.target.value)}
+                placeholder="Slide title"
+              />
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="edit-entity">Entity (Optional)</label>
+              <Select value={textSlideEntityId} onValueChange={setTextSlideEntityId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an entity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">None</SelectItem>
+                  {entities.map((entity) => (
+                    <SelectItem key={entity.id} value={String(entity.id)}>
+                      {entity.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="edit-description">Description (Internal)</label>
+              <Input
+                id="edit-description"
+                value={textSlideDescription}
+                onChange={(e) => setTextSlideDescription(e.target.value)}
+                placeholder="Description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="edit-content">Content (Markdown)</label>
+              <textarea
+                id="edit-content"
+                className="flex min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={textSlideContent}
+                onChange={(e) => setTextSlideContent(e.target.value)}
+                placeholder="# Slide Title..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleUpdateTextSlide} disabled={isCreatingTextSlide}>
+              {isCreatingTextSlide ? 'Saving...' : 'Update Slide'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div >
   );
 }

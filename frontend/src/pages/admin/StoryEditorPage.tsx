@@ -53,6 +53,7 @@ import {
   getEntities,
   listPromptVersions,
   createTextSlide,
+  updateTextSlide,
 } from '@/lib/api';
 import type { Story, StoryItem, MediaAsset, StoryWithItems, Entity } from '@/lib/api-types';
 
@@ -142,7 +143,7 @@ interface MediaGridItemProps {
   isAdding: boolean;
 }
 
-function MediaGridItem({ media, onAdd, isAdding }: MediaGridItemProps) {
+export function MediaGridItem({ media, onAdd, isAdding, onEdit }: MediaGridItemProps & { onEdit?: (media: MediaAsset) => void }) {
   const thumbnailUrl = media.type === 'video' && media.youtube_id
     ? getYouTubeThumbnail(media.youtube_id)
     : (media.thumbnail_url || media.url || '');
@@ -165,14 +166,26 @@ function MediaGridItem({ media, onAdd, isAdding }: MediaGridItemProps) {
           No preview
         </div>
       )}
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
         <Button
           size="sm"
           onClick={() => onAdd(media)}
           disabled={isAdding}
         >
-          {isAdding ? 'Adding...' : 'Add to Story'}
+          {isAdding ? 'Adding...' : 'Add'}
         </Button>
+        {media.type === 'text' && onEdit && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(media);
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </div>
       <div className="absolute top-1 right-1">
         <Badge variant="secondary" className="text-xs">
@@ -200,7 +213,9 @@ export function StoryEditorPage() {
   const [textSlideTitle, setTextSlideTitle] = useState('');
   const [textSlideDescription, setTextSlideDescription] = useState('');
   const [textSlideContent, setTextSlideContent] = useState('');
+  const [textSlideEntityId, setTextSlideEntityId] = useState<string>('0');
   const [isCreatingTextSlide, setIsCreatingTextSlide] = useState(false);
+  const [editingTextSlideId, setEditingTextSlideId] = useState<number | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -225,8 +240,17 @@ export function StoryEditorPage() {
   useEffect(() => {
     if (selectedStoryId) {
       loadStory(selectedStoryId);
+      localStorage.setItem('crimekickers-last-story-id', selectedStoryId);
     }
   }, [selectedStoryId]);
+
+  // Load last edited story on mount
+  useEffect(() => {
+    const lastId = localStorage.getItem('crimekickers-last-story-id');
+    if (lastId && stories.some(s => String(s.id) === lastId)) {
+      setSelectedStoryId(lastId);
+    }
+  }, [stories]);
 
   const loadStories = async () => {
     try {
@@ -390,27 +414,56 @@ export function StoryEditorPage() {
 
     try {
       setIsCreatingTextSlide(true);
-      const newSlide = await createTextSlide({
-        title: textSlideTitle,
-        description: textSlideDescription,
-        text_content: textSlideContent
-      });
 
-      setAvailableMedia(prev => [newSlide, ...prev]);
+      const entityId = textSlideEntityId !== '0' ? parseInt(textSlideEntityId) : undefined;
+
+      if (editingTextSlideId) {
+        // Update existing
+        const updatedSlide = await updateTextSlide(editingTextSlideId, {
+          title: textSlideTitle,
+          description: textSlideDescription,
+          text_content: textSlideContent,
+          entity_id: entityId || 0, // 0 to clear if undefined
+        });
+
+        setAvailableMedia(prev => prev.map(m => m.id === editingTextSlideId ? updatedSlide : m));
+        toast.success("Text slide updated");
+      } else {
+        // Create new
+        const newSlide = await createTextSlide({
+          title: textSlideTitle,
+          description: textSlideDescription,
+          text_content: textSlideContent,
+          entity_id: entityId
+        });
+        setAvailableMedia(prev => [newSlide, ...prev]);
+        toast.success("Text slide created");
+      }
+
       setIsTextSlideDialogOpen(false);
+      setEditingTextSlideId(null);
 
       // Reset form
       setTextSlideTitle('');
       setTextSlideDescription('');
       setTextSlideContent('');
+      setTextSlideEntityId('0');
 
-      toast.success("Text slide created");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create text slide");
+      toast.error(editingTextSlideId ? "Failed to update text slide" : "Failed to create text slide");
     } finally {
       setIsCreatingTextSlide(false);
     }
+  };
+
+  const openEditSlideDialog = (slide: MediaAsset) => {
+    setTextSlideTitle(slide.title || '');
+    setTextSlideDescription(slide.description || '');
+    setTextSlideContent(slide.text_content || '');
+    setTextSlideEntityId(slide.entity_id ? String(slide.entity_id) : '0');
+    setEditingTextSlideId(slide.id);
+    setIsTextSlideDialogOpen(true);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -767,6 +820,7 @@ export function StoryEditorPage() {
                     media={media}
                     onAdd={handleAddToStory}
                     isAdding={addingMediaIds.has(media.id)}
+                    onEdit={openEditSlideDialog}
                   />
                 ))}
               </div>
