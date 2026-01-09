@@ -209,15 +209,6 @@ export function WikiPage() {
                   </div>
                 )}
 
-                {/* Origin */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Origin</h3>
-                  <p className="text-slate-300">
-                    Born in the hidden city of {selectedHero?.name || 'Unknown'},
-                    this {types.find(t => t.slug === selectedHero?.type)?.name || selectedHero?.type} has dedicated their life to protecting
-                    the innocent and fighting against the forces of darkness.
-                  </p>
-                </div>
               </div>
             </ScrollArea>
           </DialogContent>
