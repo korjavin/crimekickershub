@@ -36,6 +36,33 @@ services:
       - SERVER_ADDR=${SERVER_ADDR:-:8080}
       - FRONTEND_PATH=${FRONTEND_PATH:-frontend/dist}
 
+  # Litestream - SQLite replication to Cloudflare R2
+  litestream:
+    image: litestream/litestream:latest
+    container_name: crimekickershub-litestream
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        cat << EOF > /tmp/litestream.yml
+        dbs:
+          - path: ${DB_PATH:-/app/data/crimekickers.db}
+            replicas:
+              - type: s3
+                bucket: ${R2_BUCKET_NAME}
+                path: crimekickershub
+                endpoint: https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+                sync-interval: 1h
+                snapshot-interval: 24h
+                retention: 168h
+        EOF
+        exec litestream replicate -config /tmp/litestream.yml
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - crimekickershub
+
 networks:
   traefik_network:
     name: ${NETWORK_NAME:-traefik_network}
