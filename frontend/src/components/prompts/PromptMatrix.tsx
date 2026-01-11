@@ -361,7 +361,7 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
                 className="font-mono"
               />
               <p className="text-xs text-muted-foreground">
-                Use <code className="px-1 bg-muted rounded">{'{'}ENTITY{'}'}</code> placeholder for character description
+                Use <code className="px-1 bg-muted rounded">{'{{'}ENTITY{'}}'}</code> placeholder for character description
               </p>
             </div>
           </div>
