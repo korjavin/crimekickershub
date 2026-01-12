@@ -56,7 +56,7 @@ export async function deleteEntity(id: string) {
 
 // Entity Types APIs
 export async function getEntityTypes() {
-  return fetchApi<any[]>('/admin/entity-types');
+  return fetchApi<any[]>('/entity-types');
 }
 
 export async function createEntityType(data: { slug: string; name: string; description?: string }) {

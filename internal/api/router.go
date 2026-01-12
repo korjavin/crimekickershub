@@ -86,6 +86,7 @@ func (r *Router) publicRoutes() {
 	// Heroes/Entities endpoints
 	r.mux.HandleFunc("GET /api/heroes", r.handleListHeroes)
 	r.mux.HandleFunc("GET /api/entities", r.handleListEntities)
+	r.mux.HandleFunc("GET /api/entity-types", r.handleListEntityTypes)
 
 	// Comics/Stories endpoints
 	r.mux.HandleFunc("GET /api/comics", r.handleListStories)
