@@ -1,9 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Patrick+Hand&family=Patrick+Hand+SC&family=Permanent+Marker&family=Special+Elite&family=Shadows+Into+Light&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=VT323&family=Caveat:wght@500;700&display=swap');
 @import "tailwindcss";
 
 /* ============================================================
-   WIMPY COMICS — Crime Kickers Hub design system
-   "A kid's spiral notebook with comics scribbled in it"
+   CRIME KICKERS — RISO FIELD MANUAL design system
+   Distinct from any diary-comic vocabulary:
+   - graph paper, not ruled
+   - riso overprint dots, not halftone
+   - Archivo Black + VT323 + Caveat (no Bangers / Patrick Hand /
+     Permanent Marker)
+   - flat color shadows, not black drop shadows
+   - squared / hard-cut shapes; no taped stickers
    ============================================================ */
 
 @theme {
@@ -54,47 +60,34 @@
   --ring: 222.2 84% 4.9%;
   --radius: 0.5rem;
 
-  /* ===== Wimpy paper ===== */
-  --paper-cream:        #faf3e0;
-  --paper-manila:       #f0d99a;
-  --paper-old:          #e8dcb8;
-  --paper-margin-line:  #f08a8a;
-  --paper-rule-line:    #b8d4e8;
-  --paper-grid:         #d8e6f0;
+  /* paper */
+  --paper:        #f4ecd8;
+  --paper-2:      #ece2c4;
+  --paper-bright: #fbf6e6;
+  --grid:         #c8c0a4;
+  --rule:         rgba(40, 30, 20, 0.10);
 
-  /* ===== Wimpy ink ===== */
-  --ink-1:              #1c1a16;
-  --ink-2:              #3a352c;
-  --ink-3:              #6b6354;
-  --ink-4:              #a89e8c;
-  --ink-outline:        #0a0907;
+  /* ink */
+  --ink:          #1f1d18;
+  --ink-2:        #4a4538;
+  --ink-3:        #807a66;
+  --ink-4:        #aaa490;
 
-  /* ===== Marker accents ===== */
-  --marker-red:         #e63946;
-  --marker-yellow:      #ffd23f;
-  --marker-blue:        #2d7dd2;
-  --marker-green:       #6cbf3f;
-  --marker-orange:      #f4823c;
-  --marker-purple:      #8e5ea2;
-  --marker-pink:        #ff7eb6;
+  /* RISO palette — flat, slightly off, all overprint together */
+  --riso-pink:    #ff5a8e;
+  --riso-blue:    #2541b2;
+  --riso-teal:    #0d9b8b;
+  --riso-mustard: #e8b22e;
+  --riso-mint:    #9ed8a3;
+  --riso-violet:  #5b3f9c;
+  --riso-coral:   #ff7a4c;
+  --riso-cream:   #fbf6e6;
 
-  /* ===== Highlighter ===== */
-  --hl-yellow:          rgba(255, 226, 89, 0.55);
-  --hl-green:           rgba(150, 230, 130, 0.45);
-  --hl-pink:            rgba(255, 150, 180, 0.45);
-
-  /* ===== Type ===== */
-  --font-display:       'Bangers', 'Impact', system-ui, sans-serif;
-  --font-marker:        'Permanent Marker', 'Bangers', cursive;
-  --font-hand:          'Patrick Hand', 'Comic Sans MS', cursive;
-  --font-hand-sc:       'Patrick Hand SC', 'Patrick Hand', cursive;
-  --font-dialogue:      'Special Elite', 'Courier New', monospace;
-  --font-scribble:      'Shadows Into Light', 'Patrick Hand', cursive;
-
-  /* ===== Sticker shadows ===== */
-  --shadow-sticker-sm:  3px 3px 0 var(--ink-1);
-  --shadow-sticker:     5px 5px 0 var(--ink-1);
-  --shadow-sticker-lg:  8px 8px 0 var(--ink-1);
+  /* type */
+  --font-display: 'Archivo Black', 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono:    'VT323', 'Courier New', monospace;
+  --font-body:    'Space Grotesk', system-ui, sans-serif;
+  --font-hand:    'Caveat', cursive;
 }
 
 .dark {
@@ -120,268 +113,312 @@
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-  }
+  * { border-color: var(--color-border); }
+  body { background-color: var(--color-background); color: var(--color-foreground); }
 }
 
 /* ============================================================
-   Wimpy components
+   Surface: graph paper + riso overprint
    ============================================================ */
-
-/* ----- Notebook paper background ----- */
-.wk-paper {
-  background-color: var(--paper-cream);
-  background-image: linear-gradient(transparent 31px, var(--paper-rule-line) 32px);
-  background-size: 100% 32px;
+.ck-paper {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
   position: relative;
-  color: var(--ink-1);
-  font-family: var(--font-hand);
+  color: var(--ink);
+  font-family: var(--font-body);
 }
-.wk-paper::before {
-  content: ""; position: absolute; left: 56px; top: 0; bottom: 0;
-  width: 2px; background: var(--paper-margin-line); opacity: .55;
-  pointer-events: none; z-index: 0;
+.ck-paper::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(31,29,24,.06) 1px, transparent 1.4px);
+  background-size: 5px 5px;
+  mix-blend-mode: multiply;
+  z-index: 0;
 }
-.wk-paper > * { position: relative; z-index: 1; }
+.ck-paper > * { position: relative; z-index: 1; }
 
-/* ----- Sticker buttons ----- */
-.wk-btn {
-  font-family: var(--font-display);
-  text-transform: uppercase; letter-spacing: .04em;
-  font-size: 18px; padding: 8px 18px;
-  background: var(--marker-yellow); color: var(--ink-1);
-  border: 3px solid var(--ink-1); border-radius: 8px;
-  box-shadow: 4px 4px 0 var(--ink-1);
-  cursor: pointer; transform: rotate(-1.2deg);
-  transition: transform .12s, box-shadow .12s;
-  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
-  white-space: nowrap; line-height: 1.1;
-}
-.wk-btn:hover { transform: rotate(-1.2deg) translate(-1px,-1px); box-shadow: 6px 6px 0 var(--ink-1); }
-.wk-btn:active { transform: rotate(-1.2deg) translate(3px,3px); box-shadow: 1px 1px 0 var(--ink-1); }
-.wk-btn.red    { background: var(--marker-red); color: var(--paper-cream); }
-.wk-btn.blue   { background: var(--marker-blue); color: var(--paper-cream); transform: rotate(1deg); }
-.wk-btn.blue:hover { transform: rotate(1deg) translate(-1px,-1px); }
-.wk-btn.blue:active { transform: rotate(1deg) translate(3px,3px); }
-.wk-btn.green  { background: var(--marker-green); }
-.wk-btn.ghost  { background: transparent; box-shadow: none; border: 2px dashed var(--ink-1); transform: rotate(0); }
-.wk-btn.ghost:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink-1); }
-.wk-btn.sm     { font-size: 14px; padding: 4px 10px; }
-.wk-btn.xs     { font-size: 12px; padding: 3px 8px; box-shadow: 2px 2px 0 var(--ink-1); }
-.wk-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ck-paper-flat   { background: var(--paper); }
+.ck-paper-bright { background: var(--paper-bright); }
 
-/* ----- Sticker cards ----- */
-.wk-card {
-  background: #fffaee;
-  border: 3px solid var(--ink-1);
-  border-radius: 10px;
-  box-shadow: 5px 5px 0 var(--ink-1);
-  padding: 14px;
-  position: relative;
-  color: var(--ink-1);
-}
-.wk-card-tape::before {
-  content: ""; position: absolute; top: -10px; left: 50%;
-  width: 90px; height: 18px; background: rgba(255,226,89,.75);
-  border: 1px dashed rgba(28,26,22,.3);
-  transform: translateX(-50%) rotate(-3deg);
-}
-
-/* ----- Pills / tags ----- */
-.wk-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 3px 11px; border: 2px solid var(--ink-1); border-radius: 999px;
-  font-family: var(--font-hand-sc); font-size: 13px;
-  text-transform: uppercase; letter-spacing: .06em;
-  background: #fffaee;
-  white-space: nowrap;
-  color: var(--ink-1);
-}
-.wk-pill.yellow { background: var(--marker-yellow); }
-.wk-pill.red    { background: var(--marker-red); color: var(--paper-cream); }
-.wk-pill.blue   { background: var(--marker-blue); color: var(--paper-cream); }
-.wk-pill.green  { background: var(--marker-green); }
-.wk-pill.purple { background: var(--marker-purple); color: var(--paper-cream); }
-.wk-pill.orange { background: var(--marker-orange); color: var(--paper-cream); }
-
-/* ----- Eyebrow ----- */
-.wk-eyebrow {
-  font-family: var(--font-hand-sc);
-  font-size: 13px; letter-spacing: .08em;
+/* ============================================================
+   Type
+   ============================================================ */
+.ck-dpy     { font-family: var(--font-display); text-transform: uppercase; letter-spacing: -.01em; line-height: .92; }
+.ck-mono    { font-family: var(--font-mono); letter-spacing: .04em; }
+.ck-hand    { font-family: var(--font-hand); }
+.ck-eyebrow {
+  font-family: var(--font-mono); font-size: 13px; letter-spacing: .14em;
   text-transform: uppercase; color: var(--ink-3);
 }
+.ck-eyebrow-strong { color: var(--riso-blue); }
 
-/* ----- Top nav ----- */
-.wk-topnav {
-  position: sticky; top: 0; z-index: 50;
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 22px;
-  background: var(--ink-1);
-  color: var(--paper-cream);
-  border-bottom: 4px solid var(--ink-1);
+/* layered offset display heading */
+.ck-riso-h {
+  font-family: var(--font-display); text-transform: uppercase;
+  letter-spacing: -.01em; line-height: .9;
+  color: var(--ink); position: relative; display: inline-block;
 }
-.wk-topnav .wk-brand {
-  font-family: var(--font-display);
-  font-size: 26px; letter-spacing: .04em;
-  color: var(--marker-yellow);
-  text-transform: uppercase;
-  transform: rotate(-2deg);
-  cursor: pointer; padding-right: 10px;
-  border-right: 2px dashed rgba(255,255,255,.25);
+.ck-riso-h::before {
+  content: attr(data-shadow); position: absolute; left: 4px; top: 4px;
+  color: var(--riso-pink); z-index: -1;
+  mix-blend-mode: multiply;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.ck-btn {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 14px; letter-spacing: .04em;
+  padding: 10px 16px;
+  background: var(--ink); color: var(--paper-bright);
+  border: 2px solid var(--ink); border-radius: 0;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 4px 4px 0 var(--riso-pink);
+  transition: transform .12s, box-shadow .12s;
+  white-space: nowrap; text-decoration: none; line-height: 1.1;
+}
+.ck-btn:hover  { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--riso-pink); }
+.ck-btn:active { transform: translate(2px,2px);   box-shadow: 2px 2px 0 var(--riso-pink); }
+.ck-btn.pink    { background: var(--riso-pink);    color: var(--ink);          box-shadow: 4px 4px 0 var(--ink); }
+.ck-btn.pink:hover    { box-shadow: 6px 6px 0 var(--ink); }
+.ck-btn.blue    { background: var(--riso-blue);    color: var(--paper-bright); box-shadow: 4px 4px 0 var(--riso-mustard); }
+.ck-btn.blue:hover    { box-shadow: 6px 6px 0 var(--riso-mustard); }
+.ck-btn.mustard { background: var(--riso-mustard); color: var(--ink);          box-shadow: 4px 4px 0 var(--riso-blue); }
+.ck-btn.mustard:hover { box-shadow: 6px 6px 0 var(--riso-blue); }
+.ck-btn.ghost   { background: transparent; color: var(--ink); border: 2px solid var(--ink); box-shadow: none; }
+.ck-btn.ghost:hover   { background: var(--ink); color: var(--paper-bright); transform: none; }
+.ck-btn.sm      { font-size: 12px; padding: 6px 10px; box-shadow: 3px 3px 0 var(--riso-pink); }
+.ck-btn.xs      { font-size: 10px; padding: 4px 8px;  box-shadow: 2px 2px 0 var(--ink); }
+.ck-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ============================================================
+   Cards (squared, color offset shadow)
+   ============================================================ */
+.ck-card {
+  background: var(--paper-bright);
+  border: 2px solid var(--ink);
+  padding: 16px;
+  position: relative;
+  box-shadow: 6px 6px 0 var(--ink);
+  color: var(--ink);
+}
+.ck-card.color-shadow   { box-shadow: 6px 6px 0 var(--riso-pink); }
+.ck-card.blue-shadow    { box-shadow: 6px 6px 0 var(--riso-blue); }
+.ck-card.mustard-shadow { box-shadow: 6px 6px 0 var(--riso-mustard); }
+
+.ck-card.dbl::before {
+  content: ""; position: absolute; inset: 4px;
+  border: 1px solid var(--ink); pointer-events: none;
+}
+
+/* ============================================================
+   Tags / pills
+   ============================================================ */
+.ck-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border: 1.5px solid var(--ink);
+  font-family: var(--font-mono); font-size: 12px;
+  text-transform: uppercase; letter-spacing: .1em;
+  background: var(--paper-bright); color: var(--ink);
+  white-space: nowrap; border-radius: 0;
+}
+.ck-pill.pink    { background: var(--riso-pink);    color: var(--ink); }
+.ck-pill.blue    { background: var(--riso-blue);    color: var(--paper-bright); }
+.ck-pill.mustard { background: var(--riso-mustard); color: var(--ink); }
+.ck-pill.mint    { background: var(--riso-mint);    color: var(--ink); }
+.ck-pill.violet  { background: var(--riso-violet);  color: var(--paper-bright); }
+.ck-pill.coral   { background: var(--riso-coral);   color: var(--paper-bright); }
+.ck-pill.teal    { background: var(--riso-teal);    color: var(--paper-bright); }
+.ck-pill.ink     { background: var(--ink);          color: var(--paper-bright); border-color: var(--ink); }
+
+/* ============================================================
+   Top nav (newsprint masthead)
+   ============================================================ */
+.ck-topnav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: stretch;
+  background: var(--paper-bright);
+  border-bottom: 4px double var(--ink);
+}
+.ck-topnav .ck-brand {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 22px; letter-spacing: .02em;
+  padding: 14px 20px;
+  background: var(--ink); color: var(--riso-mustard);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
   text-decoration: none;
 }
-.wk-topnav .wk-navlink {
-  font-family: var(--font-hand-sc);
-  text-transform: uppercase; letter-spacing: .06em;
-  color: var(--paper-cream);
-  text-decoration: none; font-size: 14px;
-  padding: 4px 9px; border-radius: 6px; cursor: pointer;
-  border: 2px solid transparent;
+.ck-topnav .ck-brand-stamp {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  background: var(--riso-pink);
+  border: 2px solid var(--paper-bright);
+  font-family: var(--font-display); font-size: 10px;
+  color: var(--paper-bright);
 }
-.wk-topnav .wk-navlink.on,
-.wk-topnav .wk-navlink[aria-current="page"] {
-  color: var(--ink-1); background: var(--marker-yellow);
-  border: 2px solid var(--paper-cream);
+.ck-topnav .ck-navlink {
+  font-family: var(--font-mono); font-size: 14px;
+  letter-spacing: .14em; text-transform: uppercase;
+  padding: 0 16px; display: flex; align-items: center;
+  cursor: pointer; color: var(--ink); text-decoration: none;
+  border-right: 1px dashed var(--ink-3);
+}
+.ck-topnav .ck-navlink.on,
+.ck-topnav .ck-navlink[aria-current="page"] { background: var(--riso-mustard); }
+.ck-topnav .ck-navlink:hover { background: var(--paper-2); }
+.ck-topnav .ck-nav-right {
+  margin-left: auto; display: flex; align-items: center;
+  gap: 12px; padding-right: 16px;
 }
 
-/* ----- Inputs ----- */
-.wk-field {
-  font-family: var(--font-hand);
-  font-size: 16px;
-  background: #fffaee;
-  border: 2px solid var(--ink-1);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--ink-1);
+/* ============================================================
+   Inputs
+   ============================================================ */
+.ck-field {
+  font-family: var(--font-body); font-size: 14px;
+  background: var(--paper-bright);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 8px 10px; color: var(--ink);
   width: 100%;
 }
-.wk-field:focus { outline: none; box-shadow: 3px 3px 0 var(--marker-yellow); }
-textarea.wk-field { font-family: var(--font-hand); line-height: 1.4; resize: vertical; }
-select.wk-field { background: #fffaee; cursor: pointer; }
+.ck-field:focus { outline: none; box-shadow: 3px 3px 0 var(--riso-pink); }
+textarea.ck-field { font-family: var(--font-mono); line-height: 1.45; resize: vertical; }
+select.ck-field { background: var(--paper-bright); cursor: pointer; }
 
-.wk-checkbox-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 12px;
-  border: 2px solid var(--ink-1);
-  border-radius: 999px;
-  background: #fffaee;
-  cursor: pointer;
-  font-family: var(--font-hand);
-  font-size: 15px;
-  user-select: none;
+.ck-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border: 2px solid var(--ink);
+  background: var(--paper-bright); color: var(--ink);
+  font-family: var(--font-mono); font-size: 12px;
+  text-transform: uppercase; letter-spacing: .1em;
+  cursor: pointer; user-select: none; border-radius: 0;
   transition: transform .12s, box-shadow .12s;
-  color: var(--ink-1);
 }
-.wk-checkbox-pill:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink-1); }
-.wk-checkbox-pill.on { background: var(--marker-yellow); box-shadow: 3px 3px 0 var(--ink-1); }
-.wk-checkbox-pill .wk-dot {
-  width: 14px; height: 14px; border: 2px solid var(--ink-1); border-radius: 4px;
-  background: var(--paper-cream); display: inline-block;
-}
-.wk-checkbox-pill.on .wk-dot { background: var(--ink-1); }
+.ck-chip:hover { transform: translate(-1px,-1px); box-shadow: 2px 2px 0 var(--ink); }
+.ck-chip.on { background: var(--riso-mustard); box-shadow: 3px 3px 0 var(--ink); }
+.ck-chip.on:hover { box-shadow: 4px 4px 0 var(--ink); }
 
-/* ----- Sticky note ----- */
-.wk-sticky {
-  background: var(--marker-yellow);
-  border: 2px solid var(--ink-1);
-  padding: 10px 14px;
-  font-family: var(--font-scribble);
-  font-size: 17px;
-  box-shadow: 4px 4px 0 var(--ink-1);
-  display: inline-block;
-  color: var(--ink-1);
-}
-
-/* ----- Speech bubble ----- */
-.wk-bubble {
-  background: #fff;
-  border: 3px solid var(--ink-1);
-  border-radius: 18px 22px 20px 4px;
-  padding: 8px 14px;
-  font-family: var(--font-dialogue);
-  font-size: 14px;
-  line-height: 1.3;
-  box-shadow: 3px 3px 0 var(--ink-1);
-  display: inline-block;
-  max-width: 280px;
-  color: var(--ink-1);
-}
-.wk-bubble.narration { background: var(--paper-old); }
-
-/* ----- SFX text ----- */
-.wk-sfx {
+/* ============================================================
+   Riso "stamp" — circular monogram badge for heroes
+   ============================================================ */
+.ck-stamp {
+  display: inline-flex; align-items: center; justify-content: center;
+  position: relative;
   font-family: var(--font-display);
-  font-size: 70px;
-  color: var(--marker-red);
-  text-shadow: 4px 4px 0 var(--ink-1);
-  letter-spacing: .04em;
-  transform: rotate(-8deg);
+  border: 3px double var(--ink);
+  border-radius: 50%;
+  text-transform: uppercase;
+}
+.ck-stamp::before {
+  content: ""; position: absolute; inset: -8px;
+  border: 1.5px dashed var(--ink); border-radius: 50%;
+  opacity: .5;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Field-note callout
+   ============================================================ */
+.ck-note {
+  background: var(--riso-mustard);
+  border: 2px solid var(--ink);
+  padding: 10px 14px;
+  font-family: var(--font-hand);
+  font-size: 22px; line-height: 1.15;
+  box-shadow: 4px 4px 0 var(--ink);
+  color: var(--ink);
   display: inline-block;
-  line-height: 1;
 }
+.ck-note.pink { background: var(--riso-pink); }
+.ck-note.mint { background: var(--riso-mint); }
 
-/* ----- Halftone overlay ----- */
-.wk-halftone {
-  background-image: radial-gradient(rgba(28,26,22,.18) 1px, transparent 1.4px);
-  background-size: 6px 6px;
+/* ============================================================
+   Highlighter
+   ============================================================ */
+.ck-hl       { background: linear-gradient(transparent 55%, var(--riso-mustard) 55%, var(--riso-mustard) 92%, transparent 92%); padding: 0 2px; }
+.ck-hl-pink  { background: linear-gradient(transparent 55%, var(--riso-pink)    55%, var(--riso-pink)    92%, transparent 92%); padding: 0 2px; }
+
+/* ============================================================
+   Riso speech bar (rectangular, monospaced)
+   ============================================================ */
+.ck-speech {
+  background: var(--paper-bright);
+  border: 2px solid var(--ink);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  display: inline-block;
+  position: relative;
+  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--ink);
 }
+.ck-speech::before {
+  content: ""; position: absolute; left: 14px; bottom: -10px;
+  width: 12px; height: 10px; background: var(--paper-bright);
+  border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  transform: skewX(-20deg);
+}
+.ck-speech.narration { background: var(--riso-cream); }
 
-/* ----- Crayon underline ----- */
-.wk-crayon-underline {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 10'><path d='M2 6 Q 50 2 100 5 T 198 4' stroke='%23e63946' stroke-width='4' fill='none' stroke-linecap='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  background-size: 100% 10px;
-  padding-bottom: 8px;
+/* ============================================================
+   SFX text — riso style
+   ============================================================ */
+.ck-sfx {
+  font-family: var(--font-display); text-transform: uppercase;
+  font-size: 56px; letter-spacing: -.02em; line-height: .9;
+  color: var(--riso-pink);
+  text-shadow: 3px 3px 0 var(--ink);
   display: inline-block;
 }
+.ck-sfx.blue    { color: var(--riso-blue);    text-shadow: 3px 3px 0 var(--riso-mustard); }
+.ck-sfx.mustard { color: var(--riso-mustard); text-shadow: 3px 3px 0 var(--ink); }
 
-/* ----- Studio (admin) surfaces ----- */
-.wk-studio-bg {
-  background: #221f18;
-  background-image: radial-gradient(rgba(255,210,63,.04) 1.5px, transparent 1.6px);
+/* ============================================================
+   Studio (admin) — dark riso-blue mode
+   (kept available; admin shadcn UI continues to use its tokens)
+   ============================================================ */
+.ck-studio-bg {
+  background: #0e1535;
+  background-image: radial-gradient(rgba(255,90,142,.06) 1.5px, transparent 1.6px);
   background-size: 14px 14px;
-  color: var(--paper-cream);
-  font-family: var(--font-hand);
+  color: var(--paper-bright);
 }
-.wk-studio-card {
-  background: #2c2820;
-  border: 2px solid var(--ink-1);
-  border-radius: 8px;
-  box-shadow: 4px 4px 0 var(--ink-1), inset 0 0 0 1px rgba(255,250,238,.04);
-  color: var(--paper-cream);
+.ck-studio-card {
+  background: #14204a;
+  border: 2px solid var(--paper-bright);
+  box-shadow: 5px 5px 0 var(--riso-pink);
+  color: var(--paper-bright);
+  padding: 16px;
 }
-.wk-studio-card .wk-label {
-  font-family: var(--font-hand-sc);
-  font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--marker-yellow);
-}
-.wk-studio-card .wk-field {
-  background: #1a1813;
-  color: var(--paper-cream);
-  border: 2px solid #4a4536;
-}
-.wk-studio-card .wk-field:focus { box-shadow: 3px 3px 0 var(--marker-yellow); border-color: var(--marker-yellow); }
-.wk-studio-table {
-  width: 100%; border-collapse: collapse;
-  font-family: var(--font-hand);
-  font-size: 15px;
-}
-.wk-studio-table th, .wk-studio-table td {
-  padding: 6px 10px; text-align: left;
-  border-bottom: 1px dashed rgba(255,250,238,.18);
-}
-.wk-studio-table th {
-  font-family: var(--font-hand-sc); font-size: 12px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--marker-yellow);
-  border-bottom: 2px solid var(--marker-yellow);
+.ck-studio-card .ck-label {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--riso-mustard);
 }
 
-/* ----- Tilt utilities ----- */
-.wk-tilt-l { transform: rotate(-1.2deg); }
-.wk-tilt-r { transform: rotate(1.4deg); }
+/* ============================================================
+   Misc
+   ============================================================ */
+.ck-divider-double { border: 0; border-top: 4px double var(--ink); margin: 16px 0; }
+.ck-scroll { overflow: auto; }
+.ck-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.ck-scroll::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 0; }
+.ck-scroll::-webkit-scrollbar-track { background: var(--paper-2); }
+
+/* riso plate — flat-color cover with overprint dots */
+.ck-plate {
+  position: relative; overflow: hidden;
+  border: 2px solid var(--ink);
+  background-image: radial-gradient(rgba(31,29,24,.18) 1.4px, transparent 1.6px);
+  background-size: 8px 8px;
+}
+.ck-plate-skew {
+  position: absolute; inset: auto -10% 30% -10%; height: 55%;
+  background: var(--riso-blue); mix-blend-mode: multiply;
+  transform: skewY(-4deg);
+  pointer-events: none;
+}

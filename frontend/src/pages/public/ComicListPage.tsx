@@ -3,20 +3,14 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getStories } from '@/lib/api';
 import type { Story } from '@/lib/api-types';
-import { STORIES, heroColorVar, heroFg } from '@/components/wimpy/data';
-import type { WimpyHeroColor } from '@/components/wimpy/data';
-
-const SFX_BY_COVER: Record<string, string> = {
-  windy: 'WHOOSH!',
-  soup: 'SLURP!',
-  size: 'STOMP!',
-  dim: 'ZAP!',
-  spoon: 'CLINK!',
-  rad: 'BRRR!',
-};
-
-const ACCENTS: WimpyHeroColor[] = ['yellow', 'red', 'blue', 'green', 'purple'];
-const TILTS = [-1.2, 1.4, -0.6, 1.0, -0.9, 1.6];
+import { CoverPlate } from '@/components/wimpy/HeroPortrait';
+import {
+  HEROES,
+  STORIES,
+  accentForIndex,
+  sfxForIndex,
+} from '@/components/wimpy/data';
+import type { Hero, RisoColor, StoryDesign } from '@/components/wimpy/data';
 
 export const ComicListPage = () => {
   const [stories, setStories] = useState<Story[]>([]);
@@ -30,7 +24,7 @@ export const ComicListPage = () => {
       })
       .catch((err) => {
         console.error(err);
-        toast.error('Failed to load comics. Please try again.');
+        toast.error('Failed to load dossiers. Please try again.');
         setLoading(false);
       });
   }, []);
@@ -38,25 +32,17 @@ export const ComicListPage = () => {
   return (
     <div style={{ paddingBottom: 40 }}>
       <div style={{ padding: '32px 64px 16px' }}>
-        <div className="wk-eyebrow" style={{ color: 'var(--marker-red)' }}>
-          All issues · ranked by chaos
+        <div className="ck-eyebrow ck-eyebrow-strong">
+          § 01 · Dossiers · {stories.length || STORIES.length} of 41 visible
         </div>
-        <h1
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 78,
-            lineHeight: 0.95,
-            textTransform: 'uppercase',
-            margin: '6px 0 8px',
-          }}
-        >
-          The Comic <span style={{ color: 'var(--marker-red)' }}>vault</span>
+        <h1 className="ck-riso-h" data-shadow="The Vault" style={{ fontSize: 84, margin: '8px 0' }}>
+          The Vault
         </h1>
       </div>
 
       {loading && (
         <div style={{ padding: '40px 64px', textAlign: 'center' }}>
-          <span className="wk-eyebrow">Loading comics from the printing press...</span>
+          <span className="ck-eyebrow">Pulling files from the cabinet…</span>
         </div>
       )}
 
@@ -65,17 +51,17 @@ export const ComicListPage = () => {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: 24,
+            gap: 22,
             padding: '0 64px',
           }}
         >
           {stories.map((s, i) => (
-            <LiveComicCard
+            <LiveDossierCard
               key={s.id}
               story={s}
-              tilt={TILTS[i % TILTS.length]}
-              accent={ACCENTS[i % ACCENTS.length]}
-              sfx={Object.values(SFX_BY_COVER)[i % 6]}
+              hero={HEROES[i % HEROES.length]}
+              accent={accentForIndex(i)}
+              sfx={sfxForIndex(i)}
             />
           ))}
         </div>
@@ -84,23 +70,24 @@ export const ComicListPage = () => {
       {!loading && stories.length === 0 && (
         <>
           <div style={{ padding: '0 64px 16px' }}>
-            <div
-              className="wk-sticky"
-              style={{ transform: 'rotate(-1.5deg)', marginBottom: 18 }}
-            >
-              No issues live yet — here's what the vault looks like once it fills up:
-            </div>
+            <span className="ck-note">
+              No live files yet — preview entries below for what the vault will hold.
+            </span>
           </div>
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gap: 24,
+              gap: 22,
               padding: '0 64px',
             }}
           >
-            {STORIES.map((s) => (
-              <PreviewComicCard key={s.id} story={s} />
+            {STORIES.map((s, i) => (
+              <PreviewDossierCard
+                key={s.id}
+                story={s}
+                hero={HEROES[i % HEROES.length]}
+              />
             ))}
           </div>
         </>
@@ -109,123 +96,84 @@ export const ComicListPage = () => {
   );
 };
 
-function PreviewComicCard({ story }: { story: (typeof STORIES)[number] }) {
-  const accentBg = heroColorVar(story.accent);
-  const fg = heroFg(story.accent);
+function CardHeader({ code, accent }: { code: string; accent: RisoColor }) {
   return (
     <div
-      className="wk-card"
-      style={{ transform: `rotate(${story.tilt}deg)`, opacity: 0.85 }}
+      style={{
+        padding: '8px 12px',
+        borderBottom: '2px solid var(--ink)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}
     >
-      <div
-        className="wk-halftone"
-        style={{
-          background: accentBg,
-          color: fg,
-          height: 130,
-          border: '3px solid var(--ink-1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 60, letterSpacing: '.04em' }}>
-          #{story.issue}
+      <span className="ck-mono" style={{ fontSize: 11 }}>FILE / {code}</span>
+      <span className={`ck-pill ${accent}`}>{accent}</span>
+    </div>
+  );
+}
+
+function PreviewDossierCard({ story, hero }: { story: StoryDesign; hero: Hero }) {
+  return (
+    <div
+      className="ck-card"
+      style={{ padding: 0, opacity: 0.92, background: 'var(--paper-bright)' }}
+    >
+      <CardHeader code={story.code} accent={story.accent} />
+      <CoverPlate hero={hero} accent={story.accent} sfx={story.sfx} height={180} />
+      <div style={{ padding: 12 }}>
+        <div className="ck-dpy" style={{ fontSize: 22, lineHeight: 1 }}>
+          {story.title}
         </div>
-        <span
-          className="wk-sfx"
+        <div
           style={{
-            position: 'absolute',
-            bottom: 6,
-            right: 8,
-            fontSize: 28,
-            color: 'var(--ink-1)',
-            textShadow: '2px 2px 0 var(--paper-cream)',
+            fontFamily: 'var(--font-body)',
+            fontSize: 14,
+            color: 'var(--ink-2)',
+            marginTop: 6,
           }}
         >
-          {SFX_BY_COVER[story.cover]}
-        </span>
-      </div>
-      <div style={{ fontFamily: 'var(--font-marker)', fontSize: 22, lineHeight: 1.1, marginTop: 8 }}>
-        {story.title}
-      </div>
-      <div style={{ fontFamily: 'var(--font-hand)', fontSize: 16, color: 'var(--ink-2)' }}>
-        {story.blurb}
+          {story.blurb}
+        </div>
       </div>
     </div>
   );
 }
 
-function LiveComicCard({
+function LiveDossierCard({
   story,
-  tilt,
+  hero,
   accent,
   sfx,
 }: {
   story: Story;
-  tilt: number;
-  accent: WimpyHeroColor;
+  hero: Hero;
+  accent: RisoColor;
   sfx: string;
 }) {
-  const accentBg = heroColorVar(accent);
-  const fg = heroFg(accent);
-  const issue = String(story.id).padStart(3, '0');
+  const code = `C-${String(story.id).padStart(3, '0')}`;
   return (
     <Link
       to={`/comics/${story.slug}`}
-      className="wk-card"
-      style={{
-        transform: `rotate(${tilt}deg)`,
-        textDecoration: 'none',
-        display: 'block',
-      }}
+      className="ck-card"
+      style={{ padding: 0, textDecoration: 'none', display: 'block' }}
     >
-      <div
-        className="wk-halftone"
-        style={{
-          background: accentBg,
-          color: fg,
-          height: 200,
-          border: '3px solid var(--ink-1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {story.cover_image_url ? (
-          <img
-            src={story.cover_image_url}
-            alt={story.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 80, letterSpacing: '.04em' }}>
-            #{issue}
-          </div>
-        )}
-        <span
-          className="wk-sfx"
+      <CardHeader code={code} accent={accent} />
+      <CoverPlate hero={hero} accent={accent} sfx={sfx} height={200} imageUrl={story.cover_image_url} />
+      <div style={{ padding: 12 }}>
+        <div className="ck-dpy" style={{ fontSize: 22, lineHeight: 1 }}>
+          {story.title}
+        </div>
+        <div
           style={{
-            position: 'absolute',
-            bottom: 6,
-            right: 8,
-            fontSize: 32,
-            color: 'var(--ink-1)',
-            textShadow: '2px 2px 0 var(--paper-cream)',
+            fontFamily: 'var(--font-body)',
+            fontSize: 14,
+            color: 'var(--ink-2)',
+            marginTop: 6,
           }}
         >
-          {sfx}
-        </span>
-      </div>
-      <div style={{ fontFamily: 'var(--font-marker)', fontSize: 22, lineHeight: 1.1, marginTop: 8 }}>
-        {story.title}
-      </div>
-      <div style={{ fontFamily: 'var(--font-hand)', fontSize: 16, color: 'var(--ink-2)' }}>
-        {story.published ? 'Live in the vault.' : 'Still inking — peek inside.'}
+          {story.published ? 'Cleared for distribution.' : 'Pending redaction review.'}
+        </div>
       </div>
     </Link>
   );

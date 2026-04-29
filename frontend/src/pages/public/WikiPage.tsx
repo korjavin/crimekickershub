@@ -1,31 +1,22 @@
 import { useEffect, useState } from 'react';
 import { getEntities, getEntityTypes } from '@/lib/api';
 import type { Entity } from '@/lib/api-types';
-import { HeroPortrait, pickHeroIdByName } from '@/components/wimpy/HeroPortrait';
-import { HEROES, heroColorVar, heroFg } from '@/components/wimpy/data';
-import type { WimpyHeroColor, WimpyHero } from '@/components/wimpy/data';
+import { HeroStamp } from '@/components/wimpy/HeroPortrait';
+import { HEROES, pickHeroByName } from '@/components/wimpy/data';
+import type { Hero } from '@/components/wimpy/data';
 
-const COLOR_RING: WimpyHeroColor[] = ['blue', 'red', 'purple', 'yellow', 'green', 'orange'];
-const TILTS = [-1.2, 1.4, -0.8, 1.0, -0.6, 1.2];
-
-function colorFor(idx: number): WimpyHeroColor {
-  return COLOR_RING[idx % COLOR_RING.length];
-}
-
-interface MergedHero {
+interface MergedSubject {
   id: string | number;
   name: string;
   description: string | null;
   avatar_url: string | null;
   avatar_thumbnail_url: string | null;
   type: string;
-  color: WimpyHeroColor;
-  portraitId: string;
-  issue: string;
-  designOnly?: WimpyHero;
+  /** Hero design metadata (monogram / stats / bio) bound by name match. */
+  design: Hero;
 }
 
-function makeFallbackHeroes(): MergedHero[] {
+function makeFallbackSubjects(): MergedSubject[] {
   return HEROES.map((h) => ({
     id: h.id,
     name: h.name,
@@ -33,107 +24,87 @@ function makeFallbackHeroes(): MergedHero[] {
     avatar_url: null,
     avatar_thumbnail_url: null,
     type: 'hero',
-    color: h.color,
-    portraitId: h.id,
-    issue: h.issue,
-    designOnly: h,
+    design: h,
   }));
 }
 
-function mergeWithLive(entities: Entity[]): MergedHero[] {
-  return entities.map((e, i) => {
-    const designMatch = HEROES.find((h) => h.name.toLowerCase() === e.name.toLowerCase());
-    return {
-      id: e.id,
-      name: e.name,
-      description: e.description,
-      avatar_url: e.avatar_url,
-      avatar_thumbnail_url: e.avatar_thumbnail_url,
-      type: e.type,
-      color: designMatch?.color ?? colorFor(i),
-      portraitId: pickHeroIdByName(e.name),
-      issue: String(e.id).padStart(3, '0'),
-      designOnly: designMatch,
-    };
-  });
+function mergeWithLive(entities: Entity[]): MergedSubject[] {
+  return entities.map((e) => ({
+    id: e.id,
+    name: e.name,
+    description: e.description,
+    avatar_url: e.avatar_url,
+    avatar_thumbnail_url: e.avatar_thumbnail_url,
+    type: e.type,
+    design: pickHeroByName(e.name),
+  }));
 }
 
 export function WikiPage() {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [types, setTypes] = useState<{ slug: string; name: string }[]>([]);
   const [filter, setFilter] = useState<string>('all');
-  const [selected, setSelected] = useState<MergedHero | null>(null);
+  const [selected, setSelected] = useState<MergedSubject | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getEntities().catch(() => []), getEntityTypes().catch(() => [])]).then(([e, t]) => {
-      if (cancelled) return;
-      setEntities(e ?? []);
-      setTypes(t ?? []);
-    });
+    Promise.all([getEntities().catch(() => []), getEntityTypes().catch(() => [])]).then(
+      ([e, t]) => {
+        if (cancelled) return;
+        setEntities(e ?? []);
+        setTypes(t ?? []);
+      },
+    );
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const baseList: MergedHero[] = entities.length > 0 ? mergeWithLive(entities) : makeFallbackHeroes();
-  const filtered = filter === 'all' ? baseList : baseList.filter((e) => e.type.toLowerCase() === filter.toLowerCase());
+  const baseList: MergedSubject[] =
+    entities.length > 0 ? mergeWithLive(entities) : makeFallbackSubjects();
+  const filtered =
+    filter === 'all'
+      ? baseList
+      : baseList.filter((e) => e.type.toLowerCase() === filter.toLowerCase());
 
   return (
     <div style={{ paddingBottom: 40 }}>
       {!selected && (
         <>
-          <div style={{ padding: '32px 64px 14px' }}>
-            <div className="wk-eyebrow" style={{ color: 'var(--marker-red)' }}>
-              The roster · 4 kids · 4 weird powers
+          <div style={{ padding: '32px 64px 12px' }}>
+            <div className="ck-eyebrow ck-eyebrow-strong">
+              § 02 · Field guide · subjects 001–004
             </div>
-            <h1
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 84,
-                lineHeight: 0.95,
-                textTransform: 'uppercase',
-                margin: '6px 0 6px',
-              }}
-            >
-              Meet the <span style={{ color: 'var(--marker-blue)' }}>HEROES</span>
+            <h1 className="ck-riso-h" data-shadow="The roster" style={{ fontSize: 88, margin: '8px 0' }}>
+              The roster
             </h1>
             <p
               style={{
-                fontFamily: 'var(--font-hand)',
-                fontSize: 19,
+                fontFamily: 'var(--font-body)',
+                fontSize: 17,
                 color: 'var(--ink-2)',
                 maxWidth: 720,
-                lineHeight: 1.5,
+                lineHeight: 1.55,
               }}
             >
-              Click a kid for their backstory, stats, and the absolutely-real powers they SWEAR they have.
+              Four subjects under active observation. Click a card for the long-form file.
             </p>
           </div>
 
           {types.length > 0 && (
-            <div
-              style={{
-                padding: '0 64px 14px',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-              }}
-            >
+            <div style={{ padding: '0 64px 14px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
-                className={`wk-checkbox-pill${filter === 'all' ? ' on' : ''}`}
+                className={`ck-chip${filter === 'all' ? ' on' : ''}`}
                 onClick={() => setFilter('all')}
               >
-                <span className="wk-dot" />
                 all
               </button>
               {types.map((t) => (
                 <button
                   key={t.slug}
-                  className={`wk-checkbox-pill${filter === t.slug ? ' on' : ''}`}
+                  className={`ck-chip${filter === t.slug ? ' on' : ''}`}
                   onClick={() => setFilter(t.slug)}
                 >
-                  <span className="wk-dot" />
                   {t.name}
                 </button>
               ))}
@@ -144,12 +115,12 @@ export function WikiPage() {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              gap: 26,
+              gap: 22,
               padding: '10px 64px',
             }}
           >
-            {filtered.map((h, i) => (
-              <HeroBigCard key={h.id} hero={h} tilt={TILTS[i % TILTS.length]} onClick={() => setSelected(h)} />
+            {filtered.map((s) => (
+              <SubjectCard key={s.id} subject={s} onClick={() => setSelected(s)} />
             ))}
           </div>
 
@@ -157,26 +128,33 @@ export function WikiPage() {
             <div style={{ padding: '40px 64px', textAlign: 'center' }}>
               <p
                 style={{
-                  fontFamily: 'var(--font-hand)',
-                  fontSize: 22,
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 14,
+                  letterSpacing: '.14em',
+                  textTransform: 'uppercase',
                   color: 'var(--ink-3)',
                 }}
               >
-                Nobody here. Check another category!
+                No subjects in this category.
               </p>
             </div>
           )}
         </>
       )}
 
-      {selected && <HeroProfile hero={selected} onBack={() => setSelected(null)} />}
+      {selected && <SubjectProfile subject={selected} onBack={() => setSelected(null)} />}
     </div>
   );
 }
 
-function HeroBigCard({ hero, tilt, onClick }: { hero: MergedHero; tilt: number; onClick: () => void }) {
-  const bg = heroColorVar(hero.color);
-  const fg = heroFg(hero.color);
+function SubjectCard({
+  subject,
+  onClick,
+}: {
+  subject: MergedSubject;
+  onClick: () => void;
+}) {
+  const { design } = subject;
   return (
     <div
       role="button"
@@ -188,229 +166,195 @@ function HeroBigCard({ hero, tilt, onClick }: { hero: MergedHero; tilt: number; 
           onClick();
         }
       }}
-      className="wk-card"
+      className="ck-card"
       style={{
         display: 'grid',
-        gridTemplateColumns: '200px minmax(0, 1fr)',
-        gap: 16,
-        transform: `rotate(${tilt}deg)`,
+        gridTemplateColumns: '180px minmax(0, 1fr)',
+        gap: 18,
         cursor: 'pointer',
+        background: 'var(--paper-bright)',
       }}
     >
       <div
-        className="wk-halftone"
         style={{
-          background: bg,
-          color: fg,
-          border: '3px solid var(--ink-1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          height: 220,
+          background: 'var(--paper-2)',
+          border: '2px solid var(--ink)',
+          height: 200,
           overflow: 'hidden',
         }}
       >
-        {hero.avatar_url ? (
+        {subject.avatar_url ? (
           <img
-            src={hero.avatar_thumbnail_url || hero.avatar_url}
-            alt={hero.name}
+            src={subject.avatar_thumbnail_url || subject.avatar_url}
+            alt={subject.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <HeroPortrait id={hero.portraitId} size={170} />
+          <HeroStamp hero={design} size={130} />
         )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div className="wk-eyebrow" style={{ color: bg }}>
-          Hero file · #{hero.issue}
+        <div className="ck-mono" style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+          SUBJECT {design.code}
+        </div>
+        <div className="ck-dpy" style={{ fontSize: 38, lineHeight: 1 }}>
+          {subject.name}
         </div>
         <div
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 44,
-            textTransform: 'uppercase',
-            lineHeight: 0.95,
-            margin: '2px 0 6px',
-          }}
+          className="ck-mono"
+          style={{ fontSize: 13, color: 'var(--riso-blue)', margin: '6px 0' }}
         >
-          {hero.name}
+          {design.powerName}
         </div>
-        {hero.designOnly && (
-          <div style={{ fontFamily: 'var(--font-marker)', fontSize: 18, color: 'var(--ink-2)' }}>
-            Power: {hero.designOnly.powerName}
-          </div>
-        )}
-        <div
-          style={{
-            fontFamily: 'var(--font-hand)',
-            fontSize: 16,
-            color: 'var(--ink-2)',
-            marginTop: 6,
-            lineHeight: 1.4,
-          }}
-        >
-          {hero.description ?? 'No file on this one yet.'}
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--ink-2)' }}>
+          {subject.description ?? design.tagline}
         </div>
-        {hero.designOnly && (
-          <div style={{ marginTop: 10 }}>
-            {hero.designOnly.tags.slice(0, 3).map((t) => (
-              <span key={t} className="wk-pill" style={{ marginRight: 6 }}>
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
+        <div style={{ marginTop: 10 }}>
+          {design.tags.slice(0, 3).map((t) => (
+            <span key={t} className="ck-pill" style={{ marginRight: 6 }}>
+              {t}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-function HeroProfile({ hero, onBack }: { hero: MergedHero; onBack: () => void }) {
-  const design = hero.designOnly;
+function SubjectProfile({
+  subject,
+  onBack,
+}: {
+  subject: MergedSubject;
+  onBack: () => void;
+}) {
+  const { design } = subject;
   return (
     <div
       style={{
         padding: '12px 64px',
         display: 'grid',
-        gridTemplateColumns: '320px minmax(0, 1fr)',
+        gridTemplateColumns: '300px minmax(0, 1fr)',
         gap: 32,
       }}
     >
       <div>
-        <button className="wk-btn sm ghost" onClick={onBack}>
-          ← back to roster
+        <button className="ck-btn ghost sm" onClick={onBack}>
+          ← roster
         </button>
         <div
-          style={{
-            marginTop: 12,
-            background: heroColorVar(hero.color),
-            border: '5px solid var(--ink-1)',
-            boxShadow: '8px 8px 0 var(--ink-1)',
-            padding: 14,
-            transform: 'rotate(-1.5deg)',
-          }}
+          className="ck-card color-shadow"
+          style={{ marginTop: 12, padding: 18, background: 'var(--paper-bright)' }}
         >
-          <div
-            style={{
-              background: '#fffaee',
-              border: '3px solid var(--ink-1)',
-              height: 320,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            {hero.avatar_url ? (
-              <img
-                src={hero.avatar_url}
-                alt={hero.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+            {subject.avatar_url ? (
+              <div
+                style={{
+                  width: 200,
+                  height: 200,
+                  border: '3px solid var(--ink)',
+                  overflow: 'hidden',
+                }}
+              >
+                <img
+                  src={subject.avatar_url}
+                  alt={subject.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
             ) : (
-              <HeroPortrait id={hero.portraitId} size={260} />
+              <HeroStamp hero={design} size={180} />
             )}
           </div>
           <div
-            style={{
-              fontFamily: 'var(--font-marker)',
-              fontSize: 18,
-              textAlign: 'center',
-              marginTop: 8,
-            }}
+            className="ck-mono"
+            style={{ fontSize: 11, color: 'var(--ink-3)', textAlign: 'center' }}
           >
-            {hero.name}
+            SUBJECT {design.code}
           </div>
         </div>
 
-        {design && (
-          <div style={{ marginTop: 18 }}>
-            <div className="wk-eyebrow" style={{ marginBottom: 4 }}>
-              Stats
+        <div style={{ marginTop: 18 }}>
+          <div className="ck-eyebrow">Stat ratings</div>
+          {Object.entries(design.stats).map(([k, v]) => (
+            <div
+              key={k}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '6px 0',
+                borderBottom: '1px dashed var(--ink-3)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 14,
+              }}
+            >
+              <span>{k.toUpperCase()}</span>
+              <span>
+                {Array.from({ length: 5 })
+                  .map((_, i) => (i < v ? '■' : '□'))
+                  .join(' ')}
+              </span>
             </div>
-            {Object.entries(design.stats).map(([k, v]) => (
-              <div
-                key={k}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '6px 0',
-                  borderBottom: '2px dashed var(--ink-1)',
-                }}
-              >
-                <span style={{ fontFamily: 'var(--font-hand)' }}>{k}</span>
-                <span>
-                  {'★'.repeat(v)}
-                  {'☆'.repeat(5 - v)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       <div>
-        <div className="wk-eyebrow" style={{ color: 'var(--marker-red)' }}>
-          Hero profile · #{hero.issue}
-        </div>
+        <div className="ck-eyebrow ck-eyebrow-strong">Subject {design.code} · Field profile</div>
         <h1
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 88,
-            lineHeight: 0.92,
-            textTransform: 'uppercase',
-            margin: '4px 0 10px',
-            letterSpacing: '.02em',
-          }}
+          className="ck-riso-h"
+          data-shadow={subject.name}
+          style={{ fontSize: 88, margin: '6px 0 6px' }}
         >
-          {hero.name}
+          {subject.name}
         </h1>
+        <div className="ck-mono" style={{ fontSize: 14, color: 'var(--riso-blue)' }}>
+          {design.powerName}
+        </div>
         <p
           style={{
-            fontFamily: 'var(--font-hand)',
-            fontSize: 21,
-            lineHeight: 1.5,
+            fontFamily: 'var(--font-body)',
+            fontSize: 18,
+            lineHeight: 1.55,
             color: 'var(--ink-2)',
             maxWidth: 600,
+            marginTop: 14,
           }}
         >
-          {design?.bio ?? hero.description ?? 'No bio yet. Check back after lunch.'}
+          {subject.description ?? design.bio}
         </p>
 
-        {design && (
-          <div style={{ marginTop: 14 }}>
-            {design.tags.map((t) => (
-              <span key={t} className="wk-pill" style={{ marginRight: 6, marginBottom: 6 }}>
-                {t}
-              </span>
+        <div style={{ marginTop: 14 }}>
+          {design.tags.map((t) => (
+            <span key={t} className="ck-pill" style={{ marginRight: 6, marginBottom: 6 }}>
+              {t}
+            </span>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 22 }}>
+          <div className="ck-eyebrow">Capabilities</div>
+          <ul
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 14,
+              lineHeight: 1.7,
+              paddingLeft: 18,
+              margin: '8px 0 0',
+            }}
+          >
+            {design.powers.map((p, i) => (
+              <li key={i}>{p}</li>
             ))}
-          </div>
-        )}
+          </ul>
+        </div>
 
-        {design && (
-          <div style={{ marginTop: 22 }}>
-            <div className="wk-eyebrow" style={{ marginBottom: 8 }}>
-              Powers
-            </div>
-            <ul
-              style={{
-                fontFamily: 'var(--font-hand)',
-                fontSize: 19,
-                lineHeight: 1.7,
-                paddingLeft: 18,
-                margin: 0,
-              }}
-            >
-              {design.powers.map((p, i) => (
-                <li key={i}>{p}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div style={{ marginTop: 22, display: 'flex', gap: 12 }}>
-          <button className="wk-btn red">Add to my roster</button>
-          <button className="wk-btn">Share to lockerwall</button>
+        <div style={{ marginTop: 22, display: 'flex', gap: 10 }}>
+          <button className="ck-btn pink">Save subject</button>
+          <button className="ck-btn ghost">Print field card</button>
         </div>
       </div>
     </div>

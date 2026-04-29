@@ -21,8 +21,8 @@ export const ComicReaderPage = () => {
         })
         .catch((err) => {
           console.error(err);
-          toast.error('Failed to load story. Please try again.');
-          setError('Failed to load story');
+          toast.error('Failed to open dossier. Please try again.');
+          setError('Failed to load dossier');
           setLoading(false);
         });
     }
@@ -31,7 +31,7 @@ export const ComicReaderPage = () => {
   if (loading) {
     return (
       <div style={{ padding: '60px 64px', textAlign: 'center' }}>
-        <span className="wk-eyebrow">Pulling the issue off the shelf...</span>
+        <span className="ck-eyebrow">Pulling file from the cabinet…</span>
       </div>
     );
   }
@@ -39,20 +39,19 @@ export const ComicReaderPage = () => {
   if (error || !story) {
     return (
       <div style={{ padding: '60px 64px', textAlign: 'center' }}>
-        <div
-          className="wk-sticky"
-          style={{ display: 'inline-block', transform: 'rotate(-1.5deg)', marginBottom: 18 }}
-        >
-          {error || 'We looked everywhere. This issue is not real.'}
+        <div style={{ marginBottom: 18 }}>
+          <span className="ck-note pink">{error || 'No such file in the vault.'}</span>
         </div>
         <div>
-          <Link to="/comics" className="wk-btn red">
+          <Link to="/comics" className="ck-btn pink">
             ← back to the vault
           </Link>
         </div>
       </div>
     );
   }
+
+  const code = slug ? `C-${slug.toUpperCase()}` : 'C-???';
 
   return (
     <div>
@@ -62,24 +61,20 @@ export const ComicReaderPage = () => {
           display: 'flex',
           alignItems: 'baseline',
           gap: 14,
+          flexWrap: 'wrap',
         }}
       >
-        <Link to="/comics" className="wk-btn sm ghost">
-          ← all comics
+        <Link to="/comics" className="ck-btn ghost sm">
+          ← vault
         </Link>
-        <span className="wk-eyebrow">Issue · {story.title}</span>
+        <span className="ck-mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+          FILE / {code}
+        </span>
       </div>
 
       <div style={{ padding: '8px 64px 0' }}>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 48,
-            textTransform: 'uppercase',
-            margin: '8px 0 14px',
-            letterSpacing: '.02em',
-          }}
-        >
+        <div className="ck-eyebrow ck-eyebrow-strong">Dossier</div>
+        <h2 className="ck-riso-h" data-shadow={story.title} style={{ fontSize: 56, margin: '6px 0 14px' }}>
           {story.title}
         </h2>
       </div>

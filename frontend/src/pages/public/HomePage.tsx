@@ -2,20 +2,17 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getStories, getHeroes } from '@/lib/api';
 import type { Story, Entity } from '@/lib/api-types';
-import { HeroPortrait, pickHeroIdByName } from '@/components/wimpy/HeroPortrait';
-import { HEROES, STORIES, VIDEOS, heroColorVar, heroFg } from '@/components/wimpy/data';
-import type { WimpyHeroColor } from '@/components/wimpy/data';
-
-const SFX_BY_COVER: Record<string, string> = {
-  windy: 'WHOOSH!',
-  soup: 'SLURP!',
-  size: 'STOMP!',
-  dim: 'ZAP!',
-  spoon: 'CLINK!',
-  rad: 'BRRR!',
-};
-
-const TILTS = [-1.2, 1.4, -0.6, 1.2];
+import { HeroStamp, CoverPlate } from '@/components/wimpy/HeroPortrait';
+import {
+  HEROES,
+  STORIES,
+  VIDEOS,
+  accentForIndex,
+  pickHeroByName,
+  risoColorVar,
+  sfxForIndex,
+} from '@/components/wimpy/data';
+import type { Hero, RisoColor, StoryDesign, VideoDesign } from '@/components/wimpy/data';
 
 export function HomePage() {
   const [stories, setStories] = useState<Story[]>([]);
@@ -36,67 +33,77 @@ export function HomePage() {
   const featured = STORIES[0];
   const liveStories = stories.slice(0, 3);
   const liveHeroes = heroes.slice(0, 4);
+  const featuredHero = HEROES[1]; // pho-boman, matches the SLURP cover
+
+  const featuredHref =
+    liveStories[0]?.slug ? `/comics/${liveStories[0].slug}` : '/comics';
 
   return (
     <div style={{ paddingBottom: 40 }}>
-      {/* Hero */}
+      {/* Masthead */}
+      <section style={{ padding: '36px 64px 8px' }}>
+        <div className="ck-eyebrow ck-eyebrow-strong">
+          Vol. 04 · Index · Cleared for distribution
+        </div>
+        <h1 className="ck-riso-h" data-shadow="Crime Kickers" style={{ fontSize: 124, margin: '10px 0 6px' }}>
+          Crime Kickers
+        </h1>
+        <div className="ck-dpy" style={{ fontSize: 26, color: 'var(--riso-blue)', marginTop: -4 }}>
+          A field manual / Issue forty-one
+        </div>
+      </section>
+      <hr className="ck-divider-double" style={{ margin: '14px 64px' }} />
+
+      {/* Feature row */}
       <section
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0,1.2fr) minmax(0,1fr)',
-          gap: 32,
-          padding: '40px 64px 24px',
+          gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)',
+          gap: 30,
+          padding: '0 64px 30px',
         }}
       >
         <div>
-          <div className="wk-eyebrow" style={{ color: 'var(--marker-red)', marginBottom: 4 }}>
-            ★ NEW ISSUE · #{featured.issue}
-          </div>
-          <h1
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 92,
-              lineHeight: 0.92,
-              margin: '0 0 14px',
-              textTransform: 'uppercase',
-              letterSpacing: '.02em',
-            }}
-          >
-            Crime
+          <div className="ck-eyebrow">Lead dossier</div>
+          <h2 className="ck-dpy" style={{ fontSize: 56, margin: '6px 0 14px' }}>
+            Four kids.
             <br />
-            Kickers
+            One <span className="ck-hl-pink">cafeteria.</span>
             <br />
-            <span style={{ color: 'var(--marker-red)' }}>UNITE</span>
-          </h1>
+            Ongoing problem.
+          </h2>
           <p
             style={{
-              fontFamily: 'var(--font-hand)',
-              fontSize: 22,
-              lineHeight: 1.45,
-              maxWidth: 520,
+              fontFamily: 'var(--font-body)',
+              fontSize: 18,
+              lineHeight: 1.55,
+              maxWidth: 540,
               color: 'var(--ink-2)',
-              marginBottom: 22,
             }}
           >
-            Four kids. Four weird powers. One school cafeteria full of crime. Read the comics, watch the
-            clips, learn the lore — or whatever.
+            Each issue is a case file. Each case file is a small disaster. Read the dossiers, study the
+            field guide, watch the surveillance reels — proceed at your own risk.
           </p>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Link to={liveStories[0]?.slug ? `/comics/${liveStories[0].slug}` : '/comics'} className="wk-btn red">
-              Read issue #{featured.issue}
+          <div style={{ display: 'flex', gap: 12, marginTop: 18, flexWrap: 'wrap' }}>
+            <Link to={featuredHref} className="ck-btn pink">
+              Open dossier {featured.code}
             </Link>
-            <Link to="/wiki" className="wk-btn">
-              Meet the heroes →
+            <Link to="/wiki" className="ck-btn ghost">
+              Field guide →
             </Link>
           </div>
+          <div style={{ marginTop: 22, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <span className="ck-note pink">"do NOT show this to mr. pierce"</span>
+          </div>
         </div>
+
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <FeaturedPolaroid />
+          <FeaturedFile story={featured} hero={featuredHero} />
         </div>
       </section>
 
-      {/* Latest comics */}
-      <SectionHead title="Latest comics" cta="See all →" toCta="/comics" accent="red" />
+      {/* Latest dossiers */}
+      <SectionHead num="01" title="Latest dossiers" cta="See all →" toCta="/comics" />
       <div
         style={{
           display: 'grid',
@@ -106,12 +113,22 @@ export function HomePage() {
         }}
       >
         {liveStories.length > 0
-          ? liveStories.map((s, i) => <LiveComicCard key={s.id} story={s} tilt={TILTS[i]} />)
-          : STORIES.slice(0, 3).map((s) => <ComicCard key={s.id} story={s} />)}
+          ? liveStories.map((s, i) => (
+              <LiveDossierCard
+                key={s.id}
+                story={s}
+                hero={HEROES[i % HEROES.length]}
+                accent={accentForIndex(i)}
+                sfx={sfxForIndex(i)}
+              />
+            ))
+          : STORIES.slice(0, 3).map((s, i) => (
+              <DossierCard key={s.id} story={s} hero={HEROES[i % HEROES.length]} />
+            ))}
       </div>
 
-      {/* Hero roster */}
-      <SectionHead title="Hero roster" cta="All heroes →" toCta="/wiki" accent="blue" />
+      {/* Field guide */}
+      <SectionHead num="02" title="Field guide" cta="All entries →" toCta="/wiki" />
       <div
         style={{
           display: 'grid',
@@ -121,12 +138,12 @@ export function HomePage() {
         }}
       >
         {liveHeroes.length > 0
-          ? liveHeroes.map((h, i) => <LiveHeroCard key={h.id} hero={h} tilt={TILTS[i % TILTS.length]} />)
-          : HEROES.map((h, i) => <HeroCardSmall key={h.id} hero={h} tilt={TILTS[i]} />)}
+          ? liveHeroes.map((h) => <LiveHeroIndexCard key={h.id} entity={h} />)
+          : HEROES.map((h) => <HeroIndexCard key={h.id} hero={h} />)}
       </div>
 
-      {/* Cinema teaser */}
-      <SectionHead title="From the cinema" cta="Watch all →" toCta="/cinema" accent="green" />
+      {/* Reels */}
+      <SectionHead num="03" title="Surveillance reels" cta="Watch all →" toCta="/cinema" />
       <div
         style={{
           display: 'grid',
@@ -135,116 +152,52 @@ export function HomePage() {
           padding: '0 64px 40px',
         }}
       >
-        {VIDEOS.slice(0, 3).map((v, i) => (
-          <VideoTile key={v.id} video={v} tilt={[-1, 1.2, -0.5][i]} />
+        {VIDEOS.slice(0, 3).map((v) => (
+          <ReelCard key={v.id} video={v} />
         ))}
       </div>
     </div>
   );
 }
 
-function FeaturedPolaroid() {
-  return (
-    <div
-      style={{
-        background: '#fffaee',
-        border: '4px solid var(--ink-1)',
-        boxShadow: '10px 10px 0 var(--ink-1)',
-        padding: 12,
-        transform: 'rotate(2.5deg)',
-        width: 360,
-        position: 'relative',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          top: -16,
-          left: '50%',
-          width: 110,
-          height: 24,
-          background: 'rgba(255,226,89,.85)',
-          border: '1px dashed rgba(28,26,22,.35)',
-          transform: 'translateX(-50%) rotate(-4deg)',
-        }}
-      />
-      <div
-        style={{
-          background: 'var(--paper-manila)',
-          border: '3px solid var(--ink-1)',
-          height: 280,
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        <HeroPortrait id="phoboman" size={200} />
-        <span className="wk-sfx" style={{ position: 'absolute', top: 10, right: 8, fontSize: 56 }}>
-          POW!
-        </span>
-        <span
-          className="wk-sfx"
-          style={{ position: 'absolute', bottom: 10, left: 8, fontSize: 44, color: 'var(--marker-blue)' }}
-        >
-          WHOOSH!
-        </span>
-      </div>
-      <div
-        style={{
-          fontFamily: 'var(--font-marker)',
-          fontSize: 18,
-          marginTop: 10,
-          textAlign: 'center',
-        }}
-      >
-        "The mall was a MISTAKE."
-      </div>
-    </div>
-  );
-}
-
 function SectionHead({
+  num,
   title,
   cta,
   toCta,
-  accent = 'yellow',
 }: {
+  num: string;
   title: string;
   cta: string;
   toCta: string;
-  accent?: WimpyHeroColor;
 }) {
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'baseline',
-        gap: 16,
+        gap: 18,
         padding: '32px 64px 14px',
       }}
     >
-      <h2
-        className="wk-crayon-underline"
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 40,
-          textTransform: 'uppercase',
-          letterSpacing: '.03em',
-          margin: 0,
-        }}
-      >
+      <span className="ck-mono" style={{ fontSize: 14, color: 'var(--riso-pink)' }}>
+        § {num}
+      </span>
+      <h2 className="ck-dpy" style={{ fontSize: 32, margin: 0 }}>
         {title}
       </h2>
+      <div
+        style={{
+          flex: 1,
+          borderBottom: '2px dashed var(--ink-3)',
+          height: 1,
+          marginBottom: 6,
+        }}
+      />
       <Link
         to={toCta}
-        className="wk-eyebrow"
-        style={{
-          marginLeft: 'auto',
-          color: heroColorVar(accent),
-          textDecoration: 'none',
-        }}
+        className="ck-mono"
+        style={{ fontSize: 13, textDecoration: 'none', color: 'var(--riso-blue)' }}
       >
         {cta}
       </Link>
@@ -252,269 +205,248 @@ function SectionHead({
   );
 }
 
-function ComicCard({ story }: { story: (typeof STORIES)[number] }) {
-  const accent = heroColorVar(story.accent);
-  const fg = heroFg(story.accent);
+function FeaturedFile({ story, hero }: { story: StoryDesign; hero: Hero }) {
+  return (
+    <div
+      className="ck-card color-shadow"
+      style={{ width: 360, padding: 0, background: 'var(--paper-bright)' }}
+    >
+      <div
+        style={{
+          padding: '10px 14px',
+          borderBottom: '2px solid var(--ink)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span className="ck-mono" style={{ fontSize: 11 }}>FILE / {story.code}</span>
+        <span className="ck-pill ink">CLASSIFIED</span>
+      </div>
+      <CoverPlate hero={hero} accent={story.accent} sfx={story.sfx} height={260} />
+      <div style={{ padding: 14 }}>
+        <div className="ck-dpy" style={{ fontSize: 28, lineHeight: 1 }}>
+          {story.title}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 13,
+            color: 'var(--ink-3)',
+            marginTop: 6,
+          }}
+        >
+          filed 04:11 PM · {story.sfx}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DossierCard({ story, hero }: { story: StoryDesign; hero: Hero }) {
   return (
     <Link
       to="/comics"
-      className="wk-card"
-      style={{ transform: `rotate(${story.tilt}deg)`, textDecoration: 'none', display: 'block' }}
+      className="ck-card"
+      style={{ padding: 0, textDecoration: 'none', display: 'block' }}
     >
-      <div
-        className="wk-halftone"
-        style={{
-          background: accent,
-          color: fg,
-          height: 130,
-          border: '3px solid var(--ink-1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 60, letterSpacing: '.04em' }}>
-          #{story.issue}
+      <CardHeader code={story.code} accent={story.accent} />
+      <CoverPlate hero={hero} accent={story.accent} sfx={story.sfx} height={150} />
+      <div style={{ padding: 12 }}>
+        <div className="ck-dpy" style={{ fontSize: 22, lineHeight: 1 }}>
+          {story.title}
         </div>
-        <span
-          className="wk-sfx"
+        <div
           style={{
-            position: 'absolute',
-            bottom: 6,
-            right: 8,
-            fontSize: 28,
-            color: 'var(--ink-1)',
-            textShadow: '2px 2px 0 var(--paper-cream)',
+            fontFamily: 'var(--font-body)',
+            fontSize: 14,
+            color: 'var(--ink-2)',
+            marginTop: 6,
           }}
         >
-          {SFX_BY_COVER[story.cover]}
-        </span>
-      </div>
-      <div style={{ fontFamily: 'var(--font-marker)', fontSize: 22, lineHeight: 1.1, marginTop: 8 }}>
-        {story.title}
-      </div>
-      <div style={{ fontFamily: 'var(--font-hand)', fontSize: 16, color: 'var(--ink-2)' }}>
-        {story.blurb}
+          {story.blurb}
+        </div>
       </div>
     </Link>
   );
 }
 
-function LiveComicCard({ story, tilt }: { story: Story; tilt: number }) {
-  // map a SFX based on title length
-  const sfxs = Object.values(SFX_BY_COVER);
-  const sfx = sfxs[story.id % sfxs.length];
-  const accents: WimpyHeroColor[] = ['yellow', 'red', 'blue', 'green', 'purple'];
-  const accent = accents[story.id % accents.length];
-  const accentBg = heroColorVar(accent);
-  const fg = heroFg(accent);
-  const issue = String(story.id).padStart(3, '0');
+function LiveDossierCard({
+  story,
+  hero,
+  accent,
+  sfx,
+}: {
+  story: Story;
+  hero: Hero;
+  accent: RisoColor;
+  sfx: string;
+}) {
+  const code = `C-${String(story.id).padStart(3, '0')}`;
   return (
     <Link
       to={`/comics/${story.slug}`}
-      className="wk-card"
-      style={{ transform: `rotate(${tilt}deg)`, textDecoration: 'none', display: 'block' }}
+      className="ck-card"
+      style={{ padding: 0, textDecoration: 'none', display: 'block' }}
     >
-      <div
-        className="wk-halftone"
-        style={{
-          background: accentBg,
-          color: fg,
-          height: 130,
-          border: '3px solid var(--ink-1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {story.cover_image_url ? (
-          <img
-            src={story.cover_image_url}
-            alt={story.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 60, letterSpacing: '.04em' }}>
-            #{issue}
-          </div>
-        )}
-        <span
-          className="wk-sfx"
+      <CardHeader code={code} accent={accent} />
+      <CoverPlate hero={hero} accent={accent} sfx={sfx} height={150} imageUrl={story.cover_image_url} />
+      <div style={{ padding: 12 }}>
+        <div className="ck-dpy" style={{ fontSize: 22, lineHeight: 1 }}>
+          {story.title}
+        </div>
+        <div
           style={{
-            position: 'absolute',
-            bottom: 6,
-            right: 8,
-            fontSize: 28,
-            color: 'var(--ink-1)',
-            textShadow: '2px 2px 0 var(--paper-cream)',
+            fontFamily: 'var(--font-body)',
+            fontSize: 14,
+            color: 'var(--ink-2)',
+            marginTop: 6,
           }}
         >
-          {sfx}
-        </span>
-      </div>
-      <div style={{ fontFamily: 'var(--font-marker)', fontSize: 22, lineHeight: 1.1, marginTop: 8 }}>
-        {story.title}
-      </div>
-      <div style={{ fontFamily: 'var(--font-hand)', fontSize: 16, color: 'var(--ink-2)' }}>
-        {story.published ? 'New issue, hot off the printer.' : 'Coming soon — Greg is still inking.'}
+          {story.published ? 'Cleared for distribution.' : 'Pending redaction review.'}
+        </div>
       </div>
     </Link>
   );
 }
 
-function HeroCardSmall({ hero, tilt }: { hero: (typeof HEROES)[number]; tilt: number }) {
-  const bg = heroColorVar(hero.color);
-  const fg = heroFg(hero.color);
+function CardHeader({ code, accent }: { code: string; accent: RisoColor }) {
+  return (
+    <div
+      style={{
+        padding: '8px 12px',
+        borderBottom: '2px solid var(--ink)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}
+    >
+      <span className="ck-mono" style={{ fontSize: 11 }}>FILE / {code}</span>
+      <span className={`ck-pill ${accent}`}>{accent}</span>
+    </div>
+  );
+}
+
+function HeroIndexCard({ hero }: { hero: Hero }) {
   return (
     <Link
       to="/wiki"
-      className="wk-card"
-      style={{
-        background: bg,
-        color: fg,
-        transform: `rotate(${tilt}deg)`,
-        textDecoration: 'none',
-        display: 'block',
-      }}
+      className="ck-card"
+      style={{ textDecoration: 'none', display: 'block', background: 'var(--paper-bright)' }}
     >
-      <div
-        style={{
-          height: 150,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#fffaee',
-          border: '3px solid var(--ink-1)',
-        }}
-      >
-        <HeroPortrait id={hero.id} size={130} />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 18px' }}>
+        <HeroStamp hero={hero} size={100} />
       </div>
-      <div
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 26,
-          letterSpacing: '.03em',
-          textTransform: 'uppercase',
-          lineHeight: 1.05,
-          marginTop: 10,
-        }}
-      >
+      <div className="ck-dpy" style={{ fontSize: 22, marginTop: 10 }}>
         {hero.name}
       </div>
-      <div style={{ fontFamily: 'var(--font-hand)', fontSize: 14, opacity: 0.95 }}>{hero.tagline}</div>
+      <div
+        className="ck-mono"
+        style={{ fontSize: 12, color: 'var(--ink-3)', margin: '2px 0 6px' }}
+      >
+        {hero.powerName}
+      </div>
+      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink-2)' }}>
+        {hero.tagline}
+      </div>
     </Link>
   );
 }
 
-function LiveHeroCard({ hero, tilt }: { hero: Entity; tilt: number }) {
-  const colors: WimpyHeroColor[] = ['blue', 'red', 'purple', 'yellow', 'green', 'orange'];
-  const color = colors[hero.id % colors.length];
-  const bg = heroColorVar(color);
-  const fg = heroFg(color);
-  const portraitId = pickHeroIdByName(hero.name);
+function LiveHeroIndexCard({ entity }: { entity: Entity }) {
+  const hero = pickHeroByName(entity.name);
   return (
     <Link
       to="/wiki"
-      className="wk-card"
-      style={{
-        background: bg,
-        color: fg,
-        transform: `rotate(${tilt}deg)`,
-        textDecoration: 'none',
-        display: 'block',
-      }}
+      className="ck-card"
+      style={{ textDecoration: 'none', display: 'block', background: 'var(--paper-bright)' }}
     >
-      <div
-        style={{
-          height: 150,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#fffaee',
-          border: '3px solid var(--ink-1)',
-          overflow: 'hidden',
-        }}
-      >
-        {hero.avatar_url ? (
-          <img
-            src={hero.avatar_thumbnail_url || hero.avatar_url}
-            alt={hero.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 18px' }}>
+        {entity.avatar_url ? (
+          <div
+            style={{
+              width: 100,
+              height: 100,
+              border: '3px solid var(--ink)',
+              overflow: 'hidden',
+            }}
+          >
+            <img
+              src={entity.avatar_thumbnail_url || entity.avatar_url}
+              alt={entity.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
         ) : (
-          <HeroPortrait id={portraitId} size={130} />
+          <HeroStamp hero={hero} size={100} />
         )}
       </div>
-      <div
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 26,
-          letterSpacing: '.03em',
-          textTransform: 'uppercase',
-          lineHeight: 1.05,
-          marginTop: 10,
-        }}
-      >
-        {hero.name}
+      <div className="ck-dpy" style={{ fontSize: 22, marginTop: 10 }}>
+        {entity.name}
       </div>
-      <div style={{ fontFamily: 'var(--font-hand)', fontSize: 14, opacity: 0.95 }}>
-        {hero.description?.slice(0, 60) ?? 'Powers tba. Stay tuned.'}
+      <div
+        className="ck-mono"
+        style={{ fontSize: 12, color: 'var(--ink-3)', margin: '2px 0 6px' }}
+      >
+        {hero.powerName}
+      </div>
+      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink-2)' }}>
+        {entity.description?.slice(0, 80) ?? hero.tagline}
       </div>
     </Link>
   );
 }
 
-function VideoTile({ video, tilt }: { video: (typeof VIDEOS)[number]; tilt: number }) {
-  const bg = heroColorVar(video.color);
+function ReelCard({ video }: { video: VideoDesign }) {
   return (
-    <Link to="/cinema" className="wk-card" style={{ transform: `rotate(${tilt}deg)`, textDecoration: 'none', display: 'block' }}>
+    <Link
+      to="/cinema"
+      className="ck-card"
+      style={{ padding: 0, textDecoration: 'none', display: 'block' }}
+    >
       <div
-        className="wk-halftone"
+        className="ck-plate"
         style={{
           height: 140,
-          background: bg,
-          border: '3px solid var(--ink-1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
+          background: risoColorVar(video.color),
+          borderBottom: '2px solid var(--ink)',
+          borderTop: 'none',
+          borderLeft: 'none',
+          borderRight: 'none',
+          borderImage: 'none',
         }}
       >
         <div
           style={{
-            width: 0,
-            height: 0,
-            borderLeft: '30px solid var(--ink-1)',
-            borderTop: '20px solid transparent',
-            borderBottom: '20px solid transparent',
-            marginLeft: 8,
-          }}
-        />
-        <span
-          className="wk-pill"
-          style={{
             position: 'absolute',
-            top: 8,
-            left: 8,
-            background: 'var(--ink-1)',
-            color: 'var(--paper-cream)',
-            borderColor: 'var(--paper-cream)',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
+          <div
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '30px solid var(--ink)',
+              borderTop: '20px solid transparent',
+              borderBottom: '20px solid transparent',
+            }}
+          />
+        </div>
+        <span className="ck-pill ink" style={{ position: 'absolute', top: 8, left: 8 }}>
           {video.tag}
         </span>
-        <span
-          className="wk-pill"
-          style={{ position: 'absolute', bottom: 8, right: 8, background: 'var(--paper-cream)' }}
-        >
+        <span className="ck-pill" style={{ position: 'absolute', bottom: 8, right: 8 }}>
           {video.mins}
         </span>
       </div>
-      <div style={{ fontFamily: 'var(--font-marker)', fontSize: 20, marginTop: 8 }}>{video.title}</div>
+      <div style={{ padding: 12 }}>
+        <div className="ck-dpy" style={{ fontSize: 20 }}>
+          {video.title}
+        </div>
+      </div>
     </Link>
   );
 }

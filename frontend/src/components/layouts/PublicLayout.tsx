@@ -1,62 +1,61 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/comics', label: 'Comics' },
-  { to: '/wiki', label: 'Wiki' },
-  { to: '/cinema', label: 'Cinema' },
+  { to: '/', label: 'Index', end: true },
+  { to: '/comics', label: 'Dossiers' },
+  { to: '/wiki', label: 'Field Guide' },
+  { to: '/cinema', label: 'Reels' },
 ];
 
 export function PublicLayout() {
   return (
-    <div className="min-h-screen flex flex-col wk-paper">
-      <nav className="wk-topnav">
-        <Link to="/" className="wk-brand">Crime Kickers</Link>
+    <div className="min-h-screen flex flex-col ck-paper">
+      <nav className="ck-topnav">
+        <Link to="/" className="ck-brand">
+          <span className="ck-brand-stamp">CK</span>
+          Crime Kickers
+        </Link>
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end}
-            className={({ isActive }) => `wk-navlink${isActive ? ' on' : ''}`}
+            className={({ isActive }) => `ck-navlink${isActive ? ' on' : ''}`}
           >
             {item.label}
           </NavLink>
         ))}
-        <span style={{ flex: 1 }} />
-        <span
-          style={{
-            fontFamily: 'var(--font-scribble)',
-            color: 'var(--marker-yellow)',
-            fontSize: 16,
-            transform: 'rotate(-3deg)',
-            display: 'inline-block',
-          }}
-        >
-          NEW issue!!
+        <span className="ck-nav-right">
+          <span
+            className="ck-mono"
+            style={{ fontSize: 12, color: 'var(--ink-3)' }}
+          >
+            VOL.04 · ISSUE 41
+          </span>
+          <Link to="/login" className="ck-btn pink sm">
+            Sign in
+          </Link>
         </span>
-        <Link to="/login" className="wk-btn red sm" style={{ transform: 'rotate(0)' }}>
-          Sign in
-        </Link>
       </nav>
       <main className="flex-1" style={{ position: 'relative', zIndex: 1 }}>
         <Outlet />
       </main>
       <footer
         style={{
-          padding: '16px 22px',
-          fontFamily: 'var(--font-hand-sc)',
-          fontSize: 13,
-          letterSpacing: '.06em',
+          padding: '18px 22px',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 12,
+          letterSpacing: '.14em',
           textTransform: 'uppercase',
           color: 'var(--ink-3)',
           textAlign: 'center',
-          borderTop: '2px dashed var(--ink-1)',
-          background: 'transparent',
+          borderTop: '4px double var(--ink)',
+          background: 'var(--paper-bright)',
           position: 'relative',
           zIndex: 1,
         }}
       >
-        © Crime Kickers Hub · all four heroes reserved
+        © Crime Kickers Hub · Field Manual edition · cleared for distribution
       </footer>
     </div>
   );
