@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getStoryBySlug } from '@/lib/api';
 import { ComicReader } from '@/components/ComicReader';
-import { ChevronLeft } from 'lucide-react';
 import type { PublicStory } from '@/lib/api-types';
 
 export const ComicReaderPage = () => {
@@ -31,35 +30,63 @@ export const ComicReaderPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-black text-white">
-        <div className="animate-pulse">Loading...</div>
+      <div style={{ padding: '60px 64px', textAlign: 'center' }}>
+        <span className="wk-eyebrow">Pulling the issue off the shelf...</span>
       </div>
     );
   }
 
   if (error || !story) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen bg-black text-white">
-        <div className="text-red-500 mb-4">{error || 'Story not found'}</div>
-        <Link to="/comics" className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200">
-          Back to Comics
-        </Link>
+      <div style={{ padding: '60px 64px', textAlign: 'center' }}>
+        <div
+          className="wk-sticky"
+          style={{ display: 'inline-block', transform: 'rotate(-1.5deg)', marginBottom: 18 }}
+        >
+          {error || 'We looked everywhere. This issue is not real.'}
+        </div>
+        <div>
+          <Link to="/comics" className="wk-btn red">
+            ← back to the vault
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md text-white px-4 py-3 flex items-center border-b border-gray-800">
-        <Link to="/comics" className="mr-4 p-1 hover:bg-gray-800 rounded-full transition-colors">
-          <ChevronLeft className="w-6 h-6" />
+    <div>
+      <div
+        style={{
+          padding: '16px 64px 0',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 14,
+        }}
+      >
+        <Link to="/comics" className="wk-btn sm ghost">
+          ← all comics
         </Link>
-        <h1 className="text-lg font-bold truncate flex-1">{story.title}</h1>
+        <span className="wk-eyebrow">Issue · {story.title}</span>
       </div>
 
-      {/* Comic Reader */}
-      <ComicReader items={story.items} />
+      <div style={{ padding: '8px 64px 0' }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 48,
+            textTransform: 'uppercase',
+            margin: '8px 0 14px',
+            letterSpacing: '.02em',
+          }}
+        >
+          {story.title}
+        </h2>
+      </div>
+
+      <div style={{ padding: '0 32px 40px' }}>
+        <ComicReader items={story.items} />
+      </div>
     </div>
   );
 };

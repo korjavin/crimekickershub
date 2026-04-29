@@ -1,4 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Patrick+Hand&family=Patrick+Hand+SC&family=Permanent+Marker&family=Special+Elite&family=Shadows+Into+Light&display=swap');
 @import "tailwindcss";
+
+/* ============================================================
+   WIMPY COMICS — Crime Kickers Hub design system
+   "A kid's spiral notebook with comics scribbled in it"
+   ============================================================ */
 
 @theme {
   --color-background: hsl(var(--background));
@@ -26,6 +32,7 @@
 }
 
 :root {
+  /* shadcn legacy tokens — kept so admin shadcn UI still renders */
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
@@ -46,6 +53,48 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
   --radius: 0.5rem;
+
+  /* ===== Wimpy paper ===== */
+  --paper-cream:        #faf3e0;
+  --paper-manila:       #f0d99a;
+  --paper-old:          #e8dcb8;
+  --paper-margin-line:  #f08a8a;
+  --paper-rule-line:    #b8d4e8;
+  --paper-grid:         #d8e6f0;
+
+  /* ===== Wimpy ink ===== */
+  --ink-1:              #1c1a16;
+  --ink-2:              #3a352c;
+  --ink-3:              #6b6354;
+  --ink-4:              #a89e8c;
+  --ink-outline:        #0a0907;
+
+  /* ===== Marker accents ===== */
+  --marker-red:         #e63946;
+  --marker-yellow:      #ffd23f;
+  --marker-blue:        #2d7dd2;
+  --marker-green:       #6cbf3f;
+  --marker-orange:      #f4823c;
+  --marker-purple:      #8e5ea2;
+  --marker-pink:        #ff7eb6;
+
+  /* ===== Highlighter ===== */
+  --hl-yellow:          rgba(255, 226, 89, 0.55);
+  --hl-green:           rgba(150, 230, 130, 0.45);
+  --hl-pink:            rgba(255, 150, 180, 0.45);
+
+  /* ===== Type ===== */
+  --font-display:       'Bangers', 'Impact', system-ui, sans-serif;
+  --font-marker:        'Permanent Marker', 'Bangers', cursive;
+  --font-hand:          'Patrick Hand', 'Comic Sans MS', cursive;
+  --font-hand-sc:       'Patrick Hand SC', 'Patrick Hand', cursive;
+  --font-dialogue:      'Special Elite', 'Courier New', monospace;
+  --font-scribble:      'Shadows Into Light', 'Patrick Hand', cursive;
+
+  /* ===== Sticker shadows ===== */
+  --shadow-sticker-sm:  3px 3px 0 var(--ink-1);
+  --shadow-sticker:     5px 5px 0 var(--ink-1);
+  --shadow-sticker-lg:  8px 8px 0 var(--ink-1);
 }
 
 .dark {
@@ -79,3 +128,260 @@
     color: var(--color-foreground);
   }
 }
+
+/* ============================================================
+   Wimpy components
+   ============================================================ */
+
+/* ----- Notebook paper background ----- */
+.wk-paper {
+  background-color: var(--paper-cream);
+  background-image: linear-gradient(transparent 31px, var(--paper-rule-line) 32px);
+  background-size: 100% 32px;
+  position: relative;
+  color: var(--ink-1);
+  font-family: var(--font-hand);
+}
+.wk-paper::before {
+  content: ""; position: absolute; left: 56px; top: 0; bottom: 0;
+  width: 2px; background: var(--paper-margin-line); opacity: .55;
+  pointer-events: none; z-index: 0;
+}
+.wk-paper > * { position: relative; z-index: 1; }
+
+/* ----- Sticker buttons ----- */
+.wk-btn {
+  font-family: var(--font-display);
+  text-transform: uppercase; letter-spacing: .04em;
+  font-size: 18px; padding: 8px 18px;
+  background: var(--marker-yellow); color: var(--ink-1);
+  border: 3px solid var(--ink-1); border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink-1);
+  cursor: pointer; transform: rotate(-1.2deg);
+  transition: transform .12s, box-shadow .12s;
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  white-space: nowrap; line-height: 1.1;
+}
+.wk-btn:hover { transform: rotate(-1.2deg) translate(-1px,-1px); box-shadow: 6px 6px 0 var(--ink-1); }
+.wk-btn:active { transform: rotate(-1.2deg) translate(3px,3px); box-shadow: 1px 1px 0 var(--ink-1); }
+.wk-btn.red    { background: var(--marker-red); color: var(--paper-cream); }
+.wk-btn.blue   { background: var(--marker-blue); color: var(--paper-cream); transform: rotate(1deg); }
+.wk-btn.blue:hover { transform: rotate(1deg) translate(-1px,-1px); }
+.wk-btn.blue:active { transform: rotate(1deg) translate(3px,3px); }
+.wk-btn.green  { background: var(--marker-green); }
+.wk-btn.ghost  { background: transparent; box-shadow: none; border: 2px dashed var(--ink-1); transform: rotate(0); }
+.wk-btn.ghost:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink-1); }
+.wk-btn.sm     { font-size: 14px; padding: 4px 10px; }
+.wk-btn.xs     { font-size: 12px; padding: 3px 8px; box-shadow: 2px 2px 0 var(--ink-1); }
+.wk-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ----- Sticker cards ----- */
+.wk-card {
+  background: #fffaee;
+  border: 3px solid var(--ink-1);
+  border-radius: 10px;
+  box-shadow: 5px 5px 0 var(--ink-1);
+  padding: 14px;
+  position: relative;
+  color: var(--ink-1);
+}
+.wk-card-tape::before {
+  content: ""; position: absolute; top: -10px; left: 50%;
+  width: 90px; height: 18px; background: rgba(255,226,89,.75);
+  border: 1px dashed rgba(28,26,22,.3);
+  transform: translateX(-50%) rotate(-3deg);
+}
+
+/* ----- Pills / tags ----- */
+.wk-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 11px; border: 2px solid var(--ink-1); border-radius: 999px;
+  font-family: var(--font-hand-sc); font-size: 13px;
+  text-transform: uppercase; letter-spacing: .06em;
+  background: #fffaee;
+  white-space: nowrap;
+  color: var(--ink-1);
+}
+.wk-pill.yellow { background: var(--marker-yellow); }
+.wk-pill.red    { background: var(--marker-red); color: var(--paper-cream); }
+.wk-pill.blue   { background: var(--marker-blue); color: var(--paper-cream); }
+.wk-pill.green  { background: var(--marker-green); }
+.wk-pill.purple { background: var(--marker-purple); color: var(--paper-cream); }
+.wk-pill.orange { background: var(--marker-orange); color: var(--paper-cream); }
+
+/* ----- Eyebrow ----- */
+.wk-eyebrow {
+  font-family: var(--font-hand-sc);
+  font-size: 13px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+
+/* ----- Top nav ----- */
+.wk-topnav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 22px;
+  background: var(--ink-1);
+  color: var(--paper-cream);
+  border-bottom: 4px solid var(--ink-1);
+}
+.wk-topnav .wk-brand {
+  font-family: var(--font-display);
+  font-size: 26px; letter-spacing: .04em;
+  color: var(--marker-yellow);
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+  cursor: pointer; padding-right: 10px;
+  border-right: 2px dashed rgba(255,255,255,.25);
+  text-decoration: none;
+}
+.wk-topnav .wk-navlink {
+  font-family: var(--font-hand-sc);
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--paper-cream);
+  text-decoration: none; font-size: 14px;
+  padding: 4px 9px; border-radius: 6px; cursor: pointer;
+  border: 2px solid transparent;
+}
+.wk-topnav .wk-navlink.on,
+.wk-topnav .wk-navlink[aria-current="page"] {
+  color: var(--ink-1); background: var(--marker-yellow);
+  border: 2px solid var(--paper-cream);
+}
+
+/* ----- Inputs ----- */
+.wk-field {
+  font-family: var(--font-hand);
+  font-size: 16px;
+  background: #fffaee;
+  border: 2px solid var(--ink-1);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--ink-1);
+  width: 100%;
+}
+.wk-field:focus { outline: none; box-shadow: 3px 3px 0 var(--marker-yellow); }
+textarea.wk-field { font-family: var(--font-hand); line-height: 1.4; resize: vertical; }
+select.wk-field { background: #fffaee; cursor: pointer; }
+
+.wk-checkbox-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  border: 2px solid var(--ink-1);
+  border-radius: 999px;
+  background: #fffaee;
+  cursor: pointer;
+  font-family: var(--font-hand);
+  font-size: 15px;
+  user-select: none;
+  transition: transform .12s, box-shadow .12s;
+  color: var(--ink-1);
+}
+.wk-checkbox-pill:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink-1); }
+.wk-checkbox-pill.on { background: var(--marker-yellow); box-shadow: 3px 3px 0 var(--ink-1); }
+.wk-checkbox-pill .wk-dot {
+  width: 14px; height: 14px; border: 2px solid var(--ink-1); border-radius: 4px;
+  background: var(--paper-cream); display: inline-block;
+}
+.wk-checkbox-pill.on .wk-dot { background: var(--ink-1); }
+
+/* ----- Sticky note ----- */
+.wk-sticky {
+  background: var(--marker-yellow);
+  border: 2px solid var(--ink-1);
+  padding: 10px 14px;
+  font-family: var(--font-scribble);
+  font-size: 17px;
+  box-shadow: 4px 4px 0 var(--ink-1);
+  display: inline-block;
+  color: var(--ink-1);
+}
+
+/* ----- Speech bubble ----- */
+.wk-bubble {
+  background: #fff;
+  border: 3px solid var(--ink-1);
+  border-radius: 18px 22px 20px 4px;
+  padding: 8px 14px;
+  font-family: var(--font-dialogue);
+  font-size: 14px;
+  line-height: 1.3;
+  box-shadow: 3px 3px 0 var(--ink-1);
+  display: inline-block;
+  max-width: 280px;
+  color: var(--ink-1);
+}
+.wk-bubble.narration { background: var(--paper-old); }
+
+/* ----- SFX text ----- */
+.wk-sfx {
+  font-family: var(--font-display);
+  font-size: 70px;
+  color: var(--marker-red);
+  text-shadow: 4px 4px 0 var(--ink-1);
+  letter-spacing: .04em;
+  transform: rotate(-8deg);
+  display: inline-block;
+  line-height: 1;
+}
+
+/* ----- Halftone overlay ----- */
+.wk-halftone {
+  background-image: radial-gradient(rgba(28,26,22,.18) 1px, transparent 1.4px);
+  background-size: 6px 6px;
+}
+
+/* ----- Crayon underline ----- */
+.wk-crayon-underline {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 10'><path d='M2 6 Q 50 2 100 5 T 198 4' stroke='%23e63946' stroke-width='4' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 10px;
+  padding-bottom: 8px;
+  display: inline-block;
+}
+
+/* ----- Studio (admin) surfaces ----- */
+.wk-studio-bg {
+  background: #221f18;
+  background-image: radial-gradient(rgba(255,210,63,.04) 1.5px, transparent 1.6px);
+  background-size: 14px 14px;
+  color: var(--paper-cream);
+  font-family: var(--font-hand);
+}
+.wk-studio-card {
+  background: #2c2820;
+  border: 2px solid var(--ink-1);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink-1), inset 0 0 0 1px rgba(255,250,238,.04);
+  color: var(--paper-cream);
+}
+.wk-studio-card .wk-label {
+  font-family: var(--font-hand-sc);
+  font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--marker-yellow);
+}
+.wk-studio-card .wk-field {
+  background: #1a1813;
+  color: var(--paper-cream);
+  border: 2px solid #4a4536;
+}
+.wk-studio-card .wk-field:focus { box-shadow: 3px 3px 0 var(--marker-yellow); border-color: var(--marker-yellow); }
+.wk-studio-table {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--font-hand);
+  font-size: 15px;
+}
+.wk-studio-table th, .wk-studio-table td {
+  padding: 6px 10px; text-align: left;
+  border-bottom: 1px dashed rgba(255,250,238,.18);
+}
+.wk-studio-table th {
+  font-family: var(--font-hand-sc); font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--marker-yellow);
+  border-bottom: 2px solid var(--marker-yellow);
+}
+
+/* ----- Tilt utilities ----- */
+.wk-tilt-l { transform: rotate(-1.2deg); }
+.wk-tilt-r { transform: rotate(1.4deg); }
