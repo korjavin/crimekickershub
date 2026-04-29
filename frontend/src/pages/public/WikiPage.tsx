@@ -71,11 +71,15 @@ export function WikiPage() {
     <div style={{ paddingBottom: 40 }}>
       {!selected && (
         <>
-          <div style={{ padding: '32px 64px 12px' }}>
+          <div className="ck-page-x" style={{ padding: '32px clamp(16px, 5vw, 64px) 12px' }}>
             <div className="ck-eyebrow ck-eyebrow-strong">
               § 02 · Field guide · subjects 001–004
             </div>
-            <h1 className="ck-riso-h" data-shadow="The roster" style={{ fontSize: 88, margin: '8px 0' }}>
+            <h1
+              className="ck-riso-h ck-h-section"
+              data-shadow="The roster"
+              style={{ margin: '8px 0' }}
+            >
               The roster
             </h1>
             <p
@@ -92,7 +96,7 @@ export function WikiPage() {
           </div>
 
           {types.length > 0 && (
-            <div style={{ padding: '0 64px 14px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div className="ck-page-x" style={{ paddingBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
                 className={`ck-chip${filter === 'all' ? ' on' : ''}`}
                 onClick={() => setFilter('all')}
@@ -111,21 +115,14 @@ export function WikiPage() {
             </div>
           )}
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              gap: 22,
-              padding: '10px 64px',
-            }}
-          >
+          <div className="ck-grid ck-grid-2 ck-page-x" style={{ paddingTop: 10 }}>
             {filtered.map((s) => (
               <SubjectCard key={s.id} subject={s} onClick={() => setSelected(s)} />
             ))}
           </div>
 
           {filtered.length === 0 && (
-            <div style={{ padding: '40px 64px', textAlign: 'center' }}>
+            <div className="ck-page-x" style={{ padding: '40px clamp(16px, 5vw, 64px)', textAlign: 'center' }}>
               <p
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -166,10 +163,9 @@ function SubjectCard({
           onClick();
         }
       }}
-      className="ck-card"
+      className="ck-card ck-grid-subject"
       style={{
         display: 'grid',
-        gridTemplateColumns: '180px minmax(0, 1fr)',
         gap: 18,
         cursor: 'pointer',
         background: 'var(--paper-bright)',
@@ -200,7 +196,7 @@ function SubjectCard({
         <div className="ck-mono" style={{ fontSize: 11, color: 'var(--ink-3)' }}>
           SUBJECT {design.code}
         </div>
-        <div className="ck-dpy" style={{ fontSize: 38, lineHeight: 1 }}>
+        <div className="ck-dpy" style={{ fontSize: 'clamp(28px, 5.5vw, 38px)', lineHeight: 1 }}>
           {subject.name}
         </div>
         <div
@@ -234,12 +230,8 @@ function SubjectProfile({
   const { design } = subject;
   return (
     <div
-      style={{
-        padding: '12px 64px',
-        display: 'grid',
-        gridTemplateColumns: '300px minmax(0, 1fr)',
-        gap: 32,
-      }}
+      className="ck-grid ck-grid-side ck-page-x"
+      style={{ paddingTop: 12, paddingBottom: 12, gap: 32 }}
     >
       <div>
         <button className="ck-btn ghost sm" onClick={onBack}>
@@ -305,9 +297,9 @@ function SubjectProfile({
       <div>
         <div className="ck-eyebrow ck-eyebrow-strong">Subject {design.code} · Field profile</div>
         <h1
-          className="ck-riso-h"
+          className="ck-riso-h ck-h-section"
           data-shadow={subject.name}
-          style={{ fontSize: 88, margin: '6px 0 6px' }}
+          style={{ margin: '6px 0 6px' }}
         >
           {subject.name}
         </h1>

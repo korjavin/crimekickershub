@@ -30,7 +30,7 @@ export const ComicReaderPage = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '60px 64px', textAlign: 'center' }}>
+      <div className="ck-page-x" style={{ padding: '60px clamp(16px, 5vw, 64px)', textAlign: 'center' }}>
         <span className="ck-eyebrow">Pulling file from the cabinet…</span>
       </div>
     );
@@ -38,7 +38,7 @@ export const ComicReaderPage = () => {
 
   if (error || !story) {
     return (
-      <div style={{ padding: '60px 64px', textAlign: 'center' }}>
+      <div className="ck-page-x" style={{ padding: '60px clamp(16px, 5vw, 64px)', textAlign: 'center' }}>
         <div style={{ marginBottom: 18 }}>
           <span className="ck-note pink">{error || 'No such file in the vault.'}</span>
         </div>
@@ -56,8 +56,9 @@ export const ComicReaderPage = () => {
   return (
     <div>
       <div
+        className="ck-page-x"
         style={{
-          padding: '16px 64px 0',
+          padding: '16px clamp(16px, 5vw, 64px) 0',
           display: 'flex',
           alignItems: 'baseline',
           gap: 14,
@@ -72,14 +73,18 @@ export const ComicReaderPage = () => {
         </span>
       </div>
 
-      <div style={{ padding: '8px 64px 0' }}>
+      <div className="ck-page-x" style={{ paddingTop: 8 }}>
         <div className="ck-eyebrow ck-eyebrow-strong">Dossier</div>
-        <h2 className="ck-riso-h" data-shadow={story.title} style={{ fontSize: 56, margin: '6px 0 14px' }}>
+        <h2
+          className="ck-riso-h ck-h-display"
+          data-shadow={story.title}
+          style={{ margin: '6px 0 14px' }}
+        >
           {story.title}
         </h2>
       </div>
 
-      <div style={{ padding: '0 32px 40px' }}>
+      <div style={{ padding: '0 clamp(8px, 3vw, 32px) 40px' }}>
         <ComicReader items={story.items} />
       </div>
     </div>

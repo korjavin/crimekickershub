@@ -31,30 +31,27 @@ export const ComicListPage = () => {
 
   return (
     <div style={{ paddingBottom: 40 }}>
-      <div style={{ padding: '32px 64px 16px' }}>
+      <div className="ck-page-x" style={{ padding: '32px clamp(16px, 5vw, 64px) 16px' }}>
         <div className="ck-eyebrow ck-eyebrow-strong">
           § 01 · Dossiers · {stories.length || STORIES.length} of 41 visible
         </div>
-        <h1 className="ck-riso-h" data-shadow="The Vault" style={{ fontSize: 84, margin: '8px 0' }}>
+        <h1
+          className="ck-riso-h ck-h-section"
+          data-shadow="The Vault"
+          style={{ margin: '8px 0' }}
+        >
           The Vault
         </h1>
       </div>
 
       {loading && (
-        <div style={{ padding: '40px 64px', textAlign: 'center' }}>
+        <div className="ck-page-x" style={{ padding: '40px clamp(16px, 5vw, 64px)', textAlign: 'center' }}>
           <span className="ck-eyebrow">Pulling files from the cabinet…</span>
         </div>
       )}
 
       {!loading && stories.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: 22,
-            padding: '0 64px',
-          }}
-        >
+        <div className="ck-grid ck-grid-3 ck-page-x">
           {stories.map((s, i) => (
             <LiveDossierCard
               key={s.id}
@@ -69,19 +66,12 @@ export const ComicListPage = () => {
 
       {!loading && stories.length === 0 && (
         <>
-          <div style={{ padding: '0 64px 16px' }}>
+          <div className="ck-page-x" style={{ paddingBottom: 16 }}>
             <span className="ck-note">
               No live files yet — preview entries below for what the vault will hold.
             </span>
           </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gap: 22,
-              padding: '0 64px',
-            }}
-          >
+          <div className="ck-grid ck-grid-3 ck-page-x">
             {STORIES.map((s, i) => (
               <PreviewDossierCard
                 key={s.id}

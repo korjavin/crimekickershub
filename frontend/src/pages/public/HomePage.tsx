@@ -41,31 +41,34 @@ export function HomePage() {
   return (
     <div style={{ paddingBottom: 40 }}>
       {/* Masthead */}
-      <section style={{ padding: '36px 64px 8px' }}>
+      <section className="ck-page-x" style={{ padding: '36px clamp(16px, 5vw, 64px) 8px' }}>
         <div className="ck-eyebrow ck-eyebrow-strong">
           Vol. 04 · Index · Cleared for distribution
         </div>
-        <h1 className="ck-riso-h" data-shadow="Crime Kickers" style={{ fontSize: 124, margin: '10px 0 6px' }}>
+        <h1
+          className="ck-riso-h ck-h-mast"
+          data-shadow="Crime Kickers"
+          style={{ margin: '10px 0 6px' }}
+        >
           Crime Kickers
         </h1>
-        <div className="ck-dpy" style={{ fontSize: 26, color: 'var(--riso-blue)', marginTop: -4 }}>
+        <div
+          className="ck-dpy"
+          style={{ fontSize: 'clamp(18px, 3vw, 26px)', color: 'var(--riso-blue)', marginTop: -4 }}
+        >
           A field manual / Issue forty-one
         </div>
       </section>
-      <hr className="ck-divider-double" style={{ margin: '14px 64px' }} />
+      <hr className="ck-divider-double" style={{ marginLeft: 'clamp(16px, 5vw, 64px)', marginRight: 'clamp(16px, 5vw, 64px)' }} />
 
       {/* Feature row */}
       <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)',
-          gap: 30,
-          padding: '0 64px 30px',
-        }}
+        className="ck-grid ck-grid-feature ck-page-x"
+        style={{ gap: 30, paddingTop: 0, paddingBottom: 30 }}
       >
         <div>
           <div className="ck-eyebrow">Lead dossier</div>
-          <h2 className="ck-dpy" style={{ fontSize: 56, margin: '6px 0 14px' }}>
+          <h2 className="ck-dpy ck-h-display" style={{ margin: '6px 0 14px' }}>
             Four kids.
             <br />
             One <span className="ck-hl-pink">cafeteria.</span>
@@ -104,14 +107,7 @@ export function HomePage() {
 
       {/* Latest dossiers */}
       <SectionHead num="01" title="Latest dossiers" cta="See all →" toCta="/comics" />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: 22,
-          padding: '0 64px',
-        }}
-      >
+      <div className="ck-grid ck-grid-3 ck-page-x">
         {liveStories.length > 0
           ? liveStories.map((s, i) => (
               <LiveDossierCard
@@ -129,14 +125,7 @@ export function HomePage() {
 
       {/* Field guide */}
       <SectionHead num="02" title="Field guide" cta="All entries →" toCta="/wiki" />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-          gap: 18,
-          padding: '0 64px',
-        }}
-      >
+      <div className="ck-grid ck-grid-4 ck-page-x" style={{ gap: 18 }}>
         {liveHeroes.length > 0
           ? liveHeroes.map((h) => <LiveHeroIndexCard key={h.id} entity={h} />)
           : HEROES.map((h) => <HeroIndexCard key={h.id} hero={h} />)}
@@ -144,14 +133,7 @@ export function HomePage() {
 
       {/* Reels */}
       <SectionHead num="03" title="Surveillance reels" cta="Watch all →" toCta="/cinema" />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: 22,
-          padding: '0 64px 40px',
-        }}
-      >
+      <div className="ck-grid ck-grid-3 ck-page-x" style={{ paddingBottom: 40 }}>
         {VIDEOS.slice(0, 3).map((v) => (
           <ReelCard key={v.id} video={v} />
         ))}
@@ -173,17 +155,19 @@ function SectionHead({
 }) {
   return (
     <div
+      className="ck-page-x"
       style={{
         display: 'flex',
         alignItems: 'baseline',
-        gap: 18,
-        padding: '32px 64px 14px',
+        gap: 14,
+        padding: '32px clamp(16px, 5vw, 64px) 14px',
+        flexWrap: 'wrap',
       }}
     >
       <span className="ck-mono" style={{ fontSize: 14, color: 'var(--riso-pink)' }}>
         § {num}
       </span>
-      <h2 className="ck-dpy" style={{ fontSize: 32, margin: 0 }}>
+      <h2 className="ck-dpy" style={{ fontSize: 'clamp(22px, 4.5vw, 32px)', margin: 0 }}>
         {title}
       </h2>
       <div
@@ -208,8 +192,8 @@ function SectionHead({
 function FeaturedFile({ story, hero }: { story: StoryDesign; hero: Hero }) {
   return (
     <div
-      className="ck-card color-shadow"
-      style={{ width: 360, padding: 0, background: 'var(--paper-bright)' }}
+      className="ck-card color-shadow ck-feature-file"
+      style={{ padding: 0, background: 'var(--paper-bright)' }}
     >
       <div
         style={{

@@ -22,16 +22,21 @@ export function CinemaPage() {
 
   return (
     <div style={{ paddingBottom: 40 }}>
-      <div style={{ padding: '32px 64px 8px' }}>
+      <div className="ck-page-x" style={{ padding: '32px clamp(16px, 5vw, 64px) 8px' }}>
         <div className="ck-eyebrow ck-eyebrow-strong">§ 03 · Surveillance reels</div>
-        <h1 className="ck-riso-h" data-shadow="The Reels" style={{ fontSize: 84, margin: '8px 0' }}>
+        <h1
+          className="ck-riso-h ck-h-section"
+          data-shadow="The Reels"
+          style={{ margin: '8px 0' }}
+        >
           The Reels
         </h1>
       </div>
 
       <div
+        className="ck-page-x"
         style={{
-          padding: '0 64px 14px',
+          paddingBottom: 14,
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
@@ -63,13 +68,8 @@ export function CinemaPage() {
       </div>
 
       <div
-        style={{
-          padding: '0 64px',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
-          gap: 28,
-          alignItems: 'start',
-        }}
+        className="ck-grid ck-grid-cinema ck-page-x"
+        style={{ gap: 28, alignItems: 'start' }}
       >
         <div>
           <div
@@ -157,7 +157,7 @@ export function CinemaPage() {
               </>
             )}
           </div>
-          <h2 className="ck-dpy" style={{ fontSize: 30, marginTop: 14 }}>
+          <h2 className="ck-dpy" style={{ fontSize: 'clamp(22px, 4vw, 30px)', marginTop: 14 }}>
             {active.title}
           </h2>
           <p
