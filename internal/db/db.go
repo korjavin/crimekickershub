@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Migration represents a database migration.
@@ -23,7 +23,9 @@ func NewDB(filepath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
 
-	db, err := sql.Open("sqlite3", filepath)
+	// modernc.org/sqlite (pure-Go driver) registers itself under the name
+	// "sqlite", so no CGO/C toolchain is needed to build or run.
+	db, err := sql.Open("sqlite", filepath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}

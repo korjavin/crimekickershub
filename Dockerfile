@@ -1,45 +1,48 @@
+# syntax=docker/dockerfile:1
+
 # Build stage for frontend
 FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Copy frontend package files
+# Copy manifests first so `npm ci` is only re-run when dependencies change.
 COPY frontend/package*.json ./
 
-# Install frontend dependencies
-RUN npm ci
+# Cache the npm download dir so warm builds skip re-downloading packages.
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
-# Copy frontend source code
+# Copy frontend source and build for production.
 COPY frontend/ ./
-
-# Build frontend for production
 RUN npm run build
 
 # Build stage for Go backend
-FROM golang:1.24-alpine AS backend-builder
+FROM golang:1.25-alpine AS backend-builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache git gcc musl-dev sqlite-dev
-
-# Copy go mod files
+# Download modules into the layer filesystem (no cache mount) so a layer-cache
+# hit on this step — go.mod/go.sum unchanged — also carries the modules along.
+# A cache-mount here would write modules to a separate BuildKit volume that the
+# GHA layer-cache import does not restore, leaving /go/pkg/mod empty for the
+# build step and forcing a full re-download on every CI run.
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
-# Copy source code
+# Copy source and build. CGO_ENABLED=0 produces a static binary using the
+# pure-Go SQLite driver (modernc.org/sqlite) — no C toolchain or sqlite-dev
+# needed. Mount only the go-build cache here; mounting /go/pkg/mod would
+# shadow the modules baked into the previous layer.
 COPY . .
-
-# Build the Go binary
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/server
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
 
 # Final stage - minimal runtime image
 FROM alpine:latest
 
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates sqlite-libs tzdata
+# ca-certificates for outbound HTTPS (S3, OAuth); tzdata for time zones.
+# No sqlite-libs: SQLite is compiled into the static Go binary.
+RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /app
 
@@ -52,7 +55,8 @@ COPY --from=backend-builder /app/server .
 # Copy the built frontend from frontend-builder
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Copy SQL migration files if they exist
+# Copy SQL files (runtime migrations are embedded in the binary via go:embed;
+# these are kept for parity with the previous image layout).
 COPY sql/ ./sql/
 
 # Expose port 8080
