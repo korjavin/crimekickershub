@@ -4,7 +4,20 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '**/*_test.go'
+      - 'screenshots/**'
+      - 'tasks/**'
+      - '.gitignore'
   workflow_dispatch:
+
+# Serialize deploys to master so concurrent runs don't race on the force-push
+# to the deploy branch. Don't cancel an in-progress deploy mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
