@@ -255,6 +255,29 @@ INNER JOIN (
     SELECT entity_id, type_id, MAX(version_number) as max_version
     FROM prompt_versions
     GROUP BY entity_id, type_id
-) latest ON pv.entity_id = latest.entity_id 
-        AND pv.type_id = latest.type_id 
+) latest ON pv.entity_id = latest.entity_id
+        AND pv.type_id = latest.type_id
         AND pv.version_number = latest.max_version;
+
+-- name: ListPublishedVideos :many
+SELECT * FROM videos WHERE published = 1 ORDER BY sort_order, id;
+
+-- name: ListVideos :many
+SELECT * FROM videos ORDER BY sort_order, id;
+
+-- name: GetVideo :one
+SELECT * FROM videos WHERE id = ?;
+
+-- name: CreateVideo :one
+INSERT INTO videos (title, youtube_id, description, mins, tag, color, tags, sort_order, published)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING *;
+
+-- name: UpdateVideo :one
+UPDATE videos
+SET title = ?, youtube_id = ?, description = ?, mins = ?, tag = ?, color = ?, tags = ?, sort_order = ?, published = ?
+WHERE id = ?
+RETURNING *;
+
+-- name: DeleteVideo :exec
+DELETE FROM videos WHERE id = ?;

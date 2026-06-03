@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -92,6 +93,9 @@ func (r *Router) publicRoutes() {
 	r.mux.HandleFunc("GET /api/comics", r.handleListStories)
 	r.mux.HandleFunc("GET /api/comics/{slug}", r.handleGetStoryBySlug)
 
+	// Videos (public - published reels for the Cinema tab)
+	r.mux.HandleFunc("GET /api/videos", r.handleListVideos)
+
 	// Auth endpoints (public - need to check session)
 	r.mux.HandleFunc("GET /api/auth/me", r.handleAuthMe)
 	r.mux.HandleFunc("POST /api/auth/logout", r.handleAuthLogout)
@@ -155,6 +159,12 @@ func (r *Router) adminRoutes() {
 	r.mux.Handle("POST /api/admin/entity-types", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateEntityType)))
 	r.mux.Handle("PUT /api/admin/entity-types/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateEntityType)))
 	r.mux.Handle("DELETE /api/admin/entity-types/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteEntityType)))
+
+	// Videos management (admin only)
+	r.mux.Handle("GET /api/admin/videos", r.auth.RequireAdmin(http.HandlerFunc(r.handleListVideosAdmin)))
+	r.mux.Handle("POST /api/admin/videos", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateVideo)))
+	r.mux.Handle("PUT /api/admin/videos/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateVideo)))
+	r.mux.Handle("DELETE /api/admin/videos/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteVideo)))
 
 	// Matrix view (admin only)
 	r.mux.Handle("GET /api/admin/matrix", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetMatrix)))
@@ -1995,6 +2005,206 @@ func (r *Router) handleDeleteEntityType(w http.ResponseWriter, req *http.Request
 	err := r.repo.DeleteEntityType(req.Context(), id)
 	if err != nil {
 		http.Error(w, "Failed to delete entity type: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, map[string]bool{"success": true})
+}
+
+// Video Handlers
+
+// VideoDTO is the public/admin shape for a Cinema reel.
+type VideoDTO struct {
+	ID          int64    `json:"id"`
+	Title       string   `json:"title"`
+	YoutubeID   string   `json:"youtube_id"`
+	Description string   `json:"description"`
+	Mins        string   `json:"mins"`
+	Tag         string   `json:"tag"`
+	Color       string   `json:"color"`
+	Tags        []string `json:"tags"`
+	SortOrder   int64    `json:"sort_order"`
+	Published   bool     `json:"published"`
+}
+
+func toVideoDTO(v repository.Video) VideoDTO {
+	return VideoDTO{
+		ID:          v.ID,
+		Title:       v.Title,
+		YoutubeID:   v.YoutubeID,
+		Description: v.Description.String,
+		Mins:        v.Mins.String,
+		Tag:         v.Tag.String,
+		Color:       v.Color.String,
+		Tags:        splitTags(v.Tags.String),
+		SortOrder:   v.SortOrder,
+		Published:   v.Published,
+	}
+}
+
+func toVideoDTOs(videos []repository.Video) []VideoDTO {
+	dtos := make([]VideoDTO, len(videos))
+	for i, v := range videos {
+		dtos[i] = toVideoDTO(v)
+	}
+	return dtos
+}
+
+// splitTags turns a stored comma-separated tag string into a clean slice.
+func splitTags(s string) []string {
+	out := []string{}
+	for _, part := range strings.Split(s, ",") {
+		if t := strings.TrimSpace(part); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// joinTags normalizes a tag slice back into the stored comma-separated form.
+func joinTags(tags []string) string {
+	cleaned := make([]string, 0, len(tags))
+	for _, t := range tags {
+		if t = strings.TrimSpace(t); t != "" {
+			cleaned = append(cleaned, t)
+		}
+	}
+	return strings.Join(cleaned, ",")
+}
+
+var youtubeIDRe = regexp.MustCompile(`(?:youtu\.be/|/v/|/embed/|watch\?v=|&v=|/shorts/)([A-Za-z0-9_-]{11})`)
+
+// normalizeYouTubeID accepts a full YouTube URL or a bare 11-char ID and returns the ID.
+func normalizeYouTubeID(input string) string {
+	input = strings.TrimSpace(input)
+	if m := youtubeIDRe.FindStringSubmatch(input); m != nil {
+		return m[1]
+	}
+	return input
+}
+
+// videoInput is the request body for creating/updating a video.
+type videoInput struct {
+	Title       string   `json:"title"`
+	YoutubeID   string   `json:"youtube_id"`
+	Description string   `json:"description"`
+	Mins        string   `json:"mins"`
+	Tag         string   `json:"tag"`
+	Color       string   `json:"color"`
+	Tags        []string `json:"tags"`
+	SortOrder   int64    `json:"sort_order"`
+	Published   *bool    `json:"published"`
+}
+
+func nullStr(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: s != ""}
+}
+
+func (r *Router) handleListVideos(w http.ResponseWriter, req *http.Request) {
+	videos, err := r.repo.ListPublishedVideos(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list videos: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toVideoDTOs(videos))
+}
+
+func (r *Router) handleListVideosAdmin(w http.ResponseWriter, req *http.Request) {
+	videos, err := r.repo.ListVideos(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list videos: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toVideoDTOs(videos))
+}
+
+func (r *Router) handleCreateVideo(w http.ResponseWriter, req *http.Request) {
+	var input videoInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	ytID := normalizeYouTubeID(input.YoutubeID)
+	if strings.TrimSpace(input.Title) == "" || ytID == "" {
+		http.Error(w, "title and youtube_id are required", http.StatusBadRequest)
+		return
+	}
+
+	published := true
+	if input.Published != nil {
+		published = *input.Published
+	}
+
+	v, err := r.repo.CreateVideo(req.Context(), repository.CreateVideoParams{
+		Title:       input.Title,
+		YoutubeID:   ytID,
+		Description: nullStr(input.Description),
+		Mins:        nullStr(input.Mins),
+		Tag:         nullStr(input.Tag),
+		Color:       nullStr(input.Color),
+		Tags:        nullStr(joinTags(input.Tags)),
+		SortOrder:   input.SortOrder,
+		Published:   published,
+	})
+	if err != nil {
+		http.Error(w, "Failed to create video: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toVideoDTO(v))
+}
+
+func (r *Router) handleUpdateVideo(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input videoInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	ytID := normalizeYouTubeID(input.YoutubeID)
+	if strings.TrimSpace(input.Title) == "" || ytID == "" {
+		http.Error(w, "title and youtube_id are required", http.StatusBadRequest)
+		return
+	}
+
+	published := true
+	if input.Published != nil {
+		published = *input.Published
+	}
+
+	v, err := r.repo.UpdateVideo(req.Context(), repository.UpdateVideoParams{
+		Title:       input.Title,
+		YoutubeID:   ytID,
+		Description: nullStr(input.Description),
+		Mins:        nullStr(input.Mins),
+		Tag:         nullStr(input.Tag),
+		Color:       nullStr(input.Color),
+		Tags:        nullStr(joinTags(input.Tags)),
+		SortOrder:   input.SortOrder,
+		Published:   published,
+		ID:          id,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update video: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toVideoDTO(v))
+}
+
+func (r *Router) handleDeleteVideo(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.repo.DeleteVideo(req.Context(), id); err != nil {
+		http.Error(w, "Failed to delete video: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	respondJSON(w, map[string]bool{"success": true})

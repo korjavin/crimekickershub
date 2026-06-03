@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getStories, getHeroes } from '@/lib/api';
+import { getStories, getHeroes, getVideos, type Video } from '@/lib/api';
 import type { Story, Entity } from '@/lib/api-types';
 import { HeroStamp, CoverPlate } from '@/components/wimpy/HeroPortrait';
 import {
@@ -12,18 +12,24 @@ import {
   risoColorVar,
   sfxForIndex,
 } from '@/components/wimpy/data';
-import type { Hero, RisoColor, StoryDesign, VideoDesign } from '@/components/wimpy/data';
+import type { Hero, RisoColor, StoryDesign } from '@/components/wimpy/data';
 
 export function HomePage() {
   const [stories, setStories] = useState<Story[]>([]);
   const [heroes, setHeroes] = useState<Entity[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getStories().catch(() => []), getHeroes().catch(() => [])]).then(([s, h]) => {
+    Promise.all([
+      getStories().catch(() => []),
+      getHeroes().catch(() => []),
+      getVideos().catch(() => []),
+    ]).then(([s, h, v]) => {
       if (cancelled) return;
       setStories(s ?? []);
       setHeroes(h ?? []);
+      setVideos(v ?? []);
     });
     return () => {
       cancelled = true;
@@ -134,7 +140,7 @@ export function HomePage() {
       {/* Reels */}
       <SectionHead num="03" title="Surveillance reels" cta="Watch all →" toCta="/cinema" />
       <div className="ck-grid ck-grid-3 ck-page-x" style={{ paddingBottom: 40 }}>
-        {VIDEOS.slice(0, 3).map((v) => (
+        {(videos.length > 0 ? videos : VIDEOS).slice(0, 3).map((v) => (
           <ReelCard key={v.id} video={v} />
         ))}
       </div>
@@ -381,7 +387,11 @@ function LiveHeroIndexCard({ entity }: { entity: Entity }) {
   );
 }
 
-function ReelCard({ video }: { video: VideoDesign }) {
+function ReelCard({
+  video,
+}: {
+  video: { id: number | string; title: string; color: string; tag: string; mins: string };
+}) {
   return (
     <Link
       to="/cinema"
@@ -392,7 +402,7 @@ function ReelCard({ video }: { video: VideoDesign }) {
         className="ck-plate"
         style={{
           height: 140,
-          background: risoColorVar(video.color),
+          background: risoColorVar(video.color as RisoColor),
           borderBottom: '2px solid var(--ink)',
           borderTop: 'none',
           borderLeft: 'none',

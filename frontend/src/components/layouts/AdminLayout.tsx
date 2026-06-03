@@ -11,6 +11,7 @@ const navItems = [
   { path: '/admin/types', label: 'Prompt Types', icon: '📝' },
   { path: '/admin/media', label: 'Media Assets', icon: '🖼️' },
   { path: '/admin/stories', label: 'Story Builder', icon: '📚' },
+  { path: '/admin/videos', label: 'Videos', icon: '🎬' },
   { path: '/admin/entities', label: 'Entities', icon: '👤' },
   { path: '/admin/entity-types', label: 'Entity Types', icon: '🏷️' },
 ];

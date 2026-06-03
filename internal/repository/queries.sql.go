@@ -238,6 +238,53 @@ func (q *Queries) CreateStory(ctx context.Context, arg CreateStoryParams) (Story
 	return i, err
 }
 
+const createVideo = `-- name: CreateVideo :one
+INSERT INTO videos (title, youtube_id, description, mins, tag, color, tags, sort_order, published)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, title, youtube_id, description, mins, tag, color, tags, sort_order, published, created_at
+`
+
+type CreateVideoParams struct {
+	Title       string         `json:"title"`
+	YoutubeID   string         `json:"youtube_id"`
+	Description sql.NullString `json:"description"`
+	Mins        sql.NullString `json:"mins"`
+	Tag         sql.NullString `json:"tag"`
+	Color       sql.NullString `json:"color"`
+	Tags        sql.NullString `json:"tags"`
+	SortOrder   int64          `json:"sort_order"`
+	Published   bool           `json:"published"`
+}
+
+func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) (Video, error) {
+	row := q.db.QueryRowContext(ctx, createVideo,
+		arg.Title,
+		arg.YoutubeID,
+		arg.Description,
+		arg.Mins,
+		arg.Tag,
+		arg.Color,
+		arg.Tags,
+		arg.SortOrder,
+		arg.Published,
+	)
+	var i Video
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.YoutubeID,
+		&i.Description,
+		&i.Mins,
+		&i.Tag,
+		&i.Color,
+		&i.Tags,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const deleteEntity = `-- name: DeleteEntity :exec
 DELETE FROM entities WHERE id = ?
 `
@@ -289,6 +336,15 @@ DELETE FROM story_items WHERE id = ?
 
 func (q *Queries) DeleteStoryItem(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteStoryItem, id)
+	return err
+}
+
+const deleteVideo = `-- name: DeleteVideo :exec
+DELETE FROM videos WHERE id = ?
+`
+
+func (q *Queries) DeleteVideo(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteVideo, id)
 	return err
 }
 
@@ -711,6 +767,29 @@ func (q *Queries) GetUserByGoogleID(ctx context.Context, googleID string) (User,
 	return i, err
 }
 
+const getVideo = `-- name: GetVideo :one
+SELECT id, title, youtube_id, description, mins, tag, color, tags, sort_order, published, created_at FROM videos WHERE id = ?
+`
+
+func (q *Queries) GetVideo(ctx context.Context, id int64) (Video, error) {
+	row := q.db.QueryRowContext(ctx, getVideo, id)
+	var i Video
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.YoutubeID,
+		&i.Description,
+		&i.Mins,
+		&i.Tag,
+		&i.Color,
+		&i.Tags,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listAllMediaAssets = `-- name: ListAllMediaAssets :many
 SELECT id, type, r2_key, youtube_id, source_prompt_version_id, created_at, title, description, text_content, entity_id FROM media_assets ORDER BY created_at DESC
 `
@@ -975,8 +1054,8 @@ INNER JOIN (
     SELECT entity_id, type_id, MAX(version_number) as max_version
     FROM prompt_versions
     GROUP BY entity_id, type_id
-) latest ON pv.entity_id = latest.entity_id 
-        AND pv.type_id = latest.type_id 
+) latest ON pv.entity_id = latest.entity_id
+        AND pv.type_id = latest.type_id
         AND pv.version_number = latest.max_version
 `
 
@@ -1258,6 +1337,45 @@ func (q *Queries) ListPublishedStories(ctx context.Context) ([]Story, error) {
 	return items, nil
 }
 
+const listPublishedVideos = `-- name: ListPublishedVideos :many
+SELECT id, title, youtube_id, description, mins, tag, color, tags, sort_order, published, created_at FROM videos WHERE published = 1 ORDER BY sort_order, id
+`
+
+func (q *Queries) ListPublishedVideos(ctx context.Context) ([]Video, error) {
+	rows, err := q.db.QueryContext(ctx, listPublishedVideos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Video
+	for rows.Next() {
+		var i Video
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.YoutubeID,
+			&i.Description,
+			&i.Mins,
+			&i.Tag,
+			&i.Color,
+			&i.Tags,
+			&i.SortOrder,
+			&i.Published,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRecentEntities = `-- name: ListRecentEntities :many
 SELECT e.id, e.slug, e.name, e.type, e.description, e.avatar_url, e.created_at, e.base_prompt, e.entity_type_id, e.avatar_thumbnail_url, et.name as type_name, et.slug as type_slug
 FROM entities e
@@ -1461,6 +1579,45 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Email,
 			&i.GoogleID,
 			&i.Role,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listVideos = `-- name: ListVideos :many
+SELECT id, title, youtube_id, description, mins, tag, color, tags, sort_order, published, created_at FROM videos ORDER BY sort_order, id
+`
+
+func (q *Queries) ListVideos(ctx context.Context) ([]Video, error) {
+	rows, err := q.db.QueryContext(ctx, listVideos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Video
+	for rows.Next() {
+		var i Video
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.YoutubeID,
+			&i.Description,
+			&i.Mins,
+			&i.Tag,
+			&i.Color,
+			&i.Tags,
+			&i.SortOrder,
+			&i.Published,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -1683,6 +1840,56 @@ type UpdateUserRoleParams struct {
 func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error {
 	_, err := q.db.ExecContext(ctx, updateUserRole, arg.Role, arg.ID)
 	return err
+}
+
+const updateVideo = `-- name: UpdateVideo :one
+UPDATE videos
+SET title = ?, youtube_id = ?, description = ?, mins = ?, tag = ?, color = ?, tags = ?, sort_order = ?, published = ?
+WHERE id = ?
+RETURNING id, title, youtube_id, description, mins, tag, color, tags, sort_order, published, created_at
+`
+
+type UpdateVideoParams struct {
+	Title       string         `json:"title"`
+	YoutubeID   string         `json:"youtube_id"`
+	Description sql.NullString `json:"description"`
+	Mins        sql.NullString `json:"mins"`
+	Tag         sql.NullString `json:"tag"`
+	Color       sql.NullString `json:"color"`
+	Tags        sql.NullString `json:"tags"`
+	SortOrder   int64          `json:"sort_order"`
+	Published   bool           `json:"published"`
+	ID          int64          `json:"id"`
+}
+
+func (q *Queries) UpdateVideo(ctx context.Context, arg UpdateVideoParams) (Video, error) {
+	row := q.db.QueryRowContext(ctx, updateVideo,
+		arg.Title,
+		arg.YoutubeID,
+		arg.Description,
+		arg.Mins,
+		arg.Tag,
+		arg.Color,
+		arg.Tags,
+		arg.SortOrder,
+		arg.Published,
+		arg.ID,
+	)
+	var i Video
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.YoutubeID,
+		&i.Description,
+		&i.Mins,
+		&i.Tag,
+		&i.Color,
+		&i.Tags,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const upsertUser = `-- name: UpsertUser :one

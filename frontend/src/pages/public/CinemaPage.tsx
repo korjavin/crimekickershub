@@ -1,16 +1,32 @@
-import { useState } from 'react';
-import { VIDEOS, risoColorVar } from '@/components/wimpy/data';
-import type { VideoDesign } from '@/components/wimpy/data';
-import { getYouTubeEmbedUrl, getYouTubeThumbnail } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { risoColorVar } from '@/components/wimpy/data';
+import type { RisoColor } from '@/components/wimpy/data';
+import { getVideos, getYouTubeEmbedUrl, getYouTubeThumbnail, type Video } from '@/lib/api';
+
+// Videos are managed via the admin panel (/admin/videos) and served from /api/videos.
+const colorVar = (c: string) => risoColorVar(c as RisoColor);
 
 export function CinemaPage() {
-  const [activeId, setActiveId] = useState<string>(VIDEOS[0].id);
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeId, setActiveId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
 
-  const allTags = Array.from(new Set(VIDEOS.flatMap((v) => v.tags)));
-  const filtered = VIDEOS.filter((v) => {
+  useEffect(() => {
+    getVideos()
+      .then((data) => {
+        const list = data || [];
+        setVideos(list);
+        if (list.length > 0) setActiveId(list[0].id);
+      })
+      .catch((err) => console.error('Failed to load videos:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const allTags = Array.from(new Set(videos.flatMap((v) => v.tags)));
+  const filtered = videos.filter((v) => {
     const q = search.toLowerCase();
     const matchSearch =
       !q || v.title.toLowerCase().includes(q) || v.description.toLowerCase().includes(q);
@@ -18,20 +34,60 @@ export function CinemaPage() {
     return matchSearch && matchTag;
   });
 
-  const active: VideoDesign = VIDEOS.find((v) => v.id === activeId) ?? VIDEOS[0];
+  const active: Video | undefined = videos.find((v) => v.id === activeId) ?? videos[0];
+
+  const Header = (
+    <div className="ck-page-x" style={{ padding: '32px clamp(16px, 5vw, 64px) 8px' }}>
+      <div className="ck-eyebrow ck-eyebrow-strong">§ 03 · Surveillance reels</div>
+      <h1 className="ck-riso-h ck-h-section" data-shadow="The Reels" style={{ margin: '8px 0' }}>
+        The Reels
+      </h1>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div style={{ paddingBottom: 40 }}>
+        {Header}
+        <div
+          className="ck-page-x ck-mono"
+          style={{
+            fontSize: 13,
+            letterSpacing: '.12em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-3)',
+            padding: '24px 4px',
+          }}
+        >
+          Loading the reels…
+        </div>
+      </div>
+    );
+  }
+
+  if (!active) {
+    return (
+      <div style={{ paddingBottom: 40 }}>
+        {Header}
+        <div
+          className="ck-page-x ck-mono"
+          style={{
+            fontSize: 13,
+            letterSpacing: '.12em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-3)',
+            padding: '24px 4px',
+          }}
+        >
+          No reels yet. Check back soon.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ paddingBottom: 40 }}>
-      <div className="ck-page-x" style={{ padding: '32px clamp(16px, 5vw, 64px) 8px' }}>
-        <div className="ck-eyebrow ck-eyebrow-strong">§ 03 · Surveillance reels</div>
-        <h1
-          className="ck-riso-h ck-h-section"
-          data-shadow="The Reels"
-          style={{ margin: '8px 0' }}
-        >
-          The Reels
-        </h1>
-      </div>
+      {Header}
 
       <div
         className="ck-page-x"
@@ -114,7 +170,7 @@ export function CinemaPage() {
                   style={{
                     position: 'absolute',
                     inset: 0,
-                    background: risoColorVar(active.color),
+                    background: colorVar(active.color),
                     opacity: 0.45,
                     mixBlendMode: 'multiply',
                   }}
@@ -145,15 +201,19 @@ export function CinemaPage() {
                     }}
                   />
                 </button>
-                <span
-                  className="ck-pill ink"
-                  style={{ position: 'absolute', top: 12, left: 12 }}
-                >
-                  {active.tag}
-                </span>
-                <span className="ck-pill" style={{ position: 'absolute', bottom: 12, right: 12 }}>
-                  {active.mins}
-                </span>
+                {active.tag && (
+                  <span
+                    className="ck-pill ink"
+                    style={{ position: 'absolute', top: 12, left: 12 }}
+                  >
+                    {active.tag}
+                  </span>
+                )}
+                {active.mins && (
+                  <span className="ck-pill" style={{ position: 'absolute', bottom: 12, right: 12 }}>
+                    {active.mins}
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -207,7 +267,7 @@ export function CinemaPage() {
               >
                 <div
                   style={{
-                    background: risoColorVar(vv.color),
+                    background: colorVar(vv.color),
                     border: '2px solid var(--ink)',
                     height: 60,
                     display: 'flex',

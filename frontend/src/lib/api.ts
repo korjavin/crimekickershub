@@ -93,6 +93,64 @@ export async function deleteEntityType(id: number) {
   return response.json();
 }
 
+// Video APIs
+export interface Video {
+  id: number;
+  title: string;
+  youtube_id: string;
+  description: string;
+  mins: string;
+  tag: string;
+  color: string;
+  tags: string[];
+  sort_order: number;
+  published: boolean;
+}
+
+export type VideoInput = Omit<Video, 'id'>;
+
+export async function getVideos() {
+  return fetchApi<Video[]>('/videos');
+}
+
+export async function getVideosAdmin() {
+  return fetchApi<Video[]>('/admin/videos');
+}
+
+export async function createVideo(data: VideoInput) {
+  const response = await fetch(`${API_BASE}/admin/videos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updateVideo(id: number, data: VideoInput) {
+  const response = await fetch(`${API_BASE}/admin/videos/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteVideo(id: number) {
+  const response = await fetch(`${API_BASE}/admin/videos/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // Story/Comic APIs
 export async function getStories() {
   return fetchApi<any[]>('/comics');
