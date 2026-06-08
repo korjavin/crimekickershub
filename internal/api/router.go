@@ -96,6 +96,9 @@ func (r *Router) publicRoutes() {
 	// Videos (public - published reels for the Cinema tab)
 	r.mux.HandleFunc("GET /api/videos", r.handleListVideos)
 
+	// Games (public - published game cards for the Games tab)
+	r.mux.HandleFunc("GET /api/games", r.handleListGames)
+
 	// Auth endpoints (public - need to check session)
 	r.mux.HandleFunc("GET /api/auth/me", r.handleAuthMe)
 	r.mux.HandleFunc("POST /api/auth/logout", r.handleAuthLogout)
@@ -165,6 +168,12 @@ func (r *Router) adminRoutes() {
 	r.mux.Handle("POST /api/admin/videos", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateVideo)))
 	r.mux.Handle("PUT /api/admin/videos/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateVideo)))
 	r.mux.Handle("DELETE /api/admin/videos/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteVideo)))
+
+	// Games management (admin only)
+	r.mux.Handle("GET /api/admin/games", r.auth.RequireAdmin(http.HandlerFunc(r.handleListGamesAdmin)))
+	r.mux.Handle("POST /api/admin/games", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateGame)))
+	r.mux.Handle("PUT /api/admin/games/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateGame)))
+	r.mux.Handle("DELETE /api/admin/games/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteGame)))
 
 	// Matrix view (admin only)
 	r.mux.Handle("GET /api/admin/matrix", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetMatrix)))
@@ -2205,6 +2214,164 @@ func (r *Router) handleDeleteVideo(w http.ResponseWriter, req *http.Request) {
 
 	if err := r.repo.DeleteVideo(req.Context(), id); err != nil {
 		http.Error(w, "Failed to delete video: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, map[string]bool{"success": true})
+}
+
+// GameDTO is the public/admin shape for a Games tile.
+type GameDTO struct {
+	ID           int64  `json:"id"`
+	Title        string `json:"title"`
+	URL          string `json:"url"`
+	Description  string `json:"description"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	Tag          string `json:"tag"`
+	Color        string `json:"color"`
+	SortOrder    int64  `json:"sort_order"`
+	Published    bool   `json:"published"`
+}
+
+func toGameDTO(g repository.Game) GameDTO {
+	return GameDTO{
+		ID:           g.ID,
+		Title:        g.Title,
+		URL:          g.Url,
+		Description:  g.Description.String,
+		ThumbnailURL: g.ThumbnailUrl.String,
+		Tag:          g.Tag.String,
+		Color:        g.Color.String,
+		SortOrder:    g.SortOrder,
+		Published:    g.Published,
+	}
+}
+
+func toGameDTOs(games []repository.Game) []GameDTO {
+	dtos := make([]GameDTO, len(games))
+	for i, g := range games {
+		dtos[i] = toGameDTO(g)
+	}
+	return dtos
+}
+
+// gameInput is the request body for creating/updating a game card.
+type gameInput struct {
+	Title        string `json:"title"`
+	URL          string `json:"url"`
+	Description  string `json:"description"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	Tag          string `json:"tag"`
+	Color        string `json:"color"`
+	SortOrder    int64  `json:"sort_order"`
+	Published    *bool  `json:"published"`
+}
+
+func (r *Router) handleListGames(w http.ResponseWriter, req *http.Request) {
+	games, err := r.repo.ListPublishedGames(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list games: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toGameDTOs(games))
+}
+
+func (r *Router) handleListGamesAdmin(w http.ResponseWriter, req *http.Request) {
+	games, err := r.repo.ListGames(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list games: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toGameDTOs(games))
+}
+
+func (r *Router) handleCreateGame(w http.ResponseWriter, req *http.Request) {
+	var input gameInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	title := strings.TrimSpace(input.Title)
+	url := strings.TrimSpace(input.URL)
+	if title == "" || url == "" {
+		http.Error(w, "title and url are required", http.StatusBadRequest)
+		return
+	}
+
+	published := true
+	if input.Published != nil {
+		published = *input.Published
+	}
+
+	g, err := r.repo.CreateGame(req.Context(), repository.CreateGameParams{
+		Title:        title,
+		Url:          url,
+		Description:  nullStr(input.Description),
+		ThumbnailUrl: nullStr(input.ThumbnailURL),
+		Tag:          nullStr(input.Tag),
+		Color:        nullStr(input.Color),
+		SortOrder:    input.SortOrder,
+		Published:    published,
+	})
+	if err != nil {
+		http.Error(w, "Failed to create game: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toGameDTO(g))
+}
+
+func (r *Router) handleUpdateGame(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input gameInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	title := strings.TrimSpace(input.Title)
+	url := strings.TrimSpace(input.URL)
+	if title == "" || url == "" {
+		http.Error(w, "title and url are required", http.StatusBadRequest)
+		return
+	}
+
+	published := true
+	if input.Published != nil {
+		published = *input.Published
+	}
+
+	g, err := r.repo.UpdateGame(req.Context(), repository.UpdateGameParams{
+		Title:        title,
+		Url:          url,
+		Description:  nullStr(input.Description),
+		ThumbnailUrl: nullStr(input.ThumbnailURL),
+		Tag:          nullStr(input.Tag),
+		Color:        nullStr(input.Color),
+		SortOrder:    input.SortOrder,
+		Published:    published,
+		ID:           id,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update game: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toGameDTO(g))
+}
+
+func (r *Router) handleDeleteGame(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.repo.DeleteGame(req.Context(), id); err != nil {
+		http.Error(w, "Failed to delete game: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	respondJSON(w, map[string]bool{"success": true})
