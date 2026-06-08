@@ -281,3 +281,26 @@ RETURNING *;
 
 -- name: DeleteVideo :exec
 DELETE FROM videos WHERE id = ?;
+
+-- name: ListPublishedGames :many
+SELECT * FROM games WHERE published = 1 ORDER BY sort_order, id;
+
+-- name: ListGames :many
+SELECT * FROM games ORDER BY sort_order, id;
+
+-- name: GetGame :one
+SELECT * FROM games WHERE id = ?;
+
+-- name: CreateGame :one
+INSERT INTO games (title, url, description, thumbnail_url, tag, color, sort_order, published)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING *;
+
+-- name: UpdateGame :one
+UPDATE games
+SET title = ?, url = ?, description = ?, thumbnail_url = ?, tag = ?, color = ?, sort_order = ?, published = ?
+WHERE id = ?
+RETURNING *;
+
+-- name: DeleteGame :exec
+DELETE FROM games WHERE id = ?;

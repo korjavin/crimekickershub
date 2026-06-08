@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { to: '/comics', label: 'Dossiers' },
   { to: '/wiki', label: 'Field Guide' },
   { to: '/cinema', label: 'Reels' },
+  { to: '/games', label: 'Games' },
 ];
 
 export function PublicLayout() {

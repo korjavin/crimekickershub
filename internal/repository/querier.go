@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	AddStoryItem(ctx context.Context, arg AddStoryItemParams) (StoryItem, error)
 	CreateEntity(ctx context.Context, arg CreateEntityParams) (Entity, error)
+	CreateGame(ctx context.Context, arg CreateGameParams) (Game, error)
 	CreateEntityType(ctx context.Context, arg CreateEntityTypeParams) (EntityType, error)
 	CreateMediaAsset(ctx context.Context, arg CreateMediaAssetParams) (MediaAsset, error)
 	CreatePromptType(ctx context.Context, arg CreatePromptTypeParams) (PromptType, error)
@@ -18,6 +19,7 @@ type Querier interface {
 	CreateStory(ctx context.Context, arg CreateStoryParams) (Story, error)
 	CreateVideo(ctx context.Context, arg CreateVideoParams) (Video, error)
 	DeleteEntity(ctx context.Context, id int64) error
+	DeleteGame(ctx context.Context, id int64) error
 	DeleteEntityType(ctx context.Context, id int64) error
 	DeleteMediaAsset(ctx context.Context, id int64) error
 	DeletePromptType(ctx context.Context, id int64) error
@@ -25,6 +27,7 @@ type Querier interface {
 	DeleteStoryItem(ctx context.Context, id int64) error
 	DeleteVideo(ctx context.Context, id int64) error
 	GetEntityByID(ctx context.Context, id int64) (GetEntityByIDRow, error)
+	GetGame(ctx context.Context, id int64) (Game, error)
 	GetEntityBySlug(ctx context.Context, slug string) (GetEntityBySlugRow, error)
 	GetEntityTypeByID(ctx context.Context, id int64) (EntityType, error)
 	GetEntityTypeBySlug(ctx context.Context, slug string) (EntityType, error)
@@ -45,6 +48,8 @@ type Querier interface {
 	ListAllPromptVersions(ctx context.Context) ([]PromptVersion, error)
 	ListAllStories(ctx context.Context) ([]Story, error)
 	ListEntities(ctx context.Context) ([]ListEntitiesRow, error)
+	ListGames(ctx context.Context) ([]Game, error)
+	ListPublishedGames(ctx context.Context) ([]Game, error)
 	ListEntitiesByType(ctx context.Context, lower string) ([]ListEntitiesByTypeRow, error)
 	ListEntityTypes(ctx context.Context) ([]EntityType, error)
 	ListLatestPromptVersionsMatrix(ctx context.Context) ([]ListLatestPromptVersionsMatrixRow, error)
@@ -62,6 +67,7 @@ type Querier interface {
 	ListUsers(ctx context.Context) ([]User, error)
 	ListVideos(ctx context.Context) ([]Video, error)
 	UpdateEntity(ctx context.Context, arg UpdateEntityParams) (Entity, error)
+	UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error)
 	UpdateEntityType(ctx context.Context, arg UpdateEntityTypeParams) (EntityType, error)
 	UpdateMediaAsset(ctx context.Context, arg UpdateMediaAssetParams) (MediaAsset, error)
 	UpdatePromptType(ctx context.Context, arg UpdatePromptTypeParams) error

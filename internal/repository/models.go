@@ -83,6 +83,19 @@ type User struct {
 	CreatedAt sql.NullTime   `json:"created_at"`
 }
 
+type Game struct {
+	ID           int64          `json:"id"`
+	Title        string         `json:"title"`
+	Url          string         `json:"url"`
+	Description  sql.NullString `json:"description"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+}
+
 type Video struct {
 	ID          int64          `json:"id"`
 	Title       string         `json:"title"`

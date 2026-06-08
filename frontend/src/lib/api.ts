@@ -151,6 +151,63 @@ export async function deleteVideo(id: number) {
   return response.json();
 }
 
+// Game APIs
+export interface Game {
+  id: number;
+  title: string;
+  url: string;
+  description: string;
+  thumbnail_url: string;
+  tag: string;
+  color: string;
+  sort_order: number;
+  published: boolean;
+}
+
+export type GameInput = Omit<Game, 'id'>;
+
+export async function getGames() {
+  return fetchApi<Game[]>('/games');
+}
+
+export async function getGamesAdmin() {
+  return fetchApi<Game[]>('/admin/games');
+}
+
+export async function createGame(data: GameInput) {
+  const response = await fetch(`${API_BASE}/admin/games`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updateGame(id: number, data: GameInput) {
+  const response = await fetch(`${API_BASE}/admin/games/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteGame(id: number) {
+  const response = await fetch(`${API_BASE}/admin/games/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // Story/Comic APIs
 export async function getStories() {
   return fetchApi<any[]>('/comics');

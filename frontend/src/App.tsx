@@ -17,6 +17,8 @@ import { PromptTypesPage } from './pages/admin/PromptTypesPage';
 import { PromptMatrixPage } from './pages/admin/PromptMatrixPage';
 import { StoryEditorPage } from './pages/admin/StoryEditorPage';
 import { VideosPage } from './pages/admin/VideosPage';
+import { GamesPage } from './pages/admin/GamesPage';
+import { GamesPage as PublicGamesPage } from './pages/public/GamesPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { Toaster } from './components/ui/toast';
 
@@ -33,6 +35,7 @@ function App() {
             <Route path="/comics" element={<ComicListPage />} />
             <Route path="/comics/:slug" element={<ComicReaderPage />} />
             <Route path="/cinema" element={<CinemaPage />} />
+            <Route path="/games" element={<PublicGamesPage />} />
           </Route>
 
           {/* Login Page */}
@@ -52,6 +55,7 @@ function App() {
             <Route path="/admin/media" element={<MediaPage />} />
             <Route path="/admin/stories" element={<StoryEditorPage />} />
             <Route path="/admin/videos" element={<VideosPage />} />
+            <Route path="/admin/games" element={<GamesPage />} />
             <Route path="/admin/entities" element={<EntitiesPage />} />
             <Route path="/admin/entity-types" element={<EntityTypesPage />} />
             <Route path="/admin/types" element={<PromptTypesPage />} />

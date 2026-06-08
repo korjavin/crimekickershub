@@ -1919,3 +1919,201 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, e
 	)
 	return i, err
 }
+
+const createGame = `-- name: CreateGame :one
+INSERT INTO games (title, url, description, thumbnail_url, tag, color, sort_order, published)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at
+`
+
+type CreateGameParams struct {
+	Title        string         `json:"title"`
+	Url          string         `json:"url"`
+	Description  sql.NullString `json:"description"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+}
+
+func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
+	row := q.db.QueryRowContext(ctx, createGame,
+		arg.Title,
+		arg.Url,
+		arg.Description,
+		arg.ThumbnailUrl,
+		arg.Tag,
+		arg.Color,
+		arg.SortOrder,
+		arg.Published,
+	)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateGame = `-- name: UpdateGame :one
+UPDATE games
+SET title = ?, url = ?, description = ?, thumbnail_url = ?, tag = ?, color = ?, sort_order = ?, published = ?
+WHERE id = ?
+RETURNING id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at
+`
+
+type UpdateGameParams struct {
+	Title        string         `json:"title"`
+	Url          string         `json:"url"`
+	Description  sql.NullString `json:"description"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+	ID           int64          `json:"id"`
+}
+
+func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error) {
+	row := q.db.QueryRowContext(ctx, updateGame,
+		arg.Title,
+		arg.Url,
+		arg.Description,
+		arg.ThumbnailUrl,
+		arg.Tag,
+		arg.Color,
+		arg.SortOrder,
+		arg.Published,
+		arg.ID,
+	)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const deleteGame = `-- name: DeleteGame :exec
+DELETE FROM games WHERE id = ?
+`
+
+func (q *Queries) DeleteGame(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteGame, id)
+	return err
+}
+
+const getGame = `-- name: GetGame :one
+SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games WHERE id = ?
+`
+
+func (q *Queries) GetGame(ctx context.Context, id int64) (Game, error) {
+	row := q.db.QueryRowContext(ctx, getGame, id)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listGames = `-- name: ListGames :many
+SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games ORDER BY sort_order, id
+`
+
+func (q *Queries) ListGames(ctx context.Context) ([]Game, error) {
+	rows, err := q.db.QueryContext(ctx, listGames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Game
+	for rows.Next() {
+		var i Game
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.ThumbnailUrl,
+			&i.Tag,
+			&i.Color,
+			&i.SortOrder,
+			&i.Published,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedGames = `-- name: ListPublishedGames :many
+SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games WHERE published = 1 ORDER BY sort_order, id
+`
+
+func (q *Queries) ListPublishedGames(ctx context.Context) ([]Game, error) {
+	rows, err := q.db.QueryContext(ctx, listPublishedGames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Game
+	for rows.Next() {
+		var i Game
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.ThumbnailUrl,
+			&i.Tag,
+			&i.Color,
+			&i.SortOrder,
+			&i.Published,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
