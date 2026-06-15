@@ -82,21 +82,38 @@ export const ComicReaderPage = () => {
         >
           {story.title}
         </h2>
-        {story.audio_url ? (
-          <div style={{ margin: '0 0 16px' }}>
-            <div className="ck-eyebrow ck-eyebrow-strong" style={{ marginBottom: 6 }}>
-              Listen
+      </div>
+
+      {story.audio_url ? (
+        <div style={{ padding: '0 clamp(8px, 3vw, 32px)' }}>
+          <div
+            className="ck-paper-bright"
+            style={{
+              maxWidth: 760,
+              margin: '0 auto 28px',
+              border: '2px solid var(--ink)',
+              boxShadow: '6px 6px 0 var(--riso-blue)',
+              padding: '16px clamp(14px, 4vw, 22px)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12,
+              textAlign: 'center',
+            }}
+          >
+            <div className="ck-eyebrow ck-eyebrow-strong" style={{ margin: 0 }}>
+              ▶ Listen — Audio Dossier
             </div>
             <audio
               controls
               preload="none"
               src={story.audio_url}
               aria-label="Comic audio"
-              style={{ width: '100%', maxWidth: 480 }}
+              style={{ width: '100%', maxWidth: 520, display: 'block' }}
             />
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div style={{ padding: '0 clamp(8px, 3vw, 32px) 40px' }}>
         <ComicReader items={story.items} />
