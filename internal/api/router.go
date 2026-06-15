@@ -314,6 +314,14 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	// This is a public endpoint, so unpublished/draft stories must not be reachable
+	// by slug (the public list endpoint already filters on published). Respond with
+	// the same 404 used for a missing story so we do not leak the existence of drafts.
+	if !story.Published.Valid || !story.Published.Bool {
+		http.Error(w, "Story not found", http.StatusNotFound)
+		return
+	}
+
 	// Get all media assets for the story using a single query
 	mediaAssets, err := r.repo.ListMediaByStory(req.Context(), story.ID)
 	if err != nil {
@@ -885,6 +893,14 @@ func (r *Router) handleCreateStory(w http.ResponseWriter, req *http.Request) {
 		Published:     sql.NullBool{Bool: input.Published, Valid: input.Published},
 	})
 	if err != nil {
+		// ensureUniqueSlug above checks-then-writes without a transaction, so two
+		// truly-concurrent creates could each see the same slug as free and the
+		// second write then violates the stories.slug UNIQUE constraint. Convert
+		// that into a graceful 409 instead of a 500 so the client can retry.
+		if isUniqueConstraintErr(err) {
+			http.Error(w, "slug already exists, please retry", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Failed to create story: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1122,6 +1138,14 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 	respondJSON(w, response)
 }
 
+// isUniqueConstraintErr reports whether err is a SQLite UNIQUE constraint
+// violation. We match on the driver's error string ("UNIQUE constraint failed")
+// rather than importing the sqlite driver's concrete error type, keeping this
+// detection dependency-free and consistent with the rest of the codebase.
+func isUniqueConstraintErr(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
+}
+
 // ensureUniqueSlug resolves a collision-safe slug for a story. It checks whether
 // the desired slug is already taken by a *different* story (the stories.slug column
 // has a UNIQUE constraint). If it is, it appends "-2", "-3", … until a free slug is
@@ -1237,6 +1261,14 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Published:     published,
 	})
 	if err != nil {
+		// ensureUniqueSlug above checks-then-writes without a transaction, so two
+		// truly-concurrent renames could each see the same slug as free and the
+		// second write then violates the stories.slug UNIQUE constraint. Convert
+		// that into a graceful 409 instead of a 500 so the client can retry.
+		if isUniqueConstraintErr(err) {
+			http.Error(w, "slug already exists, please retry", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Failed to update story: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

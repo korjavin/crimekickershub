@@ -563,6 +563,36 @@ func TestPublicStoryAudioURL(t *testing.T) {
 	}
 }
 
+// TestPublicStoryBySlugUnpublishedReturns404 verifies the public by-slug endpoint
+// does not leak unpublished/draft stories: an unpublished story must respond with the
+// same 404 as a missing story rather than exposing its contents (e.g. audio_url).
+func TestPublicStoryBySlugUnpublishedReturns404(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Seed an UNPUBLISHED (draft) story.
+	draft, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Draft Comic",
+		Slug:          "draft-comic",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (draft) failed: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/comics/"+draft.Slug, nil)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("Expected status 404 for unpublished story, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+}
+
 // TestUpdateStoryAudioURLEndpoint exercises the admin PUT /api/admin/stories/{id}
 // endpoint and verifies the preserve/set/clear semantics for audio_url.
 func TestUpdateStoryAudioURLEndpoint(t *testing.T) {
