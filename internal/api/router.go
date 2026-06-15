@@ -1116,8 +1116,13 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 // found. The slug owned by currentStoryID itself is treated as available so a story
 // can keep (or re-set) its own slug.
 func (r *Router) ensureUniqueSlug(ctx context.Context, desired string, currentStoryID int64) (string, error) {
+	// A title made up entirely of non-alphanumeric characters (e.g. "!!!") yields
+	// an empty generated slug. Persisting an empty slug would make the comic
+	// reachable only at /comics/ (which 404s) or collide on the UNIQUE constraint
+	// with another empty slug. Fall back to a deterministic, non-empty default and
+	// resolve uniqueness from there so rename can never persist an empty slug.
 	if desired == "" {
-		return desired, nil
+		desired = fmt.Sprintf("comic-%d", currentStoryID)
 	}
 
 	// Cap attempts to guard against an unexpected infinite loop.

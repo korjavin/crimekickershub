@@ -484,7 +484,7 @@ func TestPublicStoryAudioURL(t *testing.T) {
 	ctx := context.Background()
 	queries := router.repo
 
-	// Seed a published story without audio (must be published to appear publicly).
+	// Seed a story without audio.
 	noAudio, err := queries.CreateStory(ctx, repository.CreateStoryParams{
 		Title:         "Public No Audio",
 		Slug:          "public-no-audio",
@@ -584,14 +584,7 @@ func TestUpdateStoryAudioURLEndpoint(t *testing.T) {
 	}
 
 	// Authenticate via dev-login to get a session cookie (admin routes require auth).
-	loginReq := httptest.NewRequest("POST", "/api/auth/dev-login", nil)
-	loginRR := httptest.NewRecorder()
-	router.ServeHTTP(loginRR, loginReq)
-	cookies := loginRR.Result().Cookies()
-	if len(cookies) == 0 {
-		t.Fatal("Expected session cookie from dev-login")
-	}
-	sessionCookie := cookies[0]
+	sessionCookie := devLoginCookie(t, router)
 
 	storyPath := "/api/admin/stories/" + strconv.FormatInt(story.ID, 10)
 
@@ -647,9 +640,8 @@ func TestUpdateStoryAudioURLEndpoint(t *testing.T) {
 // TestStoryAudioURLRoundTrip verifies that a non-null audio_url set via UpdateStory
 // persists and reads back correctly through GetStoryByID.
 func TestStoryAudioURLRoundTrip(t *testing.T) {
-	testDB, queries, cleanup := setupTestDB(t)
+	_, queries, cleanup := setupTestDB(t)
 	defer cleanup()
-	_ = testDB
 
 	ctx := context.Background()
 
@@ -886,6 +878,219 @@ func TestUpdateStorySlugUnchangedSelf(t *testing.T) {
 
 	if resp.Slug != "self" {
 		t.Fatalf("Expected own slug %q unchanged, got %q", "self", resp.Slug)
+	}
+}
+
+// TestUpdateStorySlugMultipleCollisions verifies that ensureUniqueSlug advances
+// past the first "-2" suffix: with "alpha" and "alpha-2" already taken, renaming a
+// third story to "Alpha" must resolve to "alpha-3".
+func TestUpdateStorySlugMultipleCollisions(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Seed slugs "alpha" and "alpha-2".
+	if _, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Alpha",
+		Slug:          "alpha",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	}); err != nil {
+		t.Fatalf("CreateStory (alpha) failed: %v", err)
+	}
+	if _, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Alpha 2",
+		Slug:          "alpha-2",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	}); err != nil {
+		t.Fatalf("CreateStory (alpha-2) failed: %v", err)
+	}
+
+	// Third story to be renamed into the colliding "alpha" namespace.
+	third, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Third",
+		Slug:          "third",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (third) failed: %v", err)
+	}
+
+	sessionCookie := devLoginCookie(t, router)
+
+	storyPath := "/api/admin/stories/" + strconv.FormatInt(third.ID, 10)
+	req := httptest.NewRequest("PUT", storyPath, strings.NewReader(`{"title":"Alpha","slug":"alpha"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookie)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("PUT %s returned %d. Body: %s", storyPath, rr.Code, rr.Body.String())
+	}
+
+	var resp struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to decode update response: %v. Body: %s", err, rr.Body.String())
+	}
+
+	if resp.Slug != "alpha-3" {
+		t.Fatalf("Expected slug to advance past one iteration to %q, got %q", "alpha-3", resp.Slug)
+	}
+}
+
+// TestUpdateStoryEmptySlugFallback verifies that renaming a story to a title whose
+// generated slug is empty (e.g. an all-non-alphanumeric title) never persists an
+// empty slug, but falls back to a deterministic non-empty default.
+func TestUpdateStoryEmptySlugFallback(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	story, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Has Slug",
+		Slug:          "has-slug",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory failed: %v", err)
+	}
+
+	sessionCookie := devLoginCookie(t, router)
+
+	// The frontend's generateSlug would yield "" for an all-non-alphanumeric title.
+	storyPath := "/api/admin/stories/" + strconv.FormatInt(story.ID, 10)
+	req := httptest.NewRequest("PUT", storyPath, strings.NewReader(`{"title":"!!!","slug":""}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookie)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("PUT %s returned %d. Body: %s", storyPath, rr.Code, rr.Body.String())
+	}
+
+	var resp struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to decode update response: %v. Body: %s", err, rr.Body.String())
+	}
+
+	if resp.Slug == "" {
+		t.Fatal("Expected a non-empty fallback slug, got empty string")
+	}
+	want := "comic-" + strconv.FormatInt(story.ID, 10)
+	if resp.Slug != want {
+		t.Fatalf("Expected fallback slug %q, got %q", want, resp.Slug)
+	}
+
+	// Confirm the non-empty slug was persisted (not the empty string).
+	persisted, err := queries.GetStoryByID(ctx, story.ID)
+	if err != nil {
+		t.Fatalf("GetStoryByID failed: %v", err)
+	}
+	if persisted.Slug == "" {
+		t.Fatal("Persisted slug is empty; rename must never persist an empty slug")
+	}
+	if persisted.Slug != want {
+		t.Fatalf("Persisted slug = %q, want %q", persisted.Slug, want)
+	}
+}
+
+// TestAdminGetStoryAudioURL verifies the admin GET /api/admin/stories/{id}
+// serialization of audio_url: a JSON string when the story has audio, and JSON
+// null when it does not.
+func TestAdminGetStoryAudioURL(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Story without audio.
+	noAudio, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Admin Get No Audio",
+		Slug:          "admin-get-no-audio",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (no audio) failed: %v", err)
+	}
+
+	// Story with audio.
+	const audioURL = "https://example.com/admin-get.mp3"
+	withAudio, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Admin Get With Audio",
+		Slug:          "admin-get-with-audio",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (with audio) failed: %v", err)
+	}
+	if _, err := queries.UpdateStory(ctx, repository.UpdateStoryParams{
+		ID:            withAudio.ID,
+		Title:         withAudio.Title,
+		Slug:          withAudio.Slug,
+		CoverImageUrl: withAudio.CoverImageUrl,
+		Published:     withAudio.Published,
+		AudioUrl:      sql.NullString{String: audioURL, Valid: true},
+	}); err != nil {
+		t.Fatalf("UpdateStory (set audio) failed: %v", err)
+	}
+
+	sessionCookie := devLoginCookie(t, router)
+
+	getAudioURL := func(t *testing.T, storyID int64) (*string, bool) {
+		t.Helper()
+		req := httptest.NewRequest("GET", "/api/admin/stories/"+strconv.FormatInt(storyID, 10), nil)
+		req.AddCookie(sessionCookie)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("GET admin story %d returned %d. Body: %s", storyID, rr.Code, rr.Body.String())
+		}
+
+		// Use json.RawMessage so we can distinguish a present-but-null field from
+		// an absent one.
+		var raw map[string]json.RawMessage
+		if err := json.Unmarshal(rr.Body.Bytes(), &raw); err != nil {
+			t.Fatalf("Failed to decode response: %v. Body: %s", err, rr.Body.String())
+		}
+		field, present := raw["audio_url"]
+		if !present {
+			return nil, false
+		}
+		if string(field) == "null" {
+			return nil, true
+		}
+		var s string
+		if err := json.Unmarshal(field, &s); err != nil {
+			t.Fatalf("Failed to decode audio_url string: %v", err)
+		}
+		return &s, true
+	}
+
+	// Story without audio -> audio_url present as JSON null.
+	if got, present := getAudioURL(t, noAudio.ID); !present || got != nil {
+		t.Fatalf("Expected audio_url to be JSON null for a story without audio (present=%v, got=%v)", present, got)
+	}
+
+	// Story with audio -> audio_url present as the URL string.
+	if got, present := getAudioURL(t, withAudio.ID); !present || got == nil || *got != audioURL {
+		t.Fatalf("Expected audio_url %q for a story with audio (present=%v, got=%v)", audioURL, present, got)
 	}
 }
 

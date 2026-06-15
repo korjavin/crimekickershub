@@ -298,11 +298,15 @@ export async function uploadMedia(file: File, promptVersionId?: string) {
 
 export async function uploadAudio(file: File): Promise<{ url: string }> {
   // 1. Get a presigned URL for the audio file
-  const presigned = await fetch(`${API_BASE}/admin/upload/presigned`, {
+  const presignedResponse = await fetch(`${API_BASE}/admin/upload/presigned`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filename: file.name, contentType: file.type }),
-  }).then(r => r.json());
+  });
+  if (!presignedResponse.ok) {
+    throw new Error(`Failed to get presigned URL: ${presignedResponse.status}`);
+  }
+  const presigned = await presignedResponse.json();
 
   // 2. Upload the raw file to R2
   const uploadResponse = await fetch(presigned.uploadURL, {

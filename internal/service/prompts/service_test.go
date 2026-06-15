@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"crimekickershub/internal/db"
@@ -208,25 +209,12 @@ func TestGetPromptDiff(t *testing.T) {
 			t.Error("Expected non-empty diff")
 		}
 		// Check that it contains markers for additions and deletions
-		if !contains(diff, "[-") || !contains(diff, "[+") {
+		if !strings.Contains(diff, "[-") || !strings.Contains(diff, "[+") {
 			t.Errorf("Diff should contain change markers ([-] and [+]), got: %s", diff)
 		}
 		// Verify it contains version info
-		if !contains(diff, "Diff between v1 and v2") {
+		if !strings.Contains(diff, "Diff between v1 and v2") {
 			t.Errorf("Diff should contain version info, got: %s", diff)
 		}
 	})
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
