@@ -725,3 +725,180 @@ func TestStoryAudioURLDefaultsNull(t *testing.T) {
 		t.Errorf("Expected audio_url to be NULL (Valid=false) for a story without audio, got %#v", got.AudioUrl)
 	}
 }
+
+// TestUpdateStorySlugCollision verifies that renaming a story to a slug already
+// owned by a *different* story resolves to a suffixed unique slug rather than
+// failing with a UNIQUE-constraint 500, and that the other story is untouched.
+func TestUpdateStorySlugCollision(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Story A occupies slug "alpha".
+	storyA, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Alpha",
+		Slug:          "alpha",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (A) failed: %v", err)
+	}
+
+	// Story B (slug "beta") will be renamed to collide with A.
+	storyB, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Beta",
+		Slug:          "beta",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (B) failed: %v", err)
+	}
+
+	sessionCookie := devLoginCookie(t, router)
+
+	storyPath := "/api/admin/stories/" + strconv.FormatInt(storyB.ID, 10)
+	req := httptest.NewRequest("PUT", storyPath, strings.NewReader(`{"title":"Alpha","slug":"alpha"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookie)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("PUT %s returned %d (expected 200, not a UNIQUE-constraint failure). Body: %s", storyPath, rr.Code, rr.Body.String())
+	}
+
+	var resp struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to decode update response: %v. Body: %s", err, rr.Body.String())
+	}
+
+	if resp.Slug != "alpha-2" {
+		t.Fatalf("Expected suffixed unique slug %q, got %q", "alpha-2", resp.Slug)
+	}
+
+	// Story B should now persist with the suffixed slug.
+	persistedB, err := queries.GetStoryByID(ctx, storyB.ID)
+	if err != nil {
+		t.Fatalf("GetStoryByID (B) failed: %v", err)
+	}
+	if persistedB.Slug != "alpha-2" {
+		t.Fatalf("Story B persisted slug = %q, want %q", persistedB.Slug, "alpha-2")
+	}
+
+	// Story A's slug must be untouched.
+	persistedA, err := queries.GetStoryByID(ctx, storyA.ID)
+	if err != nil {
+		t.Fatalf("GetStoryByID (A) failed: %v", err)
+	}
+	if persistedA.Slug != "alpha" {
+		t.Fatalf("Story A slug changed to %q, want %q (untouched)", persistedA.Slug, "alpha")
+	}
+}
+
+// TestUpdateStorySlugNoCollision verifies that renaming a story with a slug not
+// taken by any other story keeps the slug exactly as provided (no suffix).
+func TestUpdateStorySlugNoCollision(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	story, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Original",
+		Slug:          "original",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory failed: %v", err)
+	}
+
+	sessionCookie := devLoginCookie(t, router)
+
+	storyPath := "/api/admin/stories/" + strconv.FormatInt(story.ID, 10)
+	req := httptest.NewRequest("PUT", storyPath, strings.NewReader(`{"title":"Gamma","slug":"gamma"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookie)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("PUT %s returned %d. Body: %s", storyPath, rr.Code, rr.Body.String())
+	}
+
+	var resp struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to decode update response: %v. Body: %s", err, rr.Body.String())
+	}
+
+	if resp.Slug != "gamma" {
+		t.Fatalf("Expected non-colliding slug %q unchanged, got %q", "gamma", resp.Slug)
+	}
+}
+
+// TestUpdateStorySlugUnchangedSelf verifies that renaming a story to its OWN
+// current slug returns that same slug (no suffix and no spurious collision).
+func TestUpdateStorySlugUnchangedSelf(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	story, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Self",
+		Slug:          "self",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory failed: %v", err)
+	}
+
+	sessionCookie := devLoginCookie(t, router)
+
+	storyPath := "/api/admin/stories/" + strconv.FormatInt(story.ID, 10)
+	req := httptest.NewRequest("PUT", storyPath, strings.NewReader(`{"title":"Self","slug":"self"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookie)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("PUT %s returned %d. Body: %s", storyPath, rr.Code, rr.Body.String())
+	}
+
+	var resp struct {
+		Slug string `json:"slug"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to decode update response: %v. Body: %s", err, rr.Body.String())
+	}
+
+	if resp.Slug != "self" {
+		t.Fatalf("Expected own slug %q unchanged, got %q", "self", resp.Slug)
+	}
+}
+
+// devLoginCookie authenticates against the dev-login endpoint and returns the
+// resulting session cookie for use on authenticated admin requests.
+func devLoginCookie(t *testing.T, router *Router) *http.Cookie {
+	t.Helper()
+	loginReq := httptest.NewRequest("POST", "/api/auth/dev-login", nil)
+	loginRR := httptest.NewRecorder()
+	router.ServeHTTP(loginRR, loginReq)
+	cookies := loginRR.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("Expected session cookie from dev-login")
+	}
+	return cookies[0]
+}

@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -1109,6 +1110,42 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 	respondJSON(w, response)
 }
 
+// ensureUniqueSlug resolves a collision-safe slug for a story. It checks whether
+// the desired slug is already taken by a *different* story (the stories.slug column
+// has a UNIQUE constraint). If it is, it appends "-2", "-3", … until a free slug is
+// found. The slug owned by currentStoryID itself is treated as available so a story
+// can keep (or re-set) its own slug.
+func (r *Router) ensureUniqueSlug(ctx context.Context, desired string, currentStoryID int64) (string, error) {
+	if desired == "" {
+		return desired, nil
+	}
+
+	// Cap attempts to guard against an unexpected infinite loop.
+	const maxAttempts = 500
+	for n := 1; n <= maxAttempts; n++ {
+		candidate := desired
+		if n > 1 {
+			candidate = fmt.Sprintf("%s-%d", desired, n)
+		}
+
+		existing, err := r.repo.GetStoryBySlug(ctx, candidate)
+		if errors.Is(err, sql.ErrNoRows) {
+			// Slug is free.
+			return candidate, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		if existing.ID == currentStoryID {
+			// The slug belongs to the same story — no collision.
+			return candidate, nil
+		}
+		// Otherwise the slug is taken by a different story; try the next suffix.
+	}
+
+	return "", fmt.Errorf("could not find a unique slug for %q after %d attempts", desired, maxAttempts)
+}
+
 // handleUpdateStory updates story metadata (title, slug, etc) - Placeholder for now if needed
 // or we can keep it for backward compatibility or general updates
 func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
@@ -1145,8 +1182,15 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 	}
 
 	slug := currentStory.Slug
-	if input.Slug != nil {
-		slug = *input.Slug
+	if input.Slug != nil && *input.Slug != currentStory.Slug {
+		// Resolve a collision-safe slug so renaming to a title whose generated
+		// slug collides with another story does not violate the UNIQUE constraint.
+		resolvedSlug, err := r.ensureUniqueSlug(req.Context(), *input.Slug, storyID)
+		if err != nil {
+			http.Error(w, "Failed to resolve unique slug: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		slug = resolvedSlug
 	}
 
 	coverImageURL := currentStory.CoverImageUrl

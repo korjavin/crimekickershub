@@ -160,11 +160,11 @@ green and new tests can pass against the same schema as production.
 - Modify: `internal/api/router.go` (`handleUpdateStory` + a small slug-uniqueness helper)
 - Modify: `internal/api/router_test.go`
 
-- [ ] add a helper (e.g. `ensureUniqueSlug(ctx, desired, currentStoryID) string`) that, when the desired slug differs from the story's current slug, checks `GetStoryBySlug`; if taken by a *different* story, appends `-2`, `-3`, … until free
-- [ ] call it in `handleUpdateStory` only when `input.Slug` is provided and changes; persist the resolved slug; return the resolved slug in the response
-- [ ] write handler test: renaming a story to a title whose slug collides with another story yields a suffixed unique slug (no UNIQUE-constraint 500)
-- [ ] write handler test: renaming with a non-colliding slug keeps the generated slug unchanged
-- [ ] run `go test ./...` — must pass before next task
+- [x] add a helper (e.g. `ensureUniqueSlug(ctx, desired, currentStoryID) string`) that, when the desired slug differs from the story's current slug, checks `GetStoryBySlug`; if taken by a *different* story, appends `-2`, `-3`, … until free
+- [x] call it in `handleUpdateStory` only when `input.Slug` is provided and changes; persist the resolved slug; return the resolved slug in the response
+- [x] write handler test: renaming a story to a title whose slug collides with another story yields a suffixed unique slug (no UNIQUE-constraint 500)
+- [x] write handler test: renaming with a non-colliding slug keeps the generated slug unchanged
+- [x] run `go test ./...` — must pass before next task
 
 ### Task 4: Frontend — API types & client helpers
 
