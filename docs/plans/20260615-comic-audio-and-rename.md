@@ -208,10 +208,10 @@ green and new tests can pass against the same schema as production.
 - [x] verify `npm run build` and `npm run lint` pass
 
 ### Task 8: Verify acceptance criteria
-- [ ] verify Overview requirements: audio uploads like images, one audio per comic, Play on the public comic page; comics can be renamed (title + regenerated, unique slug)
-- [ ] verify edge cases: comic with no audio (no player), replacing audio, removing audio, rename causing slug collision
-- [ ] run full backend suite: `go test ./...`
-- [ ] run frontend gate: `npm run build` && `npm run lint` (no project e2e suite exists)
+- [x] verify Overview requirements: audio uploads like images, one audio per comic, Play on the public comic page; comics can be renamed (title + regenerated, unique slug) — verified by code inspection: backend `audio_url` single nullable column (migration 008, sqlc `Story.AudioUrl`, `UpdateStory` query), `handleUpdateStory`/`handleGetStory`/`handleGetStoryBySlug` accept+return it; frontend `uploadAudio` reuses presigned-PUT flow (api.ts), `StoryEditorPage` rename dialog calls `updateStoryMetadata(title + generateSlug(title))` and syncs local state from the server response, `ComicReaderPage` renders `<audio controls>` only when `story.audio_url` present. Live browser check deferred to manual Post-Completion checklist (no e2e suite).
+- [x] verify edge cases: comic with no audio (no player), replacing audio, removing audio, rename causing slug collision — verified by code + automated tests in `internal/api/router_test.go`: `TestUpdateStoryAudioURLEndpoint` (set/preserve/clear=NULL i.e. replace+remove), `TestPublicStoryAudioURL` (null when unset, URL when set), `TestStoryAudioURLRoundTrip`/`TestStoryAudioURLDefaultsNull`, `TestUpdateStorySlugCollision` (yields `alpha-2`), `TestUpdateStorySlugNoCollision`, `TestUpdateStorySlugUnchangedSelf`. No-audio "no player" confirmed by the `ComicReaderPage` conditional render. Live UI click-through deferred to manual Post-Completion checklist.
+- [x] run full backend suite: `go test ./...` — GREEN (fresh `-count=1`): `internal/api` ok 0.492s, `internal/service/prompts` ok 0.684s, `go build ./...` clean.
+- [x] run frontend gate: `npm run build` && `npm run lint` (no project e2e suite exists) — `npm run build` PASSES (tsc -b + vite build, exit 0). `npm run lint` reports 41 problems (40 errors, 1 warning) = the documented pre-existing baseline; the only feature-file finding is the `setLoading(true)` `react-hooks/set-state-in-effect` warning at `ComicReaderPage.tsx:16`, which is pre-existing in HEAD and unrelated to the audio Play control. No NEW lint errors introduced by this feature work. End-to-end audio-playback / rename flows covered by the manual Post-Completion checklist.
 
 ### Task 9: [Final] Update documentation & archive plan
 - [ ] update `README.md` (Story Builder / Comic Reader sections) to mention per-comic audio + rename, if warranted
