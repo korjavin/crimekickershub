@@ -147,12 +147,12 @@ green and new tests can pass against the same schema as production.
 - Modify: `internal/api/router.go` (`handleUpdateStory`, `handleGetStory`, `handleGetStoryBySlug`)
 - Modify: `internal/api/router_test.go`
 
-- [ ] `handleUpdateStory`: add `AudioURL *string \`json:"audio_url"\`` to the input struct; preserve current value when nil, set/clear via `sql.NullString{String: *input.AudioURL, Valid: *input.AudioURL != ""}` when provided; pass it into `UpdateStoryParams`; include `audio_url` in the response struct
-- [ ] `handleGetStory` (admin): add `"audio_url"` to the response map (string or null)
-- [ ] `handleGetStoryBySlug` (public): add `AudioURL *string \`json:"audio_url"\`` to `PublicStoryResponse` and populate it from the story
-- [ ] write handler test: `PUT /api/admin/stories/{id}` with `audio_url` set persists and is returned; a follow-up `PUT` omitting `audio_url` preserves it; `audio_url:""` clears it
-- [ ] write handler test: public `GET /api/comics/{slug}` includes `audio_url` (null when unset, the URL when set)
-- [ ] run `go test ./...` — must pass before next task
+- [x] `handleUpdateStory`: add `AudioURL *string \`json:"audio_url"\`` to the input struct; preserve current value when nil, set/clear via `sql.NullString{String: *input.AudioURL, Valid: *input.AudioURL != ""}` when provided; pass it into `UpdateStoryParams`; include `audio_url` in the response struct
+- [x] `handleGetStory` (admin): add `"audio_url"` to the response map (string or null)
+- [x] `handleGetStoryBySlug` (public): add `AudioURL *string \`json:"audio_url"\`` to `PublicStoryResponse` and populate it from the story
+- [x] write handler test: `PUT /api/admin/stories/{id}` with `audio_url` set persists and is returned; a follow-up `PUT` omitting `audio_url` preserves it; `audio_url:""` clears it
+- [x] write handler test: public `GET /api/comics/{slug}` includes `audio_url` (null when unset, the URL when set)
+- [x] run `go test ./...` — must pass before next task
 
 ### Task 3: Backend — collision-safe slug on rename
 

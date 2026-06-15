@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -471,6 +472,175 @@ func TestListMediaEndpoint(t *testing.T) {
 	// Should be empty since we haven't added any media
 	if len(mediaAssets) != 0 {
 		t.Errorf("Expected empty media list, got %d items", len(mediaAssets))
+	}
+}
+
+// TestPublicStoryAudioURL verifies that the public GET /api/comics/{slug} response
+// includes audio_url: null when the story has no audio, and the URL string when set.
+func TestPublicStoryAudioURL(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Seed a published story without audio (must be published to appear publicly).
+	noAudio, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Public No Audio",
+		Slug:          "public-no-audio",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (no audio) failed: %v", err)
+	}
+
+	// Seed a published story with audio.
+	const audioURL = "https://example.com/narration.mp3"
+	withAudio, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Public With Audio",
+		Slug:          "public-with-audio",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (with audio) failed: %v", err)
+	}
+	if _, err := queries.UpdateStory(ctx, repository.UpdateStoryParams{
+		ID:            withAudio.ID,
+		Title:         withAudio.Title,
+		Slug:          withAudio.Slug,
+		CoverImageUrl: withAudio.CoverImageUrl,
+		Published:     withAudio.Published,
+		AudioUrl:      sql.NullString{String: audioURL, Valid: true},
+	}); err != nil {
+		t.Fatalf("UpdateStory (set audio) failed: %v", err)
+	}
+
+	// audio_url should be null (JSON null -> nil pointer) for the story without audio.
+	{
+		req := httptest.NewRequest("GET", "/api/comics/"+noAudio.Slug, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d. Body: %s", rr.Code, rr.Body.String())
+		}
+
+		var resp struct {
+			AudioURL *string `json:"audio_url"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode response: %v. Body: %s", err, rr.Body.String())
+		}
+		if resp.AudioURL != nil {
+			t.Errorf("Expected audio_url to be null for a story without audio, got %q", *resp.AudioURL)
+		}
+	}
+
+	// audio_url should carry the URL for the story with audio.
+	{
+		req := httptest.NewRequest("GET", "/api/comics/"+withAudio.Slug, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d. Body: %s", rr.Code, rr.Body.String())
+		}
+
+		var resp struct {
+			AudioURL *string `json:"audio_url"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode response: %v. Body: %s", err, rr.Body.String())
+		}
+		if resp.AudioURL == nil {
+			t.Fatalf("Expected audio_url to be set for a story with audio, got null")
+		}
+		if *resp.AudioURL != audioURL {
+			t.Errorf("Expected audio_url %q, got %q", audioURL, *resp.AudioURL)
+		}
+	}
+}
+
+// TestUpdateStoryAudioURLEndpoint exercises the admin PUT /api/admin/stories/{id}
+// endpoint and verifies the preserve/set/clear semantics for audio_url.
+func TestUpdateStoryAudioURLEndpoint(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Seed a story (no audio yet).
+	story, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Admin Audio",
+		Slug:          "admin-audio",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory failed: %v", err)
+	}
+
+	// Authenticate via dev-login to get a session cookie (admin routes require auth).
+	loginReq := httptest.NewRequest("POST", "/api/auth/dev-login", nil)
+	loginRR := httptest.NewRecorder()
+	router.ServeHTTP(loginRR, loginReq)
+	cookies := loginRR.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("Expected session cookie from dev-login")
+	}
+	sessionCookie := cookies[0]
+
+	storyPath := "/api/admin/stories/" + strconv.FormatInt(story.ID, 10)
+
+	// putStory issues an authenticated PUT with the given JSON body and returns
+	// the decoded audio_url pointer from the response.
+	putStory := func(t *testing.T, body string) *string {
+		t.Helper()
+		req := httptest.NewRequest("PUT", storyPath, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(sessionCookie)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("PUT %s returned %d. Body: %s", storyPath, rr.Code, rr.Body.String())
+		}
+		var resp struct {
+			AudioURL *string `json:"audio_url"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode update response: %v. Body: %s", err, rr.Body.String())
+		}
+		return resp.AudioURL
+	}
+
+	const audioURL = "https://example.com/admin.mp3"
+
+	// 1. Set audio_url -> persisted and returned.
+	if got := putStory(t, `{"audio_url":"`+audioURL+`"}`); got == nil || *got != audioURL {
+		t.Fatalf("After setting audio_url, response = %v, want %q", got, audioURL)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); !persisted.AudioUrl.Valid || persisted.AudioUrl.String != audioURL {
+		t.Fatalf("After set, persisted audio_url = %#v, want valid %q", persisted.AudioUrl, audioURL)
+	}
+
+	// 2. Omitting audio_url preserves the existing value.
+	if got := putStory(t, `{"title":"Admin Audio Renamed"}`); got == nil || *got != audioURL {
+		t.Fatalf("After omitting audio_url, response = %v, want preserved %q", got, audioURL)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); !persisted.AudioUrl.Valid || persisted.AudioUrl.String != audioURL {
+		t.Fatalf("After omit, persisted audio_url = %#v, want preserved %q", persisted.AudioUrl, audioURL)
+	}
+
+	// 3. audio_url:"" clears it to NULL.
+	if got := putStory(t, `{"audio_url":""}`); got != nil {
+		t.Fatalf("After clearing audio_url, response = %v, want nil", got)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); persisted.AudioUrl.Valid {
+		t.Fatalf("After clear, persisted audio_url = %#v, want NULL", persisted.AudioUrl)
 	}
 }
 
