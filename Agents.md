@@ -30,6 +30,11 @@ This is a monorepo for "Crime Kickers Hub," a Go-based web application backed by
 * A **Story** (or Issue) is an ordered collection of **StoryItems**.
 * **StoryItems** are polymorphic or mixed: they can be an Image or a Video Link.
 * The frontend renders these linearly (Webtoon style).
+* A Story may also carry a single optional audio track via the nullable `stories.audio_url` column (a full R2 URL, parallel to `cover_image_url`); it is not a StoryItem and never renders as a panel.
+
+## Testing Conventions
+* DB-backed Go tests build their schema with `migrations.RunMigrations` (from `internal/migrations`), the same embedded migrations used by production and sqlc. There is no standalone `sql/schema/001_initial.sql` file.
+* The frontend has no unit-test framework; `npm run build` (tsc + vite) and `npm run lint` are the gate.
 
 ## Environment Variables
 Configuration is strictly via `.env`:
