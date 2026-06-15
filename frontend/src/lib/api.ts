@@ -296,6 +296,28 @@ export async function uploadMedia(file: File, promptVersionId?: string) {
   return { ...result, thumbnail_url: thumbPresigned.publicURL };
 }
 
+export async function uploadAudio(file: File): Promise<{ url: string }> {
+  // 1. Get a presigned URL for the audio file
+  const presigned = await fetch(`${API_BASE}/admin/upload/presigned`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: file.name, contentType: file.type }),
+  }).then(r => r.json());
+
+  // 2. Upload the raw file to R2
+  const uploadResponse = await fetch(presigned.uploadURL, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  if (!uploadResponse.ok) {
+    throw new Error(`Audio upload failed: ${uploadResponse.status}`);
+  }
+
+  // 3. Return the public URL (audio is stored directly on the story, not as a media_asset)
+  return { url: presigned.publicURL };
+}
+
 export async function createTextSlide(data: { title: string; description?: string; text_content: string; entity_id?: number }) {
   const response = await fetch(`${API_BASE}/admin/media/text`, {
     method: 'POST',
@@ -351,7 +373,7 @@ export async function updateStory(id: string, itemIds: number[]) {
   return response.json();
 }
 
-export async function updateStoryMetadata(id: string, data: { title?: string; slug?: string; coverImageUrl?: string; published?: boolean }) {
+export async function updateStoryMetadata(id: string, data: { title?: string; slug?: string; coverImageUrl?: string; published?: boolean; audio_url?: string | null }) {
   const response = await fetch(`${API_BASE}/admin/stories/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

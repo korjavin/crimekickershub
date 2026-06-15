@@ -172,10 +172,10 @@ green and new tests can pass against the same schema as production.
 - Modify: `frontend/src/lib/api-types.ts`
 - Modify: `frontend/src/lib/api.ts`
 
-- [ ] add `audio_url?: string | null` to `Story`, `StoryWithItems`, and `PublicStory`
-- [ ] add `uploadAudio(file: File): Promise<{ url: string }>` in `api.ts`: request a presigned URL (`/admin/upload/presigned` with `filename`, `contentType: file.type`), `PUT` the file to R2, return `{ url: presigned.publicURL }` (no thumbnail, no `/admin/assets` registration)
-- [ ] extend `updateStoryMetadata` to accept `audio_url?: string | null` in its payload
-- [ ] verify `npm run build` (tsc typecheck) and `npm run lint` pass (no TS unit-test framework exists — typecheck/lint is the gate)
+- [x] add `audio_url?: string | null` to `Story`, `StoryWithItems`, and `PublicStory`
+- [x] add `uploadAudio(file: File): Promise<{ url: string }>` in `api.ts`: request a presigned URL (`/admin/upload/presigned` with `filename`, `contentType: file.type`), `PUT` the file to R2, return `{ url: presigned.publicURL }` (no thumbnail, no `/admin/assets` registration)
+- [x] extend `updateStoryMetadata` to accept `audio_url?: string | null` in its payload
+- [x] verify `npm run build` (tsc typecheck) and `npm run lint` pass (no TS unit-test framework exists — typecheck/lint is the gate)
 
 ### Task 5: Frontend admin — Rename UI in Story Editor
 
