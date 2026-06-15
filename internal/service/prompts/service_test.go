@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"crimekickershub/internal/db"
+	"crimekickershub/internal/migrations"
 	"crimekickershub/internal/repository"
 )
 
@@ -26,14 +26,11 @@ func setupTestDB(t *testing.T) (*repository.Queries, func()) {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
 
-	// Initialize schema - compute path relative to the test file location
-	_, currentFile, _, _ := runtime.Caller(0)
-	testDir := filepath.Dir(currentFile)
-	schemaPath := filepath.Join(testDir, "..", "..", "..", "sql", "schema", "001_initial.sql")
-	if err := db.InitSchema(testDB, schemaPath, "001_initial"); err != nil {
+	// Initialize schema from the embedded migrations (same source sqlc and production use)
+	if err := migrations.RunMigrations(testDB); err != nil {
 		testDB.Close()
 		os.RemoveAll(tmpDir)
-		t.Fatalf("Failed to init schema: %v", err)
+		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	queries := repository.New(testDB)

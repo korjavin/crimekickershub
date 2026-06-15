@@ -121,10 +121,10 @@ green and new tests can pass against the same schema as production.
 - Modify: `internal/api/router_test.go`
 - Modify: `internal/service/prompts/service_test.go`
 
-- [ ] in `router_test.go#setupTestDB`, replace the `db.InitSchema(testDB, schemaPath, "001_initial")` call (which reads the missing `sql/schema/001_initial.sql`) with `migrations.RunMigrations(testDB)` so the test DB is built from the embedded migrations (the same source sqlc and production use)
-- [ ] do the same in `internal/service/prompts/service_test.go` setup
-- [ ] remove now-unused locals/imports (`runtime`, `schemaPath`, `db.InitSchema` if unused) and add `crimekickershub/internal/migrations`
-- [ ] run `go test ./...` — entire suite must be **green** (establishes a passing baseline before any feature work)
+- [x] in `router_test.go#setupTestDB`, replace the `db.InitSchema(testDB, schemaPath, "001_initial")` call (which reads the missing `sql/schema/001_initial.sql`) with `migrations.RunMigrations(testDB)` so the test DB is built from the embedded migrations (the same source sqlc and production use)
+- [x] do the same in `internal/service/prompts/service_test.go` setup
+- [x] remove now-unused locals/imports (`runtime`, `schemaPath`, `db.InitSchema` if unused) and add `crimekickershub/internal/migrations`
+- [x] run `go test ./...` — entire suite must be **green** (establishes a passing baseline before any feature work)
 
 ### Task 1: Add `audio_url` to the stories schema (migration + sqlc)
 
