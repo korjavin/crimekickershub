@@ -203,9 +203,9 @@ green and new tests can pass against the same schema as production.
 - Modify: `frontend/src/pages/public/ComicReaderPage.tsx`
 - Modify: `frontend/src/components/ComicReader.tsx` (only if the control lives inside the reader)
 
-- [ ] when the loaded `story.audio_url` is present, render a Play control near the dossier title (native `<audio controls>` styled to the Riso theme, or a Play button that toggles an `<audio>` element) — keep it accessible and mobile-friendly
-- [ ] render nothing audio-related when `audio_url` is absent (no empty player)
-- [ ] verify `npm run build` and `npm run lint` pass
+- [x] when the loaded `story.audio_url` is present, render a Play control near the dossier title (native `<audio controls>` styled to the Riso theme, or a Play button that toggles an `<audio>` element) — keep it accessible and mobile-friendly
+- [x] render nothing audio-related when `audio_url` is absent (no empty player)
+- [x] verify `npm run build` and `npm run lint` pass
 
 ### Task 8: Verify acceptance criteria
 - [ ] verify Overview requirements: audio uploads like images, one audio per comic, Play on the public comic page; comics can be renamed (title + regenerated, unique slug)
