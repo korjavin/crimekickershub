@@ -192,10 +192,10 @@ green and new tests can pass against the same schema as production.
 **Files:**
 - Modify: `frontend/src/pages/admin/StoryEditorPage.tsx`
 
-- [ ] add an Audio section for the selected story: a file input with `accept="audio/*"`; on select call `uploadAudio(file)` then `updateStoryMetadata(id, { audio_url })`, with an uploading/disabled state and success/error toasts
-- [ ] when `storyWithItems.audio_url` is set, render a native `<audio controls src={audio_url}>` preview plus a **Remove audio** button (calls `updateStoryMetadata(id, { audio_url: '' })`)
-- [ ] keep local `storyWithItems.audio_url` state in sync after upload/remove
-- [ ] verify `npm run build` and `npm run lint` pass
+- [x] add an Audio section for the selected story: a file input with `accept="audio/*"`; on select call `uploadAudio(file)` then `updateStoryMetadata(id, { audio_url })`, with an uploading/disabled state and success/error toasts
+- [x] when `storyWithItems.audio_url` is set, render a native `<audio controls src={audio_url}>` preview plus a **Remove audio** button (calls `updateStoryMetadata(id, { audio_url: '' })`)
+- [x] keep local `storyWithItems.audio_url` state in sync after upload/remove
+- [x] verify `npm run build` and `npm run lint` pass
 
 ### Task 7: Frontend public — Play button on the comic page
 

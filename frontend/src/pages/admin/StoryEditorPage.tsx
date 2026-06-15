@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -45,6 +45,7 @@ import {
   createStory,
   updateStory,
   updateStoryMetadata,
+  uploadAudio,
   deleteStory,
   listMedia,
   getYouTubeThumbnail,
@@ -212,6 +213,10 @@ export function StoryEditorPage() {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [renameTitle, setRenameTitle] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
+
+  // Audio State
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   // Text Slide State
   const [isTextSlideDialogOpen, setIsTextSlideDialogOpen] = useState(false);
@@ -584,6 +589,45 @@ export function StoryEditorPage() {
     }
   };
 
+  const handleAudioFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!storyWithItems) return;
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingAudio(true);
+      const { url } = await uploadAudio(file);
+      await updateStoryMetadata(String(storyWithItems.id), { audio_url: url });
+      setStoryWithItems({ ...storyWithItems, audio_url: url });
+      toast.success('Audio uploaded');
+    } catch (error) {
+      console.error('Failed to upload audio:', error);
+      toast.error('Failed to upload audio');
+    } finally {
+      setIsUploadingAudio(false);
+      // Reset the input so the same file can be re-selected
+      if (audioInputRef.current) {
+        audioInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAudio = async () => {
+    if (!storyWithItems) return;
+
+    if (!confirm('Remove the audio from this comic?')) return;
+
+    try {
+      await updateStoryMetadata(String(storyWithItems.id), { audio_url: '' });
+      setStoryWithItems({ ...storyWithItems, audio_url: null });
+      toast.success('Audio removed');
+    } catch (error) {
+      console.error('Failed to remove audio:', error);
+      toast.error('Failed to remove audio');
+    }
+  };
+
   const handleDeleteStory = async () => {
     if (!storyWithItems) return;
 
@@ -824,6 +868,60 @@ export function StoryEditorPage() {
           </Button>
         </div>
       </div>
+
+      {storyWithItems && (
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">Comic Audio</h2>
+              <p className="text-xs text-muted-foreground">
+                One narration/soundtrack file plays on the public comic page.
+              </p>
+            </div>
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={handleAudioFileSelected}
+            />
+            {storyWithItems.audio_url ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                <audio
+                  controls
+                  src={storyWithItems.audio_url}
+                  className="w-full sm:w-64 h-9"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={isUploadingAudio}
+                >
+                  {isUploadingAudio ? 'Uploading…' : 'Replace audio'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveAudio}
+                  disabled={isUploadingAudio}
+                >
+                  Remove audio
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => audioInputRef.current?.click()}
+                disabled={isUploadingAudio}
+              >
+                {isUploadingAudio ? 'Uploading…' : 'Upload audio'}
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {!selectedStoryId ? (
         <Card className="flex-1 flex items-center justify-center p-12 text-center">
