@@ -208,6 +208,11 @@ export function StoryEditorPage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [newStoryTitle, setNewStoryTitle] = useState('');
 
+  // Rename State
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [renameTitle, setRenameTitle] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
+
   // Text Slide State
   const [isTextSlideDialogOpen, setIsTextSlideDialogOpen] = useState(false);
   const [textSlideTitle, setTextSlideTitle] = useState('');
@@ -537,6 +542,48 @@ export function StoryEditorPage() {
     }
   };
 
+  const handleRenameStory = async () => {
+    if (!storyWithItems) return;
+
+    const trimmedTitle = renameTitle.trim();
+    if (!trimmedTitle) {
+      toast.error('Title is required');
+      return;
+    }
+
+    try {
+      setIsRenaming(true);
+
+      const updated = await updateStoryMetadata(String(storyWithItems.id), {
+        title: trimmedTitle,
+        slug: generateSlug(trimmedTitle),
+      });
+
+      // Reflect the server-resolved title/slug (slug may be suffixed for uniqueness)
+      setStoryWithItems({
+        ...storyWithItems,
+        title: updated.title,
+        slug: updated.slug,
+      });
+
+      setStories(stories.map(s =>
+        s.id === storyWithItems.id
+          ? { ...s, title: updated.title, slug: updated.slug }
+          : s
+      ));
+
+      setIsRenameDialogOpen(false);
+      setRenameTitle('');
+
+      toast.success('Story renamed successfully');
+    } catch (error) {
+      console.error('Failed to rename story:', error);
+      toast.error('Failed to rename story. Please try again.');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
   const handleDeleteStory = async () => {
     if (!storyWithItems) return;
 
@@ -715,6 +762,48 @@ export function StoryEditorPage() {
                   Published
                 </label>
               </div>
+              <Dialog
+                open={isRenameDialogOpen}
+                onOpenChange={(open) => {
+                  setIsRenameDialogOpen(open);
+                  if (open) {
+                    setRenameTitle(storyWithItems.title);
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline">✏️ Rename</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Rename Story</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Title</label>
+                      <Input
+                        value={renameTitle}
+                        onChange={(e) => setRenameTitle(e.target.value)}
+                        placeholder="Enter story title"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsRenameDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleRenameStory}
+                      disabled={!renameTitle.trim() || isRenaming}
+                    >
+                      {isRenaming ? 'Renaming...' : 'Rename'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               <Button
                 variant="outline"
                 onClick={handleDeleteStory}

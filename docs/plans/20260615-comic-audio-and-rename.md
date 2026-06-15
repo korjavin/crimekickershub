@@ -182,10 +182,10 @@ green and new tests can pass against the same schema as production.
 **Files:**
 - Modify: `frontend/src/pages/admin/StoryEditorPage.tsx`
 
-- [ ] add a Rename control for the selected story (a small dialog or inline title `Input` + "Rename" button), prefilled with the current title
-- [ ] on save, call `updateStoryMetadata(id, { title, slug: generateSlug(title) })`; on success update both `storyWithItems.title` and the matching entry in the `stories` list (so the selector relabels); toast success/error
-- [ ] reflect the server-resolved slug from the response (in case it was suffixed for uniqueness)
-- [ ] verify `npm run build` and `npm run lint` pass
+- [x] add a Rename control for the selected story (a small dialog or inline title `Input` + "Rename" button), prefilled with the current title
+- [x] on save, call `updateStoryMetadata(id, { title, slug: generateSlug(title) })`; on success update both `storyWithItems.title` and the matching entry in the `stories` list (so the selector relabels); toast success/error
+- [x] reflect the server-resolved slug from the response (in case it was suffixed for uniqueness)
+- [x] verify `npm run build` and `npm run lint` pass
 
 ### Task 6: Frontend admin — Audio upload UI in Story Editor
 
