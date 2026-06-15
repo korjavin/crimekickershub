@@ -1007,6 +1007,52 @@ func TestUpdateStoryEmptySlugFallback(t *testing.T) {
 	}
 }
 
+// TestCreateStoryDuplicateTitleSlug verifies that creating two stories with the
+// same title (which generate the same slug) does not violate the stories.slug
+// UNIQUE constraint and return a 500. The second creation must succeed (200) and
+// receive a suffixed unique slug.
+func TestCreateStoryDuplicateTitleSlug(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	sessionCookie := devLoginCookie(t, router)
+
+	createStory := func(title string) (int, string) {
+		t.Helper()
+		body := `{"title":` + strconv.Quote(title) + `}`
+		req := httptest.NewRequest("POST", "/api/admin/stories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(sessionCookie)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		var resp struct {
+			Slug string `json:"slug"`
+		}
+		if rr.Code == http.StatusOK {
+			if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+				t.Fatalf("Failed to decode create response: %v. Body: %s", err, rr.Body.String())
+			}
+		}
+		return rr.Code, resp.Slug
+	}
+
+	// First creation gets the bare slug "dup".
+	if code, slug := createStory("Dup"); code != http.StatusOK || slug != "dup" {
+		t.Fatalf("First create: got code=%d slug=%q, want code=200 slug=%q", code, slug, "dup")
+	}
+
+	// Second creation with the same title must NOT 500 on the UNIQUE constraint;
+	// it should resolve to a suffixed unique slug "dup-2".
+	code, slug := createStory("Dup")
+	if code != http.StatusOK {
+		t.Fatalf("Second create with duplicate title returned %d (expected 200, not a UNIQUE-constraint 500)", code)
+	}
+	if slug != "dup-2" {
+		t.Fatalf("Second create slug = %q, want suffixed unique slug %q", slug, "dup-2")
+	}
+}
+
 // TestAdminGetStoryAudioURL verifies the admin GET /api/admin/stories/{id}
 // serialization of audio_url: a JSON string when the story has audio, and JSON
 // null when it does not.

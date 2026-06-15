@@ -866,6 +866,18 @@ func (r *Router) handleCreateStory(w http.ResponseWriter, req *http.Request) {
 		slug = generateSlug(input.Title)
 	}
 
+	// Resolve a collision-safe slug so creating two stories with the same title
+	// (or an explicit slug already in use) does not violate the stories.slug
+	// UNIQUE constraint and return a 500. There is no existing row yet, so pass 0
+	// as the current story ID — AUTOINCREMENT starts at 1, so 0 matches no row and
+	// every existing slug is treated as owned by a different story and suffixed.
+	resolvedSlug, err := r.ensureUniqueSlug(req.Context(), slug, 0)
+	if err != nil {
+		http.Error(w, "Failed to resolve unique slug: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	slug = resolvedSlug
+
 	story, err := r.repo.CreateStory(req.Context(), repository.CreateStoryParams{
 		Title:         input.Title,
 		Slug:          slug,
