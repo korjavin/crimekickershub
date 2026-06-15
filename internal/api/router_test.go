@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -470,5 +471,87 @@ func TestListMediaEndpoint(t *testing.T) {
 	// Should be empty since we haven't added any media
 	if len(mediaAssets) != 0 {
 		t.Errorf("Expected empty media list, got %d items", len(mediaAssets))
+	}
+}
+
+// TestStoryAudioURLRoundTrip verifies that a non-null audio_url set via UpdateStory
+// persists and reads back correctly through GetStoryByID.
+func TestStoryAudioURLRoundTrip(t *testing.T) {
+	testDB, queries, cleanup := setupTestDB(t)
+	defer cleanup()
+	_ = testDB
+
+	ctx := context.Background()
+
+	// Create a story without audio.
+	created, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Audio Round Trip",
+		Slug:          "audio-round-trip",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory failed: %v", err)
+	}
+
+	const audioURL = "https://example.com/a.mp3"
+
+	// Update the story with a populated audio_url, preserving its other fields.
+	updated, err := queries.UpdateStory(ctx, repository.UpdateStoryParams{
+		ID:            created.ID,
+		Title:         created.Title,
+		Slug:          created.Slug,
+		CoverImageUrl: created.CoverImageUrl,
+		Published:     created.Published,
+		AudioUrl:      sql.NullString{String: audioURL, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("UpdateStory failed: %v", err)
+	}
+
+	if !updated.AudioUrl.Valid || updated.AudioUrl.String != audioURL {
+		t.Errorf("UpdateStory returned audio_url = %#v, want valid %q", updated.AudioUrl, audioURL)
+	}
+
+	// Read it back to confirm persistence.
+	got, err := queries.GetStoryByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("GetStoryByID failed: %v", err)
+	}
+
+	if !got.AudioUrl.Valid {
+		t.Errorf("Expected audio_url to be valid after update, got Valid=false")
+	}
+	if got.AudioUrl.String != audioURL {
+		t.Errorf("Expected audio_url %q, got %q", audioURL, got.AudioUrl.String)
+	}
+}
+
+// TestStoryAudioURLDefaultsNull verifies that a freshly created story that was
+// never given audio reads back with a NULL (invalid) audio_url, confirming the
+// new column is nullable and backward compatible.
+func TestStoryAudioURLDefaultsNull(t *testing.T) {
+	_, queries, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	created, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "No Audio",
+		Slug:          "no-audio",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory failed: %v", err)
+	}
+
+	got, err := queries.GetStoryByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("GetStoryByID failed: %v", err)
+	}
+
+	if got.AudioUrl.Valid {
+		t.Errorf("Expected audio_url to be NULL (Valid=false) for a story without audio, got %#v", got.AudioUrl)
 	}
 }

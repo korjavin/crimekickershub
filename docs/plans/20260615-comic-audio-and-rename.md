@@ -134,12 +134,12 @@ green and new tests can pass against the same schema as production.
 - Modify: `internal/repository/models.go`, `internal/repository/queries.sql.go` (regenerated)
 - Modify: `internal/api/router_test.go` (add round-trip test)
 
-- [ ] create `008_add_story_audio.sql` with `ALTER TABLE stories ADD COLUMN audio_url TEXT;`
-- [ ] update the `UpdateStory` query in `queries.sql` to set `audio_url = ?` (keep `RETURNING *`)
-- [ ] run `sqlc generate` and confirm `Story.AudioUrl sql.NullString` + `UpdateStoryParams.AudioUrl` are generated (if sqlc were unavailable, hand-edit the generated files to match)
-- [ ] write a Go test (in `internal/api/router_test.go`, reusing `setupTestDB`) that creates a story, calls `queries.UpdateStory` with a non-null `AudioUrl`, reads it back via `GetStoryByID`, and asserts the value round-trips
-- [ ] write a test asserting an existing story with no audio reads back `AudioUrl.Valid == false` (backward-compat / nullable)
-- [ ] run `go test ./...` — must pass before next task
+- [x] create `008_add_story_audio.sql` with `ALTER TABLE stories ADD COLUMN audio_url TEXT;`
+- [x] update the `UpdateStory` query in `queries.sql` to set `audio_url = ?` (keep `RETURNING *`)
+- [x] run `sqlc generate` and confirm `Story.AudioUrl sql.NullString` + `UpdateStoryParams.AudioUrl` are generated (if sqlc were unavailable, hand-edit the generated files to match)
+- [x] write a Go test (in `internal/api/router_test.go`, reusing `setupTestDB`) that creates a story, calls `queries.UpdateStory` with a non-null `AudioUrl`, reads it back via `GetStoryByID`, and asserts the value round-trips
+- [x] write a test asserting an existing story with no audio reads back `AudioUrl.Valid == false` (backward-compat / nullable)
+- [x] run `go test ./...` — must pass before next task
 
 ### Task 2: Backend — accept & return `audio_url` in story handlers
 
