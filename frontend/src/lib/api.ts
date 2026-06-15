@@ -296,6 +296,37 @@ export async function uploadMedia(file: File, promptVersionId?: string) {
   return { ...result, thumbnail_url: thumbPresigned.publicURL };
 }
 
+export async function uploadAudio(file: File): Promise<{ url: string }> {
+  // Some audio files report an empty MIME type. The presigned URL is signed against
+  // a specific Content-Type, so the value we sign with must match the value we PUT
+  // with, otherwise the R2 presigned PUT fails. Compute it once and reuse it.
+  const contentType = file.type || 'application/octet-stream';
+
+  // 1. Get a presigned URL for the audio file
+  const presignedResponse = await fetch(`${API_BASE}/admin/upload/presigned`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: file.name, contentType }),
+  });
+  if (!presignedResponse.ok) {
+    throw new Error(`Failed to get presigned URL: ${presignedResponse.status}`);
+  }
+  const presigned = await presignedResponse.json();
+
+  // 2. Upload the raw file to R2
+  const uploadResponse = await fetch(presigned.uploadURL, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: file,
+  });
+  if (!uploadResponse.ok) {
+    throw new Error(`Audio upload failed: ${uploadResponse.status}`);
+  }
+
+  // 3. Return the public URL (audio is stored directly on the story, not as a media_asset)
+  return { url: presigned.publicURL };
+}
+
 export async function createTextSlide(data: { title: string; description?: string; text_content: string; entity_id?: number }) {
   const response = await fetch(`${API_BASE}/admin/media/text`, {
     method: 'POST',
@@ -351,7 +382,10 @@ export async function updateStory(id: string, itemIds: number[]) {
   return response.json();
 }
 
-export async function updateStoryMetadata(id: string, data: { title?: string; slug?: string; coverImageUrl?: string; published?: boolean }) {
+// Note: audio_url is `string` (not `string | null`) on purpose. The backend treats a
+// JSON `null` / omitted field as "preserve current audio"; only an empty string `''`
+// clears it. Passing `null` would be a no-op, so the type forbids it to match behavior.
+export async function updateStoryMetadata(id: string, data: { title?: string; slug?: string; coverImageUrl?: string; published?: boolean; audio_url?: string }) {
   const response = await fetch(`${API_BASE}/admin/stories/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

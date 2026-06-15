@@ -42,6 +42,7 @@ export interface Story {
   title: string;
   slug: string;
   cover_image_url: string | null;
+  audio_url?: string | null;
   published: boolean | null;
   created_at: string | null;
 }
@@ -71,6 +72,7 @@ export interface PublicStoryItem {
 
 export interface PublicStory {
   title: string;
+  audio_url?: string | null;
   items: PublicStoryItem[];
 }
 

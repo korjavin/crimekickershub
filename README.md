@@ -39,10 +39,12 @@
 #### 📖 Story Builder
 * **Mixed Media Episodes:** Create "Issues" or "Stories" that combine static images and video clips in a single sequence.
 * **Mobile-First Layout:** content is organized for seamless vertical scrolling (Webtoon style) or swipe-viewing.
+* **Audio Track:** Attach a single audio file (narration/soundtrack) to a comic, uploaded directly to Cloudflare R2 like images. The file can be previewed, replaced, or removed.
+* **Rename:** Change a comic's title at any time; the URL slug is automatically regenerated to stay unique.
 
 ### 2. Public Portal
 * [cite_start]**Hero Wiki:** Interactive cards for characters showing powers (Wind, Pho-soup, Gravity, Size-shifting) and origin stories [cite: 52-59].
-* **Comic Reader:** Optimized viewer for reading visual stories on mobile and desktop.
+* **Comic Reader:** Optimized viewer for reading visual stories on mobile and desktop, with a Play control for comics that have an audio track.
 * **Cinema:** A tagged gallery of video clips and short films.
 
 ---

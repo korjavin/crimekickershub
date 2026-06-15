@@ -162,7 +162,7 @@ SELECT * FROM stories ORDER BY created_at DESC;
 
 -- name: UpdateStory :one
 UPDATE stories
-SET title = ?, slug = ?, cover_image_url = ?, published = ?
+SET title = ?, slug = ?, cover_image_url = ?, published = ?, audio_url = ?
 WHERE id = ?
 RETURNING *;
 

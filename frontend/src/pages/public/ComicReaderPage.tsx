@@ -82,6 +82,20 @@ export const ComicReaderPage = () => {
         >
           {story.title}
         </h2>
+        {story.audio_url ? (
+          <div style={{ margin: '0 0 16px' }}>
+            <div className="ck-eyebrow ck-eyebrow-strong" style={{ marginBottom: 6 }}>
+              Listen
+            </div>
+            <audio
+              controls
+              preload="none"
+              src={story.audio_url}
+              aria-label="Comic audio"
+              style={{ width: '100%', maxWidth: 480 }}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div style={{ padding: '0 clamp(8px, 3vw, 32px) 40px' }}>

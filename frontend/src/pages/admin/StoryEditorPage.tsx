@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -45,6 +45,7 @@ import {
   createStory,
   updateStory,
   updateStoryMetadata,
+  uploadAudio,
   deleteStory,
   listMedia,
   getYouTubeThumbnail,
@@ -207,6 +208,15 @@ export function StoryEditorPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [newStoryTitle, setNewStoryTitle] = useState('');
+
+  // Rename State
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [renameTitle, setRenameTitle] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  // Audio State
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   // Text Slide State
   const [isTextSlideDialogOpen, setIsTextSlideDialogOpen] = useState(false);
@@ -537,6 +547,87 @@ export function StoryEditorPage() {
     }
   };
 
+  const handleRenameStory = async () => {
+    if (!storyWithItems) return;
+
+    const trimmedTitle = renameTitle.trim();
+    if (!trimmedTitle) {
+      toast.error('Title is required');
+      return;
+    }
+
+    try {
+      setIsRenaming(true);
+
+      const updated = await updateStoryMetadata(String(storyWithItems.id), {
+        title: trimmedTitle,
+        slug: generateSlug(trimmedTitle),
+      });
+
+      // Reflect the server-resolved title/slug (slug may be suffixed for uniqueness)
+      setStoryWithItems({
+        ...storyWithItems,
+        title: updated.title,
+        slug: updated.slug,
+      });
+
+      setStories(stories.map(s =>
+        s.id === storyWithItems.id
+          ? { ...s, title: updated.title, slug: updated.slug }
+          : s
+      ));
+
+      setIsRenameDialogOpen(false);
+      setRenameTitle('');
+
+      toast.success('Story renamed successfully');
+    } catch (error) {
+      console.error('Failed to rename story:', error);
+      toast.error('Failed to rename story. Please try again.');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const handleAudioFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!storyWithItems) return;
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingAudio(true);
+      const { url } = await uploadAudio(file);
+      await updateStoryMetadata(String(storyWithItems.id), { audio_url: url });
+      setStoryWithItems({ ...storyWithItems, audio_url: url });
+      toast.success('Audio uploaded');
+    } catch (error) {
+      console.error('Failed to upload audio:', error);
+      toast.error('Failed to upload audio');
+    } finally {
+      setIsUploadingAudio(false);
+      // Reset the input so the same file can be re-selected
+      if (audioInputRef.current) {
+        audioInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAudio = async () => {
+    if (!storyWithItems) return;
+
+    if (!confirm('Remove the audio from this comic?')) return;
+
+    try {
+      await updateStoryMetadata(String(storyWithItems.id), { audio_url: '' });
+      setStoryWithItems({ ...storyWithItems, audio_url: null });
+      toast.success('Audio removed');
+    } catch (error) {
+      console.error('Failed to remove audio:', error);
+      toast.error('Failed to remove audio');
+    }
+  };
+
   const handleDeleteStory = async () => {
     if (!storyWithItems) return;
 
@@ -715,6 +806,48 @@ export function StoryEditorPage() {
                   Published
                 </label>
               </div>
+              <Dialog
+                open={isRenameDialogOpen}
+                onOpenChange={(open) => {
+                  setIsRenameDialogOpen(open);
+                  if (open) {
+                    setRenameTitle(storyWithItems.title);
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline">✏️ Rename</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Rename Story</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Title</label>
+                      <Input
+                        value={renameTitle}
+                        onChange={(e) => setRenameTitle(e.target.value)}
+                        placeholder="Enter story title"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsRenameDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleRenameStory}
+                      disabled={!renameTitle.trim() || isRenaming}
+                    >
+                      {isRenaming ? 'Renaming...' : 'Rename'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               <Button
                 variant="outline"
                 onClick={handleDeleteStory}
@@ -735,6 +868,60 @@ export function StoryEditorPage() {
           </Button>
         </div>
       </div>
+
+      {storyWithItems && (
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">Comic Audio</h2>
+              <p className="text-xs text-muted-foreground">
+                One narration/soundtrack file plays on the public comic page.
+              </p>
+            </div>
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={handleAudioFileSelected}
+            />
+            {storyWithItems.audio_url ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                <audio
+                  controls
+                  src={storyWithItems.audio_url}
+                  className="w-full sm:w-64 h-9"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={isUploadingAudio}
+                >
+                  {isUploadingAudio ? 'Uploading…' : 'Replace audio'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveAudio}
+                  disabled={isUploadingAudio}
+                >
+                  Remove audio
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => audioInputRef.current?.click()}
+                disabled={isUploadingAudio}
+              >
+                {isUploadingAudio ? 'Uploading…' : 'Upload audio'}
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {!selectedStoryId ? (
         <Card className="flex-1 flex items-center justify-center p-12 text-center">

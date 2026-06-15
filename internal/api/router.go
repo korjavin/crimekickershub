@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -313,6 +314,14 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	// This is a public endpoint, so unpublished/draft stories must not be reachable
+	// by slug (the public list endpoint already filters on published). Respond with
+	// the same 404 used for a missing story so we do not leak the existence of drafts.
+	if !story.Published.Valid || !story.Published.Bool {
+		http.Error(w, "Story not found", http.StatusNotFound)
+		return
+	}
+
 	// Get all media assets for the story using a single query
 	mediaAssets, err := r.repo.ListMediaByStory(req.Context(), story.ID)
 	if err != nil {
@@ -331,13 +340,18 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 	}
 
 	type PublicStoryResponse struct {
-		Title string                    `json:"title"`
-		Items []PublicStoryItemResponse `json:"items"`
+		Title    string                    `json:"title"`
+		AudioURL *string                   `json:"audio_url"`
+		Items    []PublicStoryItemResponse `json:"items"`
 	}
 
 	response := PublicStoryResponse{
 		Title: story.Title,
 		Items: make([]PublicStoryItemResponse, 0, len(mediaAssets)),
+	}
+
+	if story.AudioUrl.Valid {
+		response.AudioURL = &story.AudioUrl.String
 	}
 
 	for _, media := range mediaAssets {
@@ -860,6 +874,18 @@ func (r *Router) handleCreateStory(w http.ResponseWriter, req *http.Request) {
 		slug = generateSlug(input.Title)
 	}
 
+	// Resolve a collision-safe slug so creating two stories with the same title
+	// (or an explicit slug already in use) does not violate the stories.slug
+	// UNIQUE constraint and return a 500. There is no existing row yet, so pass 0
+	// as the current story ID — AUTOINCREMENT starts at 1, so 0 matches no row and
+	// every existing slug is treated as owned by a different story and suffixed.
+	resolvedSlug, err := r.ensureUniqueSlug(req.Context(), slug, 0)
+	if err != nil {
+		http.Error(w, "Failed to resolve unique slug: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	slug = resolvedSlug
+
 	story, err := r.repo.CreateStory(req.Context(), repository.CreateStoryParams{
 		Title:         input.Title,
 		Slug:          slug,
@@ -867,6 +893,14 @@ func (r *Router) handleCreateStory(w http.ResponseWriter, req *http.Request) {
 		Published:     sql.NullBool{Bool: input.Published, Valid: input.Published},
 	})
 	if err != nil {
+		// ensureUniqueSlug above checks-then-writes without a transaction, so two
+		// truly-concurrent creates could each see the same slug as free and the
+		// second write then violates the stories.slug UNIQUE constraint. Convert
+		// that into a graceful 409 instead of a 500 so the client can retry.
+		if isUniqueConstraintErr(err) {
+			http.Error(w, "slug already exists, please retry", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Failed to create story: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1061,11 +1095,19 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 		Media        *MediaAssetDTO `json:"media,omitempty"`
 	}
 
+	// Serialize audio_url as a *string so it becomes null when unset rather
+	// than the raw sql.NullString shape.
+	var audioURLPtr *string
+	if story.AudioUrl.Valid {
+		audioURLPtr = &story.AudioUrl.String
+	}
+
 	response := map[string]interface{}{
 		"id":              story.ID,
 		"title":           story.Title,
 		"slug":            story.Slug,
 		"cover_image_url": story.CoverImageUrl,
+		"audio_url":       audioURLPtr,
 		"published":       story.Published,
 		"created_at":      story.CreatedAt,
 		"items":           []StoryItemResponse{},
@@ -1096,6 +1138,55 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 	respondJSON(w, response)
 }
 
+// isUniqueConstraintErr reports whether err is a SQLite UNIQUE constraint
+// violation. We match on the driver's error string ("UNIQUE constraint failed")
+// rather than importing the sqlite driver's concrete error type, keeping this
+// detection dependency-free and consistent with the rest of the codebase.
+func isUniqueConstraintErr(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
+}
+
+// ensureUniqueSlug resolves a collision-safe slug for a story. It checks whether
+// the desired slug is already taken by a *different* story (the stories.slug column
+// has a UNIQUE constraint). If it is, it appends "-2", "-3", … until a free slug is
+// found. The slug owned by currentStoryID itself is treated as available so a story
+// can keep (or re-set) its own slug.
+func (r *Router) ensureUniqueSlug(ctx context.Context, desired string, currentStoryID int64) (string, error) {
+	// A title made up entirely of non-alphanumeric characters (e.g. "!!!") yields
+	// an empty generated slug. Persisting an empty slug would make the comic
+	// reachable only at /comics/ (which 404s) or collide on the UNIQUE constraint
+	// with another empty slug. Fall back to a deterministic, non-empty default and
+	// resolve uniqueness from there so rename can never persist an empty slug.
+	if desired == "" {
+		desired = fmt.Sprintf("comic-%d", currentStoryID)
+	}
+
+	// Cap attempts to guard against an unexpected infinite loop.
+	const maxAttempts = 500
+	for n := 1; n <= maxAttempts; n++ {
+		candidate := desired
+		if n > 1 {
+			candidate = fmt.Sprintf("%s-%d", desired, n)
+		}
+
+		existing, err := r.repo.GetStoryBySlug(ctx, candidate)
+		if errors.Is(err, sql.ErrNoRows) {
+			// Slug is free.
+			return candidate, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		if existing.ID == currentStoryID {
+			// The slug belongs to the same story — no collision.
+			return candidate, nil
+		}
+		// Otherwise the slug is taken by a different story; try the next suffix.
+	}
+
+	return "", fmt.Errorf("could not find a unique slug for %q after %d attempts", desired, maxAttempts)
+}
+
 // handleUpdateStory updates story metadata (title, slug, etc) - Placeholder for now if needed
 // or we can keep it for backward compatibility or general updates
 func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
@@ -1109,6 +1200,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Title         *string `json:"title"`
 		Slug          *string `json:"slug"`
 		CoverImageURL *string `json:"coverImageUrl"`
+		AudioURL      *string `json:"audio_url"`
 		Published     *bool   `json:"published"`
 	}
 
@@ -1131,13 +1223,27 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 	}
 
 	slug := currentStory.Slug
-	if input.Slug != nil {
-		slug = *input.Slug
+	if input.Slug != nil && *input.Slug != currentStory.Slug {
+		// Resolve a collision-safe slug so renaming to a title whose generated
+		// slug collides with another story does not violate the UNIQUE constraint.
+		resolvedSlug, err := r.ensureUniqueSlug(req.Context(), *input.Slug, storyID)
+		if err != nil {
+			http.Error(w, "Failed to resolve unique slug: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		slug = resolvedSlug
 	}
 
 	coverImageURL := currentStory.CoverImageUrl
 	if input.CoverImageURL != nil {
 		coverImageURL = sql.NullString{String: *input.CoverImageURL, Valid: *input.CoverImageURL != ""}
+	}
+
+	// Preserve the current audio when not provided; set or clear it (empty
+	// string clears to NULL) when provided.
+	audioURL := currentStory.AudioUrl
+	if input.AudioURL != nil {
+		audioURL = sql.NullString{String: *input.AudioURL, Valid: *input.AudioURL != ""}
 	}
 
 	published := currentStory.Published
@@ -1151,9 +1257,18 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Title:         title,
 		Slug:          slug,
 		CoverImageUrl: coverImageURL,
+		AudioUrl:      audioURL,
 		Published:     published,
 	})
 	if err != nil {
+		// ensureUniqueSlug above checks-then-writes without a transaction, so two
+		// truly-concurrent renames could each see the same slug as free and the
+		// second write then violates the stories.slug UNIQUE constraint. Convert
+		// that into a graceful 409 instead of a 500 so the client can retry.
+		if isUniqueConstraintErr(err) {
+			http.Error(w, "slug already exists, please retry", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Failed to update story: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1164,6 +1279,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Title         string  `json:"title"`
 		Slug          string  `json:"slug"`
 		CoverImageURL *string `json:"cover_image_url"`
+		AudioURL      *string `json:"audio_url"`
 		Published     bool    `json:"published"`
 		CreatedAt     *string `json:"created_at"`
 	}
@@ -1177,6 +1293,10 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 
 	if updatedStory.CoverImageUrl.Valid {
 		response.CoverImageURL = &updatedStory.CoverImageUrl.String
+	}
+
+	if updatedStory.AudioUrl.Valid {
+		response.AudioURL = &updatedStory.AudioUrl.String
 	}
 
 	if updatedStory.CreatedAt.Valid {

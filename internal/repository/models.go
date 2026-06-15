@@ -66,6 +66,7 @@ type Story struct {
 	CoverImageUrl sql.NullString `json:"cover_image_url"`
 	Published     sql.NullBool   `json:"published"`
 	CreatedAt     sql.NullTime   `json:"created_at"`
+	AudioUrl      sql.NullString `json:"audio_url"`
 }
 
 type StoryItem struct {

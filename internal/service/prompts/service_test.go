@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
-	"runtime"
+	"strings"
 	"testing"
 
 	"crimekickershub/internal/db"
+	"crimekickershub/internal/migrations"
 	"crimekickershub/internal/repository"
 )
 
@@ -26,14 +27,11 @@ func setupTestDB(t *testing.T) (*repository.Queries, func()) {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
 
-	// Initialize schema - compute path relative to the test file location
-	_, currentFile, _, _ := runtime.Caller(0)
-	testDir := filepath.Dir(currentFile)
-	schemaPath := filepath.Join(testDir, "..", "..", "..", "sql", "schema", "001_initial.sql")
-	if err := db.InitSchema(testDB, schemaPath, "001_initial"); err != nil {
+	// Initialize schema from the embedded migrations (same source sqlc and production use)
+	if err := migrations.RunMigrations(testDB); err != nil {
 		testDB.Close()
 		os.RemoveAll(tmpDir)
-		t.Fatalf("Failed to init schema: %v", err)
+		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	queries := repository.New(testDB)
@@ -211,25 +209,12 @@ func TestGetPromptDiff(t *testing.T) {
 			t.Error("Expected non-empty diff")
 		}
 		// Check that it contains markers for additions and deletions
-		if !contains(diff, "[-") || !contains(diff, "[+") {
+		if !strings.Contains(diff, "[-") || !strings.Contains(diff, "[+") {
 			t.Errorf("Diff should contain change markers ([-] and [+]), got: %s", diff)
 		}
 		// Verify it contains version info
-		if !contains(diff, "Diff between v1 and v2") {
+		if !strings.Contains(diff, "Diff between v1 and v2") {
 			t.Errorf("Diff should contain version info, got: %s", diff)
 		}
 	})
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

@@ -209,7 +209,7 @@ func (q *Queries) CreatePromptVersion(ctx context.Context, arg CreatePromptVersi
 const createStory = `-- name: CreateStory :one
 INSERT INTO stories (title, slug, cover_image_url, published)
 VALUES (?, ?, ?, ?)
-RETURNING id, title, slug, cover_image_url, published, created_at
+RETURNING id, title, slug, cover_image_url, published, created_at, audio_url
 `
 
 type CreateStoryParams struct {
@@ -234,6 +234,7 @@ func (q *Queries) CreateStory(ctx context.Context, arg CreateStoryParams) (Story
 		&i.CoverImageUrl,
 		&i.Published,
 		&i.CreatedAt,
+		&i.AudioUrl,
 	)
 	return i, err
 }
@@ -613,7 +614,7 @@ func (q *Queries) GetPromptVersionByID(ctx context.Context, id int64) (PromptVer
 }
 
 const getStoryByID = `-- name: GetStoryByID :one
-SELECT id, title, slug, cover_image_url, published, created_at FROM stories WHERE id = ?
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories WHERE id = ?
 `
 
 func (q *Queries) GetStoryByID(ctx context.Context, id int64) (Story, error) {
@@ -626,12 +627,13 @@ func (q *Queries) GetStoryByID(ctx context.Context, id int64) (Story, error) {
 		&i.CoverImageUrl,
 		&i.Published,
 		&i.CreatedAt,
+		&i.AudioUrl,
 	)
 	return i, err
 }
 
 const getStoryBySlug = `-- name: GetStoryBySlug :one
-SELECT id, title, slug, cover_image_url, published, created_at FROM stories WHERE slug = ?
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories WHERE slug = ?
 `
 
 func (q *Queries) GetStoryBySlug(ctx context.Context, slug string) (Story, error) {
@@ -644,6 +646,7 @@ func (q *Queries) GetStoryBySlug(ctx context.Context, slug string) (Story, error
 		&i.CoverImageUrl,
 		&i.Published,
 		&i.CreatedAt,
+		&i.AudioUrl,
 	)
 	return i, err
 }
@@ -864,7 +867,7 @@ func (q *Queries) ListAllPromptVersions(ctx context.Context) ([]PromptVersion, e
 }
 
 const listAllStories = `-- name: ListAllStories :many
-SELECT id, title, slug, cover_image_url, published, created_at FROM stories ORDER BY created_at DESC
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories ORDER BY created_at DESC
 `
 
 func (q *Queries) ListAllStories(ctx context.Context) ([]Story, error) {
@@ -883,6 +886,7 @@ func (q *Queries) ListAllStories(ctx context.Context) ([]Story, error) {
 			&i.CoverImageUrl,
 			&i.Published,
 			&i.CreatedAt,
+			&i.AudioUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -1304,7 +1308,7 @@ func (q *Queries) ListPromptVersionsForEntityAndType(ctx context.Context, arg Li
 }
 
 const listPublishedStories = `-- name: ListPublishedStories :many
-SELECT id, title, slug, cover_image_url, published, created_at FROM stories WHERE published = 1 ORDER BY created_at DESC
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories WHERE published = 1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListPublishedStories(ctx context.Context) ([]Story, error) {
@@ -1323,6 +1327,7 @@ func (q *Queries) ListPublishedStories(ctx context.Context) ([]Story, error) {
 			&i.CoverImageUrl,
 			&i.Published,
 			&i.CreatedAt,
+			&i.AudioUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -1528,7 +1533,7 @@ func (q *Queries) ListRecentPromptVersions(ctx context.Context) ([]ListRecentPro
 }
 
 const listRecentStories = `-- name: ListRecentStories :many
-SELECT id, title, slug, cover_image_url, published, created_at FROM stories ORDER BY created_at DESC LIMIT 10
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories ORDER BY created_at DESC LIMIT 10
 `
 
 func (q *Queries) ListRecentStories(ctx context.Context) ([]Story, error) {
@@ -1547,6 +1552,7 @@ func (q *Queries) ListRecentStories(ctx context.Context) ([]Story, error) {
 			&i.CoverImageUrl,
 			&i.Published,
 			&i.CreatedAt,
+			&i.AudioUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -1781,9 +1787,9 @@ func (q *Queries) UpdatePromptType(ctx context.Context, arg UpdatePromptTypePara
 
 const updateStory = `-- name: UpdateStory :one
 UPDATE stories
-SET title = ?, slug = ?, cover_image_url = ?, published = ?
+SET title = ?, slug = ?, cover_image_url = ?, published = ?, audio_url = ?
 WHERE id = ?
-RETURNING id, title, slug, cover_image_url, published, created_at
+RETURNING id, title, slug, cover_image_url, published, created_at, audio_url
 `
 
 type UpdateStoryParams struct {
@@ -1791,6 +1797,7 @@ type UpdateStoryParams struct {
 	Slug          string         `json:"slug"`
 	CoverImageUrl sql.NullString `json:"cover_image_url"`
 	Published     sql.NullBool   `json:"published"`
+	AudioUrl      sql.NullString `json:"audio_url"`
 	ID            int64          `json:"id"`
 }
 
@@ -1800,6 +1807,7 @@ func (q *Queries) UpdateStory(ctx context.Context, arg UpdateStoryParams) (Story
 		arg.Slug,
 		arg.CoverImageUrl,
 		arg.Published,
+		arg.AudioUrl,
 		arg.ID,
 	)
 	var i Story
@@ -1810,6 +1818,7 @@ func (q *Queries) UpdateStory(ctx context.Context, arg UpdateStoryParams) (Story
 		&i.CoverImageUrl,
 		&i.Published,
 		&i.CreatedAt,
+		&i.AudioUrl,
 	)
 	return i, err
 }
