@@ -38,9 +38,10 @@ export function MediaPage() {
 
   // Upload modal state
   const [metadataModalOpen, setMetadataModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedPromptVersionId, setSelectedPromptVersionId] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Detail sheet state
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
@@ -97,7 +98,7 @@ export function MediaPage() {
     const validFiles = files.filter(file => file.type.startsWith('image/'));
 
     if (validFiles.length > 0) {
-      openMetadataModal(validFiles[0]);
+      openMetadataModal(validFiles);
     }
   }, []);
 
@@ -105,40 +106,60 @@ export function MediaPage() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      openMetadataModal(files[0]);
+      openMetadataModal(Array.from(files));
     }
+    // Reset so selecting the same file(s) again re-triggers onChange
+    e.target.value = '';
   };
 
-  // Open metadata modal with selected file
-  const openMetadataModal = (file: File) => {
-    setSelectedFile(file);
+  // Open metadata modal with selected files
+  const openMetadataModal = (files: File[]) => {
+    setSelectedFiles(files);
     setMetadataModalOpen(true);
     setSelectedPromptVersionId('');
   };
 
-  // Upload file with metadata
+  // Upload file(s) with metadata
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     setIsSavingMetadata(true);
+    setUploadProgress({ current: 0, total: selectedFiles.length });
 
     try {
       // Treat "none" and empty string as undefined
       const promptVersionId = selectedPromptVersionId && selectedPromptVersionId !== 'none'
         ? selectedPromptVersionId
         : undefined;
-      await uploadMedia(selectedFile, promptVersionId);
+
+      // Upload all selected files in parallel, tracking completion progress.
+      let completed = 0;
+      const results = await Promise.allSettled(
+        selectedFiles.map(async (file) => {
+          const result = await uploadMedia(file, promptVersionId);
+          completed += 1;
+          setUploadProgress({ current: completed, total: selectedFiles.length });
+          return result;
+        })
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed > 0) {
+        console.error('Some uploads failed:', results.filter((r) => r.status === 'rejected'));
+        alert(`${failed} of ${selectedFiles.length} file(s) failed to upload. Please try again.`);
+      }
 
       setMetadataModalOpen(false);
       await loadData();
 
-      setSelectedFile(null);
+      setSelectedFiles([]);
       setSelectedPromptVersionId('');
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Failed to upload file. Please try again.');
+      alert('Failed to upload files. Please try again.');
     } finally {
       setIsSavingMetadata(false);
+      setUploadProgress(null);
     }
   };
 
@@ -433,15 +454,21 @@ export function MediaPage() {
           <DialogHeader>
             <DialogTitle>Link to Prompt Version</DialogTitle>
             <DialogDescription>
-              Select which prompt version generated this image (optional).
+              Select which prompt version generated {selectedFiles.length === 1 ? 'this image' : 'these images'} (optional). Applies to all selected files.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* File info */}
             <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">Selected file:</p>
-              <p className="text-sm text-muted-foreground">{selectedFile?.name}</p>
+              <p className="text-sm font-medium">
+                {selectedFiles.length === 1 ? 'Selected file:' : `${selectedFiles.length} selected files:`}
+              </p>
+              <div className="mt-1 max-h-32 overflow-y-auto space-y-1">
+                {selectedFiles.map((file, i) => (
+                  <p key={i} className="text-sm text-muted-foreground truncate">{file.name}</p>
+                ))}
+              </div>
             </div>
 
             {/* Recent prompts selector */}
@@ -492,10 +519,12 @@ export function MediaPage() {
               {isSavingMetadata ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
+                  {uploadProgress
+                    ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
+                    : 'Uploading...'}
                 </>
               ) : (
-                'Upload'
+                selectedFiles.length > 1 ? `Upload ${selectedFiles.length} files` : 'Upload'
               )}
             </Button>
           </DialogFooter>
