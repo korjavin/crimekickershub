@@ -37,8 +37,13 @@ services:
       - FRONTEND_PATH=${FRONTEND_PATH:-frontend/dist}
 
   # Litestream - SQLite replication to Cloudflare R2
+  # Use the vendored image: the official litestream/litestream:latest moved to a
+  # shell-less (distroless) base, which breaks the `entrypoint: /bin/sh` inline-config
+  # pattern below ("crun: /bin/sh not found"). This vendored tag ships litestream
+  # v0.5.9 on an alpine base (has /bin/sh) and is backward-compatible with the
+  # 0.3.x config format generated here.
   litestream:
-    image: litestream/litestream:latest
+    image: ghcr.io/korjavin/litestream:0.3.13
     container_name: crimekickershub-litestream
     restart: unless-stopped
     entrypoint: /bin/sh
