@@ -124,12 +124,12 @@ Dependencies identified:
 - [x] run `npm run lint` — touched files introduce 0 new problems; the only remaining entry on a touched file (`ComicReaderPage.tsx:16:7`, pre-existing `react-hooks/set-state-in-effect` on the untouched load `useEffect`) is confirmed present on HEAD without these changes
 
 ### Task 6: Verify acceptance criteria
-- [ ] verify `/comics` defaults to chronological (oldest first) and the selector switches to recent (newest first)
-- [ ] verify a story with a motto shows it on the list card, home card, and reader page; a story without a motto shows no status/motto line there
-- [ ] verify motto is editable in the admin editor and persists (round-trips through the API)
-- [ ] run full Go test suite `go test ./...` — must pass
-- [ ] run `npm run build` and `npm run lint` — must pass
-- [ ] verify `go build ./...` produces a clean build
+- [x] verify `/comics` defaults to chronological (oldest first) and the selector switches to recent (newest first) — code confirmed: `useState<SortOrder>('chronological')` default; `useMemo` sorts by `new Date(a.created_at ?? 0).getTime()` ascending for chronological, reversed for recent; native `<select>` toggles. Browser visual check is manual (not automatable).
+- [x] verify a story with a motto shows it on the list card, home card, and reader page; a story without a motto shows no status/motto line there — code confirmed: all three pages render `story.motto?.trim() ? <…> : null` (ComicListPage.tsx:202, HomePage.tsx:288, ComicReaderPage.tsx:85); backed by Go tests asserting `motto` null/set in slug + list responses. Browser visual check is manual (not automatable).
+- [x] verify motto is editable in the admin editor and persists (round-trips through the API) — backed by Go test `TestUpdateStoryMottoEndpoint` (set → persisted+returned, omit → preserved, `""` → cleared to NULL); admin editor "Save motto" calls `updateStoryMetadata`. Browser interaction check is manual (not automatable).
+- [x] run full Go test suite `go test ./...` — passes (all packages `ok`, including motto tests `TestStoriesMottoColumnExists`, `TestUpdateStoryMottoEndpoint`, `TestPublicStoryMottoBySlug`, `TestPublicListStoriesMotto`)
+- [x] run `npm run build` and `npm run lint` — build passes (tsc + vite clean); lint shows 41 problems (40 errors, 1 warning) identical on both master and HEAD — these changes introduce 0 new problems (verified by linting master versions of all 6 touched files: same per-file problem set)
+- [x] verify `go build ./...` produces a clean build — passes (exit 0)
 
 ### Task 7: [Final] Update documentation
 - [ ] update `README.md` / project docs if they enumerate story fields or migrations (add `motto`)
