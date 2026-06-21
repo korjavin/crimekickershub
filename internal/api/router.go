@@ -255,6 +255,7 @@ func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
 		Title         string  `json:"title"`
 		Slug          string  `json:"slug"`
 		CoverImageURL *string `json:"cover_image_url"`
+		Motto         *string `json:"motto"`
 		Published     bool    `json:"published"`
 		CreatedAt     string  `json:"created_at"`
 	}
@@ -266,6 +267,10 @@ func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
 			Title:     s.Title,
 			Slug:      s.Slug,
 			Published: s.Published.Bool,
+		}
+
+		if s.Motto.Valid {
+			dto.Motto = &s.Motto.String
 		}
 
 		// Use explicit cover image if set, otherwise use first slide
@@ -342,6 +347,7 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 	type PublicStoryResponse struct {
 		Title    string                    `json:"title"`
 		AudioURL *string                   `json:"audio_url"`
+		Motto    *string                   `json:"motto"`
 		Items    []PublicStoryItemResponse `json:"items"`
 	}
 
@@ -352,6 +358,10 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 
 	if story.AudioUrl.Valid {
 		response.AudioURL = &story.AudioUrl.String
+	}
+
+	if story.Motto.Valid {
+		response.Motto = &story.Motto.String
 	}
 
 	for _, media := range mediaAssets {
@@ -1017,6 +1027,7 @@ func (r *Router) handleListStoriesAdmin(w http.ResponseWriter, req *http.Request
 		Title         string  `json:"title"`
 		Slug          string  `json:"slug"`
 		CoverImageURL *string `json:"cover_image_url"`
+		Motto         *string `json:"motto"`
 		Published     bool    `json:"published"`
 		CreatedAt     *string `json:"created_at"`
 	}
@@ -1028,6 +1039,10 @@ func (r *Router) handleListStoriesAdmin(w http.ResponseWriter, req *http.Request
 			Title:     s.Title,
 			Slug:      s.Slug,
 			Published: s.Published.Bool,
+		}
+
+		if s.Motto.Valid {
+			dto.Motto = &s.Motto.String
 		}
 
 		// Use explicit cover image if set, otherwise use first slide
@@ -1102,12 +1117,20 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 		audioURLPtr = &story.AudioUrl.String
 	}
 
+	// Serialize motto as a *string so it becomes null when unset rather than
+	// the raw sql.NullString shape, mirroring audio_url.
+	var mottoPtr *string
+	if story.Motto.Valid {
+		mottoPtr = &story.Motto.String
+	}
+
 	response := map[string]interface{}{
 		"id":              story.ID,
 		"title":           story.Title,
 		"slug":            story.Slug,
 		"cover_image_url": story.CoverImageUrl,
 		"audio_url":       audioURLPtr,
+		"motto":           mottoPtr,
 		"published":       story.Published,
 		"created_at":      story.CreatedAt,
 		"items":           []StoryItemResponse{},
@@ -1201,6 +1224,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Slug          *string `json:"slug"`
 		CoverImageURL *string `json:"coverImageUrl"`
 		AudioURL      *string `json:"audio_url"`
+		Motto         *string `json:"motto"`
 		Published     *bool   `json:"published"`
 	}
 
@@ -1246,6 +1270,13 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		audioURL = sql.NullString{String: *input.AudioURL, Valid: *input.AudioURL != ""}
 	}
 
+	// Preserve the current motto when not provided; set or clear it (empty
+	// string clears to NULL) when provided.
+	motto := currentStory.Motto
+	if input.Motto != nil {
+		motto = sql.NullString{String: *input.Motto, Valid: *input.Motto != ""}
+	}
+
 	published := currentStory.Published
 	if input.Published != nil {
 		published = sql.NullBool{Bool: *input.Published, Valid: true}
@@ -1258,7 +1289,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Slug:          slug,
 		CoverImageUrl: coverImageURL,
 		AudioUrl:      audioURL,
-		Motto:         currentStory.Motto,
+		Motto:         motto,
 		Published:     published,
 	})
 	if err != nil {
@@ -1281,6 +1312,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Slug          string  `json:"slug"`
 		CoverImageURL *string `json:"cover_image_url"`
 		AudioURL      *string `json:"audio_url"`
+		Motto         *string `json:"motto"`
 		Published     bool    `json:"published"`
 		CreatedAt     *string `json:"created_at"`
 	}
@@ -1298,6 +1330,10 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 
 	if updatedStory.AudioUrl.Valid {
 		response.AudioURL = &updatedStory.AudioUrl.String
+	}
+
+	if updatedStory.Motto.Valid {
+		response.Motto = &updatedStory.Motto.String
 	}
 
 	if updatedStory.CreatedAt.Valid {

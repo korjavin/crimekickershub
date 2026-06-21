@@ -93,13 +93,13 @@ Dependencies identified:
 - [x] run `go test ./...` — must pass before Task 2
 
 ### Task 2: Thread `motto` through the API handlers
-- [ ] `handleUpdateStory` (router.go ~L1192): add `Motto *string` to the input struct; build `motto := sql.NullString{...}` mirroring the `audio_url` logic (null when empty); pass it into the `UpdateStory` params; add `Motto *string` to the response struct and populate it
-- [ ] `handleGetStoryBySlug` (router.go ~L300): add `Motto *string` to the response struct and set it from `story.Motto` (null when `!Valid`), mirroring `AudioURL`
-- [ ] `handleListStories` public `StoryDTO` (router.go ~L253): add a `Motto *string` JSON field and populate it in the loop
-- [ ] `handleGetStory` admin single (router.go ~L1098): add `motto` to the serialized response map as a `*string` (null when unset), mirroring `audio_url`
-- [ ] admin list `AdminStoryDTO` (router.go ~L1015): add `Motto *string` and populate it (keeps the editor list consistent)
-- [ ] add/extend Go tests in `router_test.go`: PUT a story with a motto via the admin update endpoint, then assert it is returned by the public slug endpoint and the public list endpoint; assert that omitting/clearing motto serializes as JSON `null`
-- [ ] run `go test ./...` — must pass before Task 3
+- [x] `handleUpdateStory` (router.go ~L1192): add `Motto *string` to the input struct; build `motto := sql.NullString{...}` mirroring the `audio_url` logic (null when empty); pass it into the `UpdateStory` params; add `Motto *string` to the response struct and populate it
+- [x] `handleGetStoryBySlug` (router.go ~L300): add `Motto *string` to the response struct and set it from `story.Motto` (null when `!Valid`), mirroring `AudioURL`
+- [x] `handleListStories` public `StoryDTO` (router.go ~L253): add a `Motto *string` JSON field and populate it in the loop
+- [x] `handleGetStory` admin single (router.go ~L1098): add `motto` to the serialized response map as a `*string` (null when unset), mirroring `audio_url`
+- [x] admin list `AdminStoryDTO` (router.go ~L1015): add `Motto *string` and populate it (keeps the editor list consistent)
+- [x] add/extend Go tests in `router_test.go`: PUT a story with a motto via the admin update endpoint, then assert it is returned by the public slug endpoint and the public list endpoint; assert that omitting/clearing motto serializes as JSON `null`
+- [x] run `go test ./...` — must pass before Task 3
 
 ### Task 3: Admin editor — add the motto/slogan input ("offer to fill" like audio)
 - [ ] locate the frontend API client types that carry `audio_url` (e.g. `frontend/src/lib/api.ts` or a types module) and add `motto?: string | null` to the story / story-with-items types and to the `updateStoryMetadata` payload type
