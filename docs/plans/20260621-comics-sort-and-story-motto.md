@@ -85,12 +85,12 @@ Dependencies identified:
 ## Implementation Steps
 
 ### Task 1: Add `motto` column to stories and regenerate the DB layer
-- [ ] create `internal/migrations/010_add_story_motto.sql` with a comment header (mirroring `009`) and `ALTER TABLE stories ADD COLUMN motto TEXT;` (nullable, additive)
-- [ ] update `sql/queries/queries.sql` `UpdateStory` to include `motto = ?` in the `SET` clause (keep `RETURNING *`)
-- [ ] run `sqlc generate` and confirm `internal/repository/models.go` `Story` now has `Motto sql.NullString` and `UpdateStoryParams` includes `Motto`
-- [ ] run `go build ./...` — must compile (note: `UpdateStory` callers in `router.go` will fail to build until Task 2; if so, add the `Motto` param at the existing `UpdateStory(...)` call site as part of completing this task so the build is green)
-- [ ] add a Go test (e.g. in `internal/api/router_test.go` or a new `internal/migrations` test) that runs migrations on a fresh DB and asserts via `PRAGMA table_info(stories)` that a `motto` column exists
-- [ ] run `go test ./...` — must pass before Task 2
+- [x] create `internal/migrations/010_add_story_motto.sql` with a comment header (mirroring `009`) and `ALTER TABLE stories ADD COLUMN motto TEXT;` (nullable, additive)
+- [x] update `sql/queries/queries.sql` `UpdateStory` to include `motto = ?` in the `SET` clause (keep `RETURNING *`)
+- [x] run `sqlc generate` and confirm `internal/repository/models.go` `Story` now has `Motto sql.NullString` and `UpdateStoryParams` includes `Motto`
+- [x] run `go build ./...` — must compile (added `Motto: currentStory.Motto` at the existing `UpdateStory(...)` call site to keep the build green; Task 2 wires the input/output)
+- [x] add a Go test (e.g. in `internal/api/router_test.go` or a new `internal/migrations` test) that runs migrations on a fresh DB and asserts via `PRAGMA table_info(stories)` that a `motto` column exists
+- [x] run `go test ./...` — must pass before Task 2
 
 ### Task 2: Thread `motto` through the API handlers
 - [ ] `handleUpdateStory` (router.go ~L1192): add `Motto *string` to the input struct; build `motto := sql.NullString{...}` mirroring the `audio_url` logic (null when empty); pass it into the `UpdateStory` params; add `Motto *string` to the response struct and populate it

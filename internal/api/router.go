@@ -1258,6 +1258,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Slug:          slug,
 		CoverImageUrl: coverImageURL,
 		AudioUrl:      audioURL,
+		Motto:         currentStory.Motto,
 		Published:     published,
 	})
 	if err != nil {

@@ -1170,6 +1170,44 @@ func TestAdminGetStoryAudioURL(t *testing.T) {
 	}
 }
 
+// TestStoriesMottoColumnExists asserts that migration 010 adds the motto column
+// to the stories table on a freshly-migrated database.
+func TestStoriesMottoColumnExists(t *testing.T) {
+	testDB, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	rows, err := testDB.Query("PRAGMA table_info(stories)")
+	if err != nil {
+		t.Fatalf("PRAGMA table_info(stories) failed: %v", err)
+	}
+	defer rows.Close()
+
+	found := false
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			ctype     string
+			notNull   int
+			dfltValue sql.NullString
+			pk        int
+		)
+		if err := rows.Scan(&cid, &name, &ctype, &notNull, &dfltValue, &pk); err != nil {
+			t.Fatalf("scanning table_info row failed: %v", err)
+		}
+		if name == "motto" {
+			found = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterating table_info rows failed: %v", err)
+	}
+
+	if !found {
+		t.Fatal("Expected stories table to have a motto column after migrations")
+	}
+}
+
 // devLoginCookie authenticates against the dev-login endpoint and returns the
 // resulting session cookie for use on authenticated admin requests.
 func devLoginCookie(t *testing.T, router *Router) *http.Cookie {
