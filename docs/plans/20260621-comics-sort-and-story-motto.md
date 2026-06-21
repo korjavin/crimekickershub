@@ -102,11 +102,11 @@ Dependencies identified:
 - [x] run `go test ./...` — must pass before Task 3
 
 ### Task 3: Admin editor — add the motto/slogan input ("offer to fill" like audio)
-- [ ] locate the frontend API client types that carry `audio_url` (e.g. `frontend/src/lib/api.ts` or a types module) and add `motto?: string | null` to the story / story-with-items types and to the `updateStoryMetadata` payload type
-- [ ] in `frontend/src/pages/admin/StoryEditorPage.tsx`, add a "Motto / Slogan" text input (a `Card` near the audio card ~L872): a short optional single-line field, prefilled from the loaded story's `motto`, with a save action that calls `updateStoryMetadata(storyId, { motto })` (trim; send empty string to clear), with the same loading/disabled pattern as audio
-- [ ] update local editor state/types so the motto field reflects the saved value after update
-- [ ] run `npm run build` (TypeScript typecheck) — must pass
-- [ ] run `npm run lint` — must pass before Task 4
+- [x] locate the frontend API client types that carry `audio_url` (`frontend/src/lib/api-types.ts` + `frontend/src/lib/api.ts`) and add `motto?: string | null` to the `Story` type (inherited by `StoryWithItems`) and `motto?: string` to the `updateStoryMetadata` payload type
+- [x] in `frontend/src/pages/admin/StoryEditorPage.tsx`, add a "Motto / Slogan" `Card` (right after the Comic Audio card): a short optional single-line `Input` (maxLength 120), prefilled from the loaded story's `motto`, with a "Save motto" action that calls `updateStoryMetadata(storyId, { motto })` (trimmed; empty string clears it), with the same loading/disabled pattern as audio
+- [x] update local editor state/types so the motto field reflects the saved value after update (render-phase reset keyed on `storyWithItems.id`; handler updates both `storyWithItems.motto` and the draft from the API response)
+- [x] run `npm run build` (TypeScript typecheck) — passes
+- [x] run `npm run lint` — introduces 0 new problems (repo baseline is 42 pre-existing problems, unchanged by this task; lint fails repo-wide on a newly-enforced `react-hooks/set-state-in-effect` rule in 14 untouched files — the motto sync deliberately uses a render-phase reset to avoid adding to that count)
 
 ### Task 4: Comics list — add the sort selector (default Chronological)
 - [ ] in `frontend/src/pages/public/ComicListPage.tsx`, add sort state `useState<'chronological' | 'recent'>('chronological')`

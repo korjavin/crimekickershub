@@ -218,6 +218,11 @@ export function StoryEditorPage() {
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
+  // Motto State
+  const [mottoDraft, setMottoDraft] = useState('');
+  const [mottoSyncedStoryId, setMottoSyncedStoryId] = useState<number | null>(null);
+  const [isSavingMotto, setIsSavingMotto] = useState(false);
+
   // Text Slide State
   const [isTextSlideDialogOpen, setIsTextSlideDialogOpen] = useState(false);
   const [textSlideTitle, setTextSlideTitle] = useState('');
@@ -628,6 +633,26 @@ export function StoryEditorPage() {
     }
   };
 
+  const handleSaveMotto = async () => {
+    if (!storyWithItems) return;
+
+    // Trim; an empty string clears the motto on the backend.
+    const trimmed = mottoDraft.trim();
+
+    try {
+      setIsSavingMotto(true);
+      const updated = await updateStoryMetadata(String(storyWithItems.id), { motto: trimmed });
+      setStoryWithItems({ ...storyWithItems, motto: updated.motto ?? null });
+      setMottoDraft(updated.motto ?? '');
+      toast.success(trimmed ? 'Motto saved' : 'Motto cleared');
+    } catch (error) {
+      console.error('Failed to save motto:', error);
+      toast.error('Failed to save motto');
+    } finally {
+      setIsSavingMotto(false);
+    }
+  };
+
   const handleDeleteStory = async () => {
     if (!storyWithItems) return;
 
@@ -732,6 +757,13 @@ export function StoryEditorPage() {
     const entityId = promptVersionEntityMap[media.source_prompt_version_id];
     return String(entityId) === selectedEntityId;
   });
+
+  // Reset the motto draft when a different story loads (render-phase state adjustment,
+  // the React-recommended alternative to a syncing effect).
+  if (storyWithItems && storyWithItems.id !== mottoSyncedStoryId) {
+    setMottoSyncedStoryId(storyWithItems.id);
+    setMottoDraft(storyWithItems.motto ?? '');
+  }
 
   return (
     <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
@@ -919,6 +951,37 @@ export function StoryEditorPage() {
                 {isUploadingAudio ? 'Uploading…' : 'Upload audio'}
               </Button>
             )}
+          </div>
+        </Card>
+      )}
+
+      {storyWithItems && (
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">Motto / Slogan</h2>
+              <p className="text-xs text-muted-foreground">
+                An optional tagline shown on the comic cards and reader page. Leave empty to hide it.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <Input
+                value={mottoDraft}
+                onChange={(e) => setMottoDraft(e.target.value)}
+                placeholder="e.g. Justice never clocks out."
+                maxLength={120}
+                className="w-full sm:w-72"
+                disabled={isSavingMotto}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveMotto}
+                disabled={isSavingMotto || mottoDraft.trim() === (storyWithItems.motto ?? '')}
+              >
+                {isSavingMotto ? 'Saving…' : 'Save motto'}
+              </Button>
+            </div>
           </div>
         </Card>
       )}

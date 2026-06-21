@@ -43,6 +43,7 @@ export interface Story {
   slug: string;
   cover_image_url: string | null;
   audio_url?: string | null;
+  motto?: string | null;
   published: boolean | null;
   created_at: string | null;
 }
