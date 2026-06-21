@@ -109,11 +109,11 @@ Dependencies identified:
 - [x] run `npm run lint` — introduces 0 new problems (repo baseline is 42 pre-existing problems, unchanged by this task; lint fails repo-wide on a newly-enforced `react-hooks/set-state-in-effect` rule in 14 untouched files — the motto sync deliberately uses a render-phase reset to avoid adding to that count)
 
 ### Task 4: Comics list — add the sort selector (default Chronological)
-- [ ] in `frontend/src/pages/public/ComicListPage.tsx`, add sort state `useState<'chronological' | 'recent'>('chronological')`
-- [ ] derive the displayed list with `useMemo`, sorting by `created_at` (`new Date(a.created_at).getTime() - new Date(b.created_at).getTime()` for chronological; reverse for recent); render from the sorted list instead of the raw fetch order
-- [ ] add a small sort control (native `<select>` or existing UI control) labeled e.g. "Sort: Chronological / Recent", styled to match the page
-- [ ] run `npm run build` — must pass
-- [ ] run `npm run lint` — must pass before Task 5
+- [x] in `frontend/src/pages/public/ComicListPage.tsx`, add sort state `useState<'chronological' | 'recent'>('chronological')`
+- [x] derive the displayed list with `useMemo`, sorting by `created_at` (`new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime()` for chronological — `?? 0` guards the nullable `created_at` type; reverse for recent); render from the sorted list instead of the raw fetch order
+- [x] add a small sort control (native `<select>` labeled "Sort: Chronological / Recent", shown only when live stories are present), styled with the ck-mono / ink border to match the page
+- [x] run `npm run build` — passes (tsc + vite build clean)
+- [x] run `npm run lint` — ComicListPage.tsx introduces 0 new problems (repo baseline of pre-existing `react-hooks/set-state-in-effect` errors in untouched files unchanged)
 
 ### Task 5: Show motto on public pages and remove the card status text
 - [ ] `ComicListPage.tsx` (~L165): replace the `{story.published ? 'Cleared for distribution.' : 'Pending redaction review.'}` line with the motto — render the motto element only when `story.motto` is non-empty, otherwise render nothing
