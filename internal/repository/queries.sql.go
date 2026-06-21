@@ -103,6 +103,50 @@ func (q *Queries) CreateEntityType(ctx context.Context, arg CreateEntityTypePara
 	return i, err
 }
 
+const createGame = `-- name: CreateGame :one
+INSERT INTO games (title, url, description, thumbnail_url, tag, color, sort_order, published)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at
+`
+
+type CreateGameParams struct {
+	Title        string         `json:"title"`
+	Url          string         `json:"url"`
+	Description  sql.NullString `json:"description"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+}
+
+func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
+	row := q.db.QueryRowContext(ctx, createGame,
+		arg.Title,
+		arg.Url,
+		arg.Description,
+		arg.ThumbnailUrl,
+		arg.Tag,
+		arg.Color,
+		arg.SortOrder,
+		arg.Published,
+	)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createMediaAsset = `-- name: CreateMediaAsset :one
 INSERT INTO media_assets (type, r2_key, youtube_id, source_prompt_version_id, title, description, text_content, entity_id)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -209,7 +253,7 @@ func (q *Queries) CreatePromptVersion(ctx context.Context, arg CreatePromptVersi
 const createStory = `-- name: CreateStory :one
 INSERT INTO stories (title, slug, cover_image_url, published)
 VALUES (?, ?, ?, ?)
-RETURNING id, title, slug, cover_image_url, published, created_at, audio_url
+RETURNING id, title, slug, cover_image_url, published, created_at, audio_url, motto
 `
 
 type CreateStoryParams struct {
@@ -235,6 +279,7 @@ func (q *Queries) CreateStory(ctx context.Context, arg CreateStoryParams) (Story
 		&i.Published,
 		&i.CreatedAt,
 		&i.AudioUrl,
+		&i.Motto,
 	)
 	return i, err
 }
@@ -301,6 +346,15 @@ DELETE FROM entity_types WHERE id = ?
 
 func (q *Queries) DeleteEntityType(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteEntityType, id)
+	return err
+}
+
+const deleteGame = `-- name: DeleteGame :exec
+DELETE FROM games WHERE id = ?
+`
+
+func (q *Queries) DeleteGame(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteGame, id)
 	return err
 }
 
@@ -467,6 +521,28 @@ func (q *Queries) GetEntityTypeBySlug(ctx context.Context, slug string) (EntityT
 	return i, err
 }
 
+const getGame = `-- name: GetGame :one
+SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games WHERE id = ?
+`
+
+func (q *Queries) GetGame(ctx context.Context, id int64) (Game, error) {
+	row := q.db.QueryRowContext(ctx, getGame, id)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getLatestPromptVersion = `-- name: GetLatestPromptVersion :one
 SELECT id, entity_id, type_id, version_number, prompt_text, technical_params_json, created_at FROM prompt_versions
 WHERE entity_id = ? AND type_id = ?
@@ -614,7 +690,7 @@ func (q *Queries) GetPromptVersionByID(ctx context.Context, id int64) (PromptVer
 }
 
 const getStoryByID = `-- name: GetStoryByID :one
-SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories WHERE id = ?
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url, motto FROM stories WHERE id = ?
 `
 
 func (q *Queries) GetStoryByID(ctx context.Context, id int64) (Story, error) {
@@ -628,12 +704,13 @@ func (q *Queries) GetStoryByID(ctx context.Context, id int64) (Story, error) {
 		&i.Published,
 		&i.CreatedAt,
 		&i.AudioUrl,
+		&i.Motto,
 	)
 	return i, err
 }
 
 const getStoryBySlug = `-- name: GetStoryBySlug :one
-SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories WHERE slug = ?
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url, motto FROM stories WHERE slug = ?
 `
 
 func (q *Queries) GetStoryBySlug(ctx context.Context, slug string) (Story, error) {
@@ -647,6 +724,7 @@ func (q *Queries) GetStoryBySlug(ctx context.Context, slug string) (Story, error
 		&i.Published,
 		&i.CreatedAt,
 		&i.AudioUrl,
+		&i.Motto,
 	)
 	return i, err
 }
@@ -867,7 +945,7 @@ func (q *Queries) ListAllPromptVersions(ctx context.Context) ([]PromptVersion, e
 }
 
 const listAllStories = `-- name: ListAllStories :many
-SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories ORDER BY created_at DESC
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url, motto FROM stories ORDER BY created_at DESC
 `
 
 func (q *Queries) ListAllStories(ctx context.Context) ([]Story, error) {
@@ -887,6 +965,7 @@ func (q *Queries) ListAllStories(ctx context.Context) ([]Story, error) {
 			&i.Published,
 			&i.CreatedAt,
 			&i.AudioUrl,
+			&i.Motto,
 		); err != nil {
 			return nil, err
 		}
@@ -1036,6 +1115,44 @@ func (q *Queries) ListEntityTypes(ctx context.Context) ([]EntityType, error) {
 			&i.Slug,
 			&i.Name,
 			&i.Description,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGames = `-- name: ListGames :many
+SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games ORDER BY sort_order, id
+`
+
+func (q *Queries) ListGames(ctx context.Context) ([]Game, error) {
+	rows, err := q.db.QueryContext(ctx, listGames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Game
+	for rows.Next() {
+		var i Game
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.ThumbnailUrl,
+			&i.Tag,
+			&i.Color,
+			&i.SortOrder,
+			&i.Published,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -1307,8 +1424,46 @@ func (q *Queries) ListPromptVersionsForEntityAndType(ctx context.Context, arg Li
 	return items, nil
 }
 
+const listPublishedGames = `-- name: ListPublishedGames :many
+SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games WHERE published = 1 ORDER BY sort_order, id
+`
+
+func (q *Queries) ListPublishedGames(ctx context.Context) ([]Game, error) {
+	rows, err := q.db.QueryContext(ctx, listPublishedGames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Game
+	for rows.Next() {
+		var i Game
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.Description,
+			&i.ThumbnailUrl,
+			&i.Tag,
+			&i.Color,
+			&i.SortOrder,
+			&i.Published,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPublishedStories = `-- name: ListPublishedStories :many
-SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories WHERE published = 1 ORDER BY created_at DESC
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url, motto FROM stories WHERE published = 1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListPublishedStories(ctx context.Context) ([]Story, error) {
@@ -1328,6 +1483,7 @@ func (q *Queries) ListPublishedStories(ctx context.Context) ([]Story, error) {
 			&i.Published,
 			&i.CreatedAt,
 			&i.AudioUrl,
+			&i.Motto,
 		); err != nil {
 			return nil, err
 		}
@@ -1533,7 +1689,7 @@ func (q *Queries) ListRecentPromptVersions(ctx context.Context) ([]ListRecentPro
 }
 
 const listRecentStories = `-- name: ListRecentStories :many
-SELECT id, title, slug, cover_image_url, published, created_at, audio_url FROM stories ORDER BY created_at DESC LIMIT 10
+SELECT id, title, slug, cover_image_url, published, created_at, audio_url, motto FROM stories ORDER BY created_at DESC LIMIT 10
 `
 
 func (q *Queries) ListRecentStories(ctx context.Context) ([]Story, error) {
@@ -1553,6 +1709,7 @@ func (q *Queries) ListRecentStories(ctx context.Context) ([]Story, error) {
 			&i.Published,
 			&i.CreatedAt,
 			&i.AudioUrl,
+			&i.Motto,
 		); err != nil {
 			return nil, err
 		}
@@ -1722,6 +1879,53 @@ func (q *Queries) UpdateEntityType(ctx context.Context, arg UpdateEntityTypePara
 	return i, err
 }
 
+const updateGame = `-- name: UpdateGame :one
+UPDATE games
+SET title = ?, url = ?, description = ?, thumbnail_url = ?, tag = ?, color = ?, sort_order = ?, published = ?
+WHERE id = ?
+RETURNING id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at
+`
+
+type UpdateGameParams struct {
+	Title        string         `json:"title"`
+	Url          string         `json:"url"`
+	Description  sql.NullString `json:"description"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+	ID           int64          `json:"id"`
+}
+
+func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error) {
+	row := q.db.QueryRowContext(ctx, updateGame,
+		arg.Title,
+		arg.Url,
+		arg.Description,
+		arg.ThumbnailUrl,
+		arg.Tag,
+		arg.Color,
+		arg.SortOrder,
+		arg.Published,
+		arg.ID,
+	)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Description,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const updateMediaAsset = `-- name: UpdateMediaAsset :one
 UPDATE media_assets
 SET title = COALESCE(?, title),
@@ -1787,9 +1991,9 @@ func (q *Queries) UpdatePromptType(ctx context.Context, arg UpdatePromptTypePara
 
 const updateStory = `-- name: UpdateStory :one
 UPDATE stories
-SET title = ?, slug = ?, cover_image_url = ?, published = ?, audio_url = ?
+SET title = ?, slug = ?, cover_image_url = ?, published = ?, audio_url = ?, motto = ?
 WHERE id = ?
-RETURNING id, title, slug, cover_image_url, published, created_at, audio_url
+RETURNING id, title, slug, cover_image_url, published, created_at, audio_url, motto
 `
 
 type UpdateStoryParams struct {
@@ -1798,6 +2002,7 @@ type UpdateStoryParams struct {
 	CoverImageUrl sql.NullString `json:"cover_image_url"`
 	Published     sql.NullBool   `json:"published"`
 	AudioUrl      sql.NullString `json:"audio_url"`
+	Motto         sql.NullString `json:"motto"`
 	ID            int64          `json:"id"`
 }
 
@@ -1808,6 +2013,7 @@ func (q *Queries) UpdateStory(ctx context.Context, arg UpdateStoryParams) (Story
 		arg.CoverImageUrl,
 		arg.Published,
 		arg.AudioUrl,
+		arg.Motto,
 		arg.ID,
 	)
 	var i Story
@@ -1819,6 +2025,7 @@ func (q *Queries) UpdateStory(ctx context.Context, arg UpdateStoryParams) (Story
 		&i.Published,
 		&i.CreatedAt,
 		&i.AudioUrl,
+		&i.Motto,
 	)
 	return i, err
 }
@@ -1927,202 +2134,4 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, e
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const createGame = `-- name: CreateGame :one
-INSERT INTO games (title, url, description, thumbnail_url, tag, color, sort_order, published)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at
-`
-
-type CreateGameParams struct {
-	Title        string         `json:"title"`
-	Url          string         `json:"url"`
-	Description  sql.NullString `json:"description"`
-	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
-	Tag          sql.NullString `json:"tag"`
-	Color        sql.NullString `json:"color"`
-	SortOrder    int64          `json:"sort_order"`
-	Published    bool           `json:"published"`
-}
-
-func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
-	row := q.db.QueryRowContext(ctx, createGame,
-		arg.Title,
-		arg.Url,
-		arg.Description,
-		arg.ThumbnailUrl,
-		arg.Tag,
-		arg.Color,
-		arg.SortOrder,
-		arg.Published,
-	)
-	var i Game
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Url,
-		&i.Description,
-		&i.ThumbnailUrl,
-		&i.Tag,
-		&i.Color,
-		&i.SortOrder,
-		&i.Published,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const updateGame = `-- name: UpdateGame :one
-UPDATE games
-SET title = ?, url = ?, description = ?, thumbnail_url = ?, tag = ?, color = ?, sort_order = ?, published = ?
-WHERE id = ?
-RETURNING id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at
-`
-
-type UpdateGameParams struct {
-	Title        string         `json:"title"`
-	Url          string         `json:"url"`
-	Description  sql.NullString `json:"description"`
-	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
-	Tag          sql.NullString `json:"tag"`
-	Color        sql.NullString `json:"color"`
-	SortOrder    int64          `json:"sort_order"`
-	Published    bool           `json:"published"`
-	ID           int64          `json:"id"`
-}
-
-func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error) {
-	row := q.db.QueryRowContext(ctx, updateGame,
-		arg.Title,
-		arg.Url,
-		arg.Description,
-		arg.ThumbnailUrl,
-		arg.Tag,
-		arg.Color,
-		arg.SortOrder,
-		arg.Published,
-		arg.ID,
-	)
-	var i Game
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Url,
-		&i.Description,
-		&i.ThumbnailUrl,
-		&i.Tag,
-		&i.Color,
-		&i.SortOrder,
-		&i.Published,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const deleteGame = `-- name: DeleteGame :exec
-DELETE FROM games WHERE id = ?
-`
-
-func (q *Queries) DeleteGame(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteGame, id)
-	return err
-}
-
-const getGame = `-- name: GetGame :one
-SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games WHERE id = ?
-`
-
-func (q *Queries) GetGame(ctx context.Context, id int64) (Game, error) {
-	row := q.db.QueryRowContext(ctx, getGame, id)
-	var i Game
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Url,
-		&i.Description,
-		&i.ThumbnailUrl,
-		&i.Tag,
-		&i.Color,
-		&i.SortOrder,
-		&i.Published,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const listGames = `-- name: ListGames :many
-SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games ORDER BY sort_order, id
-`
-
-func (q *Queries) ListGames(ctx context.Context) ([]Game, error) {
-	rows, err := q.db.QueryContext(ctx, listGames)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Game
-	for rows.Next() {
-		var i Game
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Url,
-			&i.Description,
-			&i.ThumbnailUrl,
-			&i.Tag,
-			&i.Color,
-			&i.SortOrder,
-			&i.Published,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listPublishedGames = `-- name: ListPublishedGames :many
-SELECT id, title, url, description, thumbnail_url, tag, color, sort_order, published, created_at FROM games WHERE published = 1 ORDER BY sort_order, id
-`
-
-func (q *Queries) ListPublishedGames(ctx context.Context) ([]Game, error) {
-	rows, err := q.db.QueryContext(ctx, listPublishedGames)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Game
-	for rows.Next() {
-		var i Game
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Url,
-			&i.Description,
-			&i.ThumbnailUrl,
-			&i.Tag,
-			&i.Color,
-			&i.SortOrder,
-			&i.Published,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

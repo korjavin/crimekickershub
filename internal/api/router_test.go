@@ -1170,6 +1170,305 @@ func TestAdminGetStoryAudioURL(t *testing.T) {
 	}
 }
 
+// TestStoriesMottoColumnExists asserts that migration 010 adds the motto column
+// to the stories table on a freshly-migrated database.
+func TestStoriesMottoColumnExists(t *testing.T) {
+	testDB, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	rows, err := testDB.Query("PRAGMA table_info(stories)")
+	if err != nil {
+		t.Fatalf("PRAGMA table_info(stories) failed: %v", err)
+	}
+	defer rows.Close()
+
+	found := false
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			ctype     string
+			notNull   int
+			dfltValue sql.NullString
+			pk        int
+		)
+		if err := rows.Scan(&cid, &name, &ctype, &notNull, &dfltValue, &pk); err != nil {
+			t.Fatalf("scanning table_info row failed: %v", err)
+		}
+		if name == "motto" {
+			found = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterating table_info rows failed: %v", err)
+	}
+
+	if !found {
+		t.Fatal("Expected stories table to have a motto column after migrations")
+	}
+}
+
+// TestUpdateStoryMottoEndpoint exercises the admin PUT /api/admin/stories/{id}
+// endpoint and verifies the preserve/set/clear semantics for motto, mirroring
+// the audio_url behaviour.
+func TestUpdateStoryMottoEndpoint(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Seed a story (no motto yet).
+	story, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Admin Motto",
+		Slug:          "admin-motto",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory failed: %v", err)
+	}
+
+	sessionCookie := devLoginCookie(t, router)
+	storyPath := "/api/admin/stories/" + strconv.FormatInt(story.ID, 10)
+
+	// putStory issues an authenticated PUT with the given JSON body and returns
+	// the decoded motto pointer from the response.
+	putStory := func(t *testing.T, body string) *string {
+		t.Helper()
+		req := httptest.NewRequest("PUT", storyPath, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(sessionCookie)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("PUT %s returned %d. Body: %s", storyPath, rr.Code, rr.Body.String())
+		}
+		var resp struct {
+			Motto *string `json:"motto"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode update response: %v. Body: %s", err, rr.Body.String())
+		}
+		return resp.Motto
+	}
+
+	const motto = "Justice never sleeps."
+
+	// 1. Set motto -> persisted and returned.
+	if got := putStory(t, `{"motto":"`+motto+`"}`); got == nil || *got != motto {
+		t.Fatalf("After setting motto, response = %v, want %q", got, motto)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); !persisted.Motto.Valid || persisted.Motto.String != motto {
+		t.Fatalf("After set, persisted motto = %#v, want valid %q", persisted.Motto, motto)
+	}
+
+	// 2. Omitting motto preserves the existing value.
+	if got := putStory(t, `{"title":"Admin Motto Renamed"}`); got == nil || *got != motto {
+		t.Fatalf("After omitting motto, response = %v, want preserved %q", got, motto)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); !persisted.Motto.Valid || persisted.Motto.String != motto {
+		t.Fatalf("After omit, persisted motto = %#v, want preserved %q", persisted.Motto, motto)
+	}
+
+	// 3. motto:"" clears it to NULL.
+	if got := putStory(t, `{"motto":""}`); got != nil {
+		t.Fatalf("After clearing motto, response = %v, want nil", got)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); persisted.Motto.Valid {
+		t.Fatalf("After clear, persisted motto = %#v, want NULL", persisted.Motto)
+	}
+
+	// 4. Re-set, then whitespace-only motto clears it to NULL (trimmed server-side,
+	//    matching the documented "empty/whitespace input clears it" contract).
+	if got := putStory(t, `{"motto":"`+motto+`"}`); got == nil || *got != motto {
+		t.Fatalf("After re-setting motto, response = %v, want %q", got, motto)
+	}
+	if got := putStory(t, `{"motto":"   "}`); got != nil {
+		t.Fatalf("After whitespace-only motto, response = %v, want nil", got)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); persisted.Motto.Valid {
+		t.Fatalf("After whitespace-only motto, persisted motto = %#v, want NULL", persisted.Motto)
+	}
+}
+
+// TestPublicStoryMottoBySlug verifies that the public GET /api/comics/{slug}
+// response includes motto: null when the story has no motto, and the motto
+// string when set.
+func TestPublicStoryMottoBySlug(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Seed a published story without a motto.
+	noMotto, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Public No Motto",
+		Slug:          "public-no-motto",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (no motto) failed: %v", err)
+	}
+
+	// Seed a published story with a motto.
+	const motto = "Crime never pays."
+	withMotto, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "Public With Motto",
+		Slug:          "public-with-motto",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (with motto) failed: %v", err)
+	}
+	if _, err := queries.UpdateStory(ctx, repository.UpdateStoryParams{
+		ID:            withMotto.ID,
+		Title:         withMotto.Title,
+		Slug:          withMotto.Slug,
+		CoverImageUrl: withMotto.CoverImageUrl,
+		Published:     withMotto.Published,
+		Motto:         sql.NullString{String: motto, Valid: true},
+	}); err != nil {
+		t.Fatalf("UpdateStory (set motto) failed: %v", err)
+	}
+
+	// motto should be null (JSON null -> nil pointer) for the story without a motto.
+	{
+		req := httptest.NewRequest("GET", "/api/comics/"+noMotto.Slug, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d. Body: %s", rr.Code, rr.Body.String())
+		}
+
+		var resp struct {
+			Motto *string `json:"motto"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode response: %v. Body: %s", err, rr.Body.String())
+		}
+		if resp.Motto != nil {
+			t.Errorf("Expected motto to be null for a story without a motto, got %q", *resp.Motto)
+		}
+	}
+
+	// motto should carry the string for the story with a motto.
+	{
+		req := httptest.NewRequest("GET", "/api/comics/"+withMotto.Slug, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d. Body: %s", rr.Code, rr.Body.String())
+		}
+
+		var resp struct {
+			Motto *string `json:"motto"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode response: %v. Body: %s", err, rr.Body.String())
+		}
+		if resp.Motto == nil {
+			t.Fatalf("Expected motto to be set for a story with a motto, got null")
+		}
+		if *resp.Motto != motto {
+			t.Errorf("Expected motto %q, got %q", motto, *resp.Motto)
+		}
+	}
+}
+
+// TestPublicListStoriesMotto verifies that the public GET /api/comics list
+// response carries each story's motto: the string when set and JSON null when
+// unset.
+func TestPublicListStoriesMotto(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	queries := router.repo
+
+	// Published story without a motto.
+	noMotto, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "List No Motto",
+		Slug:          "list-no-motto",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (no motto) failed: %v", err)
+	}
+
+	// Published story with a motto.
+	const motto = "Evidence speaks louder than words."
+	withMotto, err := queries.CreateStory(ctx, repository.CreateStoryParams{
+		Title:         "List With Motto",
+		Slug:          "list-with-motto",
+		CoverImageUrl: sql.NullString{},
+		Published:     sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("CreateStory (with motto) failed: %v", err)
+	}
+	if _, err := queries.UpdateStory(ctx, repository.UpdateStoryParams{
+		ID:            withMotto.ID,
+		Title:         withMotto.Title,
+		Slug:          withMotto.Slug,
+		CoverImageUrl: withMotto.CoverImageUrl,
+		Published:     withMotto.Published,
+		Motto:         sql.NullString{String: motto, Valid: true},
+	}); err != nil {
+		t.Fatalf("UpdateStory (set motto) failed: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/comics", nil)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+
+	// Decode with json.RawMessage on motto so a present-but-null field is
+	// distinguishable from a string.
+	var stories []struct {
+		ID    int64           `json:"id"`
+		Motto json.RawMessage `json:"motto"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &stories); err != nil {
+		t.Fatalf("Failed to decode list response: %v. Body: %s", err, rr.Body.String())
+	}
+
+	mottoByID := make(map[int64]json.RawMessage, len(stories))
+	for _, s := range stories {
+		mottoByID[s.ID] = s.Motto
+	}
+
+	rawNoMotto, ok := mottoByID[noMotto.ID]
+	if !ok {
+		t.Fatalf("Story without motto (id=%d) missing from list response", noMotto.ID)
+	}
+	if string(rawNoMotto) != "null" {
+		t.Errorf("Expected motto null for a story without a motto, got %s", string(rawNoMotto))
+	}
+
+	rawWithMotto, ok := mottoByID[withMotto.ID]
+	if !ok {
+		t.Fatalf("Story with motto (id=%d) missing from list response", withMotto.ID)
+	}
+	var gotMotto string
+	if err := json.Unmarshal(rawWithMotto, &gotMotto); err != nil {
+		t.Fatalf("Failed to decode motto string: %v (raw=%s)", err, string(rawWithMotto))
+	}
+	if gotMotto != motto {
+		t.Errorf("Expected motto %q in list response, got %q", motto, gotMotto)
+	}
+}
+
 // devLoginCookie authenticates against the dev-login endpoint and returns the
 // resulting session cookie for use on authenticated admin requests.
 func devLoginCookie(t *testing.T, router *Router) *http.Cookie {

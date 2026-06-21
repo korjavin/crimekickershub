@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"crimekickershub/internal/auth"
@@ -33,6 +34,15 @@ type Router struct {
 	auth         *auth.GoogleOAuth2
 	r2           *storage.R2Client
 	frontendPath string
+
+	// storyUpdateMu serializes the read-modify-write in handleUpdateStory.
+	// That handler reads the current story row and rewrites every column, so
+	// two concurrent metadata updates (e.g. motto vs. publish) would otherwise
+	// each preserve the other's field with a stale value and silently clobber
+	// it. This is the only read-modify-write site for the stories row, and the
+	// app runs as a single SQLite/Litestream writer process, so a process-local
+	// mutex fully removes the lost-update race.
+	storyUpdateMu sync.Mutex
 }
 
 // NewRouter creates a new HTTP router with all routes configured
@@ -255,6 +265,7 @@ func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
 		Title         string  `json:"title"`
 		Slug          string  `json:"slug"`
 		CoverImageURL *string `json:"cover_image_url"`
+		Motto         *string `json:"motto"`
 		Published     bool    `json:"published"`
 		CreatedAt     string  `json:"created_at"`
 	}
@@ -266,6 +277,10 @@ func (r *Router) handleListStories(w http.ResponseWriter, req *http.Request) {
 			Title:     s.Title,
 			Slug:      s.Slug,
 			Published: s.Published.Bool,
+		}
+
+		if s.Motto.Valid {
+			dto.Motto = &s.Motto.String
 		}
 
 		// Use explicit cover image if set, otherwise use first slide
@@ -342,6 +357,7 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 	type PublicStoryResponse struct {
 		Title    string                    `json:"title"`
 		AudioURL *string                   `json:"audio_url"`
+		Motto    *string                   `json:"motto"`
 		Items    []PublicStoryItemResponse `json:"items"`
 	}
 
@@ -352,6 +368,10 @@ func (r *Router) handleGetStoryBySlug(w http.ResponseWriter, req *http.Request) 
 
 	if story.AudioUrl.Valid {
 		response.AudioURL = &story.AudioUrl.String
+	}
+
+	if story.Motto.Valid {
+		response.Motto = &story.Motto.String
 	}
 
 	for _, media := range mediaAssets {
@@ -1017,6 +1037,7 @@ func (r *Router) handleListStoriesAdmin(w http.ResponseWriter, req *http.Request
 		Title         string  `json:"title"`
 		Slug          string  `json:"slug"`
 		CoverImageURL *string `json:"cover_image_url"`
+		Motto         *string `json:"motto"`
 		Published     bool    `json:"published"`
 		CreatedAt     *string `json:"created_at"`
 	}
@@ -1028,6 +1049,10 @@ func (r *Router) handleListStoriesAdmin(w http.ResponseWriter, req *http.Request
 			Title:     s.Title,
 			Slug:      s.Slug,
 			Published: s.Published.Bool,
+		}
+
+		if s.Motto.Valid {
+			dto.Motto = &s.Motto.String
 		}
 
 		// Use explicit cover image if set, otherwise use first slide
@@ -1102,12 +1127,20 @@ func (r *Router) handleGetStory(w http.ResponseWriter, req *http.Request) {
 		audioURLPtr = &story.AudioUrl.String
 	}
 
+	// Serialize motto as a *string so it becomes null when unset rather than
+	// the raw sql.NullString shape, mirroring audio_url.
+	var mottoPtr *string
+	if story.Motto.Valid {
+		mottoPtr = &story.Motto.String
+	}
+
 	response := map[string]interface{}{
 		"id":              story.ID,
 		"title":           story.Title,
 		"slug":            story.Slug,
 		"cover_image_url": story.CoverImageUrl,
 		"audio_url":       audioURLPtr,
+		"motto":           mottoPtr,
 		"published":       story.Published,
 		"created_at":      story.CreatedAt,
 		"items":           []StoryItemResponse{},
@@ -1201,6 +1234,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Slug          *string `json:"slug"`
 		CoverImageURL *string `json:"coverImageUrl"`
 		AudioURL      *string `json:"audio_url"`
+		Motto         *string `json:"motto"`
 		Published     *bool   `json:"published"`
 	}
 
@@ -1208,6 +1242,13 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Serialize the read-modify-write below so concurrent metadata updates to
+	// the same story cannot each preserve the other's field with a stale value
+	// (e.g. a motto save and a publish toggle clobbering one another). The lock
+	// spans the read, the slug-uniqueness resolution, and the write.
+	r.storyUpdateMu.Lock()
+	defer r.storyUpdateMu.Unlock()
 
 	// Get current story to preserve fields not being updated
 	currentStory, err := r.repo.GetStoryByID(req.Context(), storyID)
@@ -1246,6 +1287,15 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		audioURL = sql.NullString{String: *input.AudioURL, Valid: *input.AudioURL != ""}
 	}
 
+	// Preserve the current motto when not provided; set or clear it when
+	// provided. Trim first so empty/whitespace-only input clears it to NULL,
+	// matching the documented "empty/whitespace input clears it" contract.
+	motto := currentStory.Motto
+	if input.Motto != nil {
+		trimmedMotto := strings.TrimSpace(*input.Motto)
+		motto = sql.NullString{String: trimmedMotto, Valid: trimmedMotto != ""}
+	}
+
 	published := currentStory.Published
 	if input.Published != nil {
 		published = sql.NullBool{Bool: *input.Published, Valid: true}
@@ -1258,6 +1308,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Slug:          slug,
 		CoverImageUrl: coverImageURL,
 		AudioUrl:      audioURL,
+		Motto:         motto,
 		Published:     published,
 	})
 	if err != nil {
@@ -1280,6 +1331,7 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		Slug          string  `json:"slug"`
 		CoverImageURL *string `json:"cover_image_url"`
 		AudioURL      *string `json:"audio_url"`
+		Motto         *string `json:"motto"`
 		Published     bool    `json:"published"`
 		CreatedAt     *string `json:"created_at"`
 	}
@@ -1297,6 +1349,10 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 
 	if updatedStory.AudioUrl.Valid {
 		response.AudioURL = &updatedStory.AudioUrl.String
+	}
+
+	if updatedStory.Motto.Valid {
+		response.Motto = &updatedStory.Motto.String
 	}
 
 	if updatedStory.CreatedAt.Valid {

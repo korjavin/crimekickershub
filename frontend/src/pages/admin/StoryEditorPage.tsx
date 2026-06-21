@@ -56,7 +56,7 @@ import {
   createTextSlide,
   updateTextSlide,
 } from '@/lib/api';
-import type { Story, StoryItem, MediaAsset, StoryWithItems, Entity } from '@/lib/api-types';
+import type { Story, StoryItem, MediaAsset, StoryWithItems, Entity, PromptVersion } from '@/lib/api-types';
 
 interface SortableTimelineItemProps {
   item: StoryItem;
@@ -217,6 +217,15 @@ export function StoryEditorPage() {
   // Audio State
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // Motto State
+  const [mottoDraft, setMottoDraft] = useState('');
+  const [mottoSyncedStoryId, setMottoSyncedStoryId] = useState<number | null>(null);
+  const [isSavingMotto, setIsSavingMotto] = useState(false);
+
+  // Always-current ref to the loaded story so async handlers can detect when
+  // the user has switched stories mid-request and avoid clobbering the new one.
+  const storyWithItemsRef = useRef<StoryWithItems | null>(null);
 
   // Text Slide State
   const [isTextSlideDialogOpen, setIsTextSlideDialogOpen] = useState(false);
@@ -628,6 +637,39 @@ export function StoryEditorPage() {
     }
   };
 
+  const handleSaveMotto = async () => {
+    if (!storyWithItems) return;
+
+    // Capture the story this save targets. If the user selects a different
+    // story while the request is in flight, the stale response must not
+    // overwrite the newly-loaded story's state.
+    const targetStoryId = storyWithItems.id;
+
+    // Trim; an empty string clears the motto on the backend.
+    const trimmed = mottoDraft.trim();
+
+    try {
+      setIsSavingMotto(true);
+      const updated = await updateStoryMetadata(String(targetStoryId), { motto: trimmed });
+      // If the user switched stories while the request was in flight, the loaded
+      // story no longer matches the one we saved — leave the new selection alone.
+      if (storyWithItemsRef.current?.id === targetStoryId) {
+        setStoryWithItems((prev) =>
+          prev && prev.id === targetStoryId
+            ? { ...prev, motto: updated.motto ?? null }
+            : prev
+        );
+        setMottoDraft(updated.motto ?? '');
+      }
+      toast.success(trimmed ? 'Motto saved' : 'Motto cleared');
+    } catch (error) {
+      console.error('Failed to save motto:', error);
+      toast.error('Failed to save motto');
+    } finally {
+      setIsSavingMotto(false);
+    }
+  };
+
   const handleDeleteStory = async () => {
     if (!storyWithItems) return;
 
@@ -707,7 +749,7 @@ export function StoryEditorPage() {
       try {
         const versions = await listPromptVersions();
         const map: Record<number, number> = {};
-        versions.forEach((v: any) => {
+        versions.forEach((v: PromptVersion) => {
           map[v.id] = v.entity_id;
         });
         setPromptVersionEntityMap(map);
@@ -732,6 +774,17 @@ export function StoryEditorPage() {
     const entityId = promptVersionEntityMap[media.source_prompt_version_id];
     return String(entityId) === selectedEntityId;
   });
+
+  // Keep the latest-value ref in sync so in-flight async handlers can tell
+  // whether the user has since switched to a different story.
+  storyWithItemsRef.current = storyWithItems;
+
+  // Reset the motto draft when a different story loads (render-phase state adjustment,
+  // the React-recommended alternative to a syncing effect).
+  if (storyWithItems && storyWithItems.id !== mottoSyncedStoryId) {
+    setMottoSyncedStoryId(storyWithItems.id);
+    setMottoDraft(storyWithItems.motto ?? '');
+  }
 
   return (
     <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
@@ -919,6 +972,37 @@ export function StoryEditorPage() {
                 {isUploadingAudio ? 'Uploading…' : 'Upload audio'}
               </Button>
             )}
+          </div>
+        </Card>
+      )}
+
+      {storyWithItems && (
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">Motto / Slogan</h2>
+              <p className="text-xs text-muted-foreground">
+                An optional tagline shown on the comic cards and reader page. Leave empty to hide it.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <Input
+                value={mottoDraft}
+                onChange={(e) => setMottoDraft(e.target.value)}
+                placeholder="e.g. Justice never clocks out."
+                maxLength={120}
+                className="w-full sm:w-72"
+                disabled={isSavingMotto}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveMotto}
+                disabled={isSavingMotto || mottoDraft.trim() === (storyWithItems.motto ?? '')}
+              >
+                {isSavingMotto ? 'Saving…' : 'Save motto'}
+              </Button>
+            </div>
           </div>
         </Card>
       )}

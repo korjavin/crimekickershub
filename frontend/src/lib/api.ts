@@ -382,10 +382,10 @@ export async function updateStory(id: string, itemIds: number[]) {
   return response.json();
 }
 
-// Note: audio_url is `string` (not `string | null`) on purpose. The backend treats a
-// JSON `null` / omitted field as "preserve current audio"; only an empty string `''`
-// clears it. Passing `null` would be a no-op, so the type forbids it to match behavior.
-export async function updateStoryMetadata(id: string, data: { title?: string; slug?: string; coverImageUrl?: string; published?: boolean; audio_url?: string }) {
+// Note: audio_url and motto are `string` (not `string | null`) on purpose. The backend
+// treats a JSON `null` / omitted field as "preserve current value"; only an empty string
+// `''` clears it. Passing `null` would be a no-op, so the type forbids it to match behavior.
+export async function updateStoryMetadata(id: string, data: { title?: string; slug?: string; coverImageUrl?: string; published?: boolean; audio_url?: string; motto?: string }) {
   const response = await fetch(`${API_BASE}/admin/stories/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

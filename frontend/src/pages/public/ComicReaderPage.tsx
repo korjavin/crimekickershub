@@ -82,6 +82,19 @@ export const ComicReaderPage = () => {
         >
           {story.title}
         </h2>
+        {story.motto?.trim() ? (
+          <div
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontStyle: 'italic',
+              fontSize: 16,
+              color: 'var(--ink-2)',
+              margin: '-6px 0 14px',
+            }}
+          >
+            {story.motto}
+          </div>
+        ) : null}
       </div>
 
       {story.audio_url ? (

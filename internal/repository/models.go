@@ -29,6 +29,19 @@ type EntityType struct {
 	CreatedAt   sql.NullTime   `json:"created_at"`
 }
 
+type Game struct {
+	ID           int64          `json:"id"`
+	Title        string         `json:"title"`
+	Url          string         `json:"url"`
+	Description  sql.NullString `json:"description"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+}
+
 type MediaAsset struct {
 	ID                    int64          `json:"id"`
 	Type                  string         `json:"type"`
@@ -67,6 +80,7 @@ type Story struct {
 	Published     sql.NullBool   `json:"published"`
 	CreatedAt     sql.NullTime   `json:"created_at"`
 	AudioUrl      sql.NullString `json:"audio_url"`
+	Motto         sql.NullString `json:"motto"`
 }
 
 type StoryItem struct {
@@ -82,19 +96,6 @@ type User struct {
 	GoogleID  string         `json:"google_id"`
 	Role      sql.NullString `json:"role"`
 	CreatedAt sql.NullTime   `json:"created_at"`
-}
-
-type Game struct {
-	ID           int64          `json:"id"`
-	Title        string         `json:"title"`
-	Url          string         `json:"url"`
-	Description  sql.NullString `json:"description"`
-	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
-	Tag          sql.NullString `json:"tag"`
-	Color        sql.NullString `json:"color"`
-	SortOrder    int64          `json:"sort_order"`
-	Published    bool           `json:"published"`
-	CreatedAt    sql.NullTime   `json:"created_at"`
 }
 
 type Video struct {
