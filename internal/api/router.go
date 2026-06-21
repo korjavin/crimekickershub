@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"crimekickershub/internal/auth"
@@ -33,6 +34,15 @@ type Router struct {
 	auth         *auth.GoogleOAuth2
 	r2           *storage.R2Client
 	frontendPath string
+
+	// storyUpdateMu serializes the read-modify-write in handleUpdateStory.
+	// That handler reads the current story row and rewrites every column, so
+	// two concurrent metadata updates (e.g. motto vs. publish) would otherwise
+	// each preserve the other's field with a stale value and silently clobber
+	// it. This is the only read-modify-write site for the stories row, and the
+	// app runs as a single SQLite/Litestream writer process, so a process-local
+	// mutex fully removes the lost-update race.
+	storyUpdateMu sync.Mutex
 }
 
 // NewRouter creates a new HTTP router with all routes configured
@@ -1233,6 +1243,13 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Serialize the read-modify-write below so concurrent metadata updates to
+	// the same story cannot each preserve the other's field with a stale value
+	// (e.g. a motto save and a publish toggle clobbering one another). The lock
+	// spans the read, the slug-uniqueness resolution, and the write.
+	r.storyUpdateMu.Lock()
+	defer r.storyUpdateMu.Unlock()
+
 	// Get current story to preserve fields not being updated
 	currentStory, err := r.repo.GetStoryByID(req.Context(), storyID)
 	if err != nil {
@@ -1270,11 +1287,13 @@ func (r *Router) handleUpdateStory(w http.ResponseWriter, req *http.Request) {
 		audioURL = sql.NullString{String: *input.AudioURL, Valid: *input.AudioURL != ""}
 	}
 
-	// Preserve the current motto when not provided; set or clear it (empty
-	// string clears to NULL) when provided.
+	// Preserve the current motto when not provided; set or clear it when
+	// provided. Trim first so empty/whitespace-only input clears it to NULL,
+	// matching the documented "empty/whitespace input clears it" contract.
 	motto := currentStory.Motto
 	if input.Motto != nil {
-		motto = sql.NullString{String: *input.Motto, Valid: *input.Motto != ""}
+		trimmedMotto := strings.TrimSpace(*input.Motto)
+		motto = sql.NullString{String: trimmedMotto, Valid: trimmedMotto != ""}
 	}
 
 	published := currentStory.Published

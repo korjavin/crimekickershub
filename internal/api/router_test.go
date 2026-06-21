@@ -1279,6 +1279,18 @@ func TestUpdateStoryMottoEndpoint(t *testing.T) {
 	if persisted, _ := queries.GetStoryByID(ctx, story.ID); persisted.Motto.Valid {
 		t.Fatalf("After clear, persisted motto = %#v, want NULL", persisted.Motto)
 	}
+
+	// 4. Re-set, then whitespace-only motto clears it to NULL (trimmed server-side,
+	//    matching the documented "empty/whitespace input clears it" contract).
+	if got := putStory(t, `{"motto":"`+motto+`"}`); got == nil || *got != motto {
+		t.Fatalf("After re-setting motto, response = %v, want %q", got, motto)
+	}
+	if got := putStory(t, `{"motto":"   "}`); got != nil {
+		t.Fatalf("After whitespace-only motto, response = %v, want nil", got)
+	}
+	if persisted, _ := queries.GetStoryByID(ctx, story.ID); persisted.Motto.Valid {
+		t.Fatalf("After whitespace-only motto, persisted motto = %#v, want NULL", persisted.Motto)
+	}
 }
 
 // TestPublicStoryMottoBySlug verifies that the public GET /api/comics/{slug}
