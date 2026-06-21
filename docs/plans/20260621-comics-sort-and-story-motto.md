@@ -116,12 +116,12 @@ Dependencies identified:
 - [x] run `npm run lint` — ComicListPage.tsx introduces 0 new problems (repo baseline of pre-existing `react-hooks/set-state-in-effect` errors in untouched files unchanged)
 
 ### Task 5: Show motto on public pages and remove the card status text
-- [ ] `ComicListPage.tsx` (~L165): replace the `{story.published ? 'Cleared for distribution.' : 'Pending redaction review.'}` line with the motto — render the motto element only when `story.motto` is non-empty, otherwise render nothing
-- [ ] `HomePage.tsx` (~L296): apply the same replacement (motto when filled, else nothing) on the "Latest dossiers" cards
-- [ ] `ComicReaderPage.tsx` (~L84, under the title): render the motto when `story.motto` is non-empty (e.g. a tagline/italic line), else nothing
-- [ ] confirm the footer (`PublicLayout.tsx:59`) and home masthead eyebrow (`HomePage.tsx:52`) "cleared for distribution" taglines are left untouched
-- [ ] run `npm run build` — must pass
-- [ ] run `npm run lint` — must pass before Task 6
+- [x] `ComicListPage.tsx` (~L165): replace the `{story.published ? 'Cleared for distribution.' : 'Pending redaction review.'}` line with the motto — render the motto element (`story.motto?.trim() ? <div>…</div> : null`) only when `story.motto` is non-empty, otherwise render nothing
+- [x] `HomePage.tsx` (~L296): apply the same replacement (motto when filled, else nothing) on the "Latest dossiers" `LiveDossierCard`
+- [x] `ComicReaderPage.tsx` (~L84, under the title): render the motto when `story.motto` is non-empty (italic tagline line), else nothing; added `motto?: string | null` to the `PublicStory` type in `api-types.ts` so the slug response's `motto` (already returned by `handleGetStoryBySlug`) is typed
+- [x] confirm the footer (`PublicLayout.tsx:59`) and home masthead eyebrow (`HomePage.tsx:52`) "cleared for distribution" taglines are left untouched (verified via grep — both brand taglines unchanged; only the per-card status lines were removed)
+- [x] run `npm run build` — passes (tsc + vite build clean)
+- [x] run `npm run lint` — touched files introduce 0 new problems; the only remaining entry on a touched file (`ComicReaderPage.tsx:16:7`, pre-existing `react-hooks/set-state-in-effect` on the untouched load `useEffect`) is confirmed present on HEAD without these changes
 
 ### Task 6: Verify acceptance criteria
 - [ ] verify `/comics` defaults to chronological (oldest first) and the selector switches to recent (newest first)

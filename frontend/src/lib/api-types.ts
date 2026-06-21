@@ -74,6 +74,7 @@ export interface PublicStoryItem {
 export interface PublicStory {
   title: string;
   audio_url?: string | null;
+  motto?: string | null;
   items: PublicStoryItem[];
 }
 

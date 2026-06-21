@@ -199,16 +199,18 @@ function LiveDossierCard({
         <div className="ck-dpy" style={{ fontSize: 22, lineHeight: 1 }}>
           {story.title}
         </div>
-        <div
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 14,
-            color: 'var(--ink-2)',
-            marginTop: 6,
-          }}
-        >
-          {story.published ? 'Cleared for distribution.' : 'Pending redaction review.'}
-        </div>
+        {story.motto?.trim() ? (
+          <div
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 14,
+              color: 'var(--ink-2)',
+              marginTop: 6,
+            }}
+          >
+            {story.motto}
+          </div>
+        ) : null}
       </div>
     </Link>
   );
