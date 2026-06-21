@@ -40,6 +40,7 @@
 * **Mixed Media Episodes:** Create "Issues" or "Stories" that combine static images and video clips in a single sequence.
 * **Mobile-First Layout:** content is organized for seamless vertical scrolling (Webtoon style) or swipe-viewing.
 * **Audio Track:** Attach a single audio file (narration/soundtrack) to a comic, uploaded directly to Cloudflare R2 like images. The file can be previewed, replaced, or removed.
+* **Motto / Slogan:** Give a comic an optional short tagline. When filled it appears on the public comic cards and the reader page; when empty nothing is shown.
 * **Rename:** Change a comic's title at any time; the URL slug is automatically regenerated to stay unique.
 
 ### 2. Public Portal

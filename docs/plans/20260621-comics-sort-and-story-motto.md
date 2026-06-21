@@ -132,8 +132,8 @@ Dependencies identified:
 - [x] verify `go build ./...` produces a clean build — passes (exit 0)
 
 ### Task 7: [Final] Update documentation
-- [ ] update `README.md` / project docs if they enumerate story fields or migrations (add `motto`)
-- [ ] note the new migration `010_add_story_motto.sql` if migrations are documented anywhere
+- [x] update `README.md` / project docs if they enumerate story fields or migrations (add `motto`) — added a "Motto / Slogan" feature bullet to the README Story Builder list (next to Audio Track) and a `stories.motto` column note to `Agents.md` Story Structure (parallel to the existing `audio_url` note)
+- [x] note the new migration `010_add_story_motto.sql` if migrations are documented anywhere — migrations aren't enumerated by filename in the docs (only `migrations.RunMigrations` mechanism is described); referenced the `010_add_story_motto.sql` filename in the `Agents.md` column note as the closest schema-documentation location
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`.*
 
