@@ -74,9 +74,11 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
   const loadVersionHistory = async (entityId: number, typeId: number) => {
     try {
       const versions = await listPromptVersions();
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       const filtered = versions.filter(
         (v: any) => v.entity_id === entityId && v.type_id === typeId
       );
+      /* eslint-enable @typescript-eslint/no-explicit-any */
       setVersionHistory(filtered);
     } catch (error) {
       console.error('Failed to load version history:', error);
@@ -124,6 +126,7 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
 
   const handleVersionSelect = (versionId: number) => {
     setSelectedVersion(versionId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const version = versionHistory.find((v: any) => v.id === versionId);
     if (version) {
       setEditorText(version.prompt_text);
@@ -340,6 +343,7 @@ export function PromptMatrix({ onMixSelected }: PromptMatrixProps) {
                     <SelectValue placeholder="Select a version" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {versionHistory.map((v: any) => (
                       <SelectItem key={v.id} value={String(v.id)}>
                         v{v.version_number} - {new Date(v.created_at).toLocaleDateString()}

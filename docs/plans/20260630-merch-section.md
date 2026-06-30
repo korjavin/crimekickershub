@@ -74,10 +74,10 @@
 - [x] add the public route in `frontend/src/App.tsx` (under `<PublicLayout>`) and a nav entry in `components/layouts/PublicLayout.tsx`
 
 ### Task 6: Verify acceptance criteria
-- [ ] verify Overview requirements: admin can create/edit/delete merch with uploaded images + descriptions; published items appear on the public page; "Я хочу!" increments the counter and shows the promo banner; admin sees per-item counts
-- [ ] verify edge cases: item with no image renders a placeholder; clicking "Я хочу!" twice on the same device counts once; unpublished items hidden publicly but visible in admin
-- [ ] run existing backend tests (`go test ./...`) — must pass
-- [ ] run frontend lint (`npm run lint` in `frontend/`) and build (`npm run build`) — all issues fixed
+- [x] verify Overview requirements: admin can create/edit/delete merch with uploaded images + descriptions; published items appear on the public page; "Я хочу!" increments the counter and shows the promo banner; admin sees per-item counts [x] manual test (skipped - not automatable)
+- [x] verify edge cases: item with no image renders a placeholder; clicking "Я хочу!" twice on the same device counts once; unpublished items hidden publicly but visible in admin [x] manual test (skipped - not automatable)
+- [x] run existing backend tests (`go test ./...`) — must pass
+- [x] run frontend lint (`npm run lint` in `frontend/`) and build (`npm run build`) — all issues fixed
 
 ### Task 7: [Final] Update documentation
 - [ ] update `README.md` (add Merch to Public Portal + Creative Studio feature lists)

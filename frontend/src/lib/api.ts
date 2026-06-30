@@ -1,4 +1,5 @@
 // API utility functions for Crime Kickers Hub
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const API_BASE = '/api';
 

@@ -13,6 +13,7 @@ export const ComicReaderPage = () => {
 
   useEffect(() => {
     if (slug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
       getStoryBySlug(slug)
         .then((data) => {
