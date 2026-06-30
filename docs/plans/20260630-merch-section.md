@@ -57,8 +57,8 @@
 - [x] integration test: `POST /api/merch/{id}/want` increments and needs no auth — **only if** `router_test.go` already has a harness to mirror; otherwise omit
 
 ### Task 3: Frontend API client for Merch
-- [ ] in `frontend/src/lib/api.ts`, add `Merch` + `MerchInput` types (with `want_count`, `image_url`, `thumbnail_url`) and `getMerch`, `getMerchAdmin`, `createMerch`, `updateMerch`, `deleteMerch`, `wantMerch(id)` — copy the Game block
-- [ ] `wantMerch(id)` POSTs to `/api/merch/{id}/want` and returns the new count; reuse existing `uploadMedia()` for image uploads (no new helper)
+- [x] in `frontend/src/lib/api.ts`, add `Merch` + `MerchInput` types (with `want_count`, `image_url`, `thumbnail_url`) and `getMerch`, `getMerchAdmin`, `createMerch`, `updateMerch`, `deleteMerch`, `wantMerch(id)` — copy the Game block
+- [x] `wantMerch(id)` POSTs to `/api/merch/{id}/want` and returns the new count; reuse existing `uploadMedia()` for image uploads (no new helper)
 
 ### Task 4: Admin Merch page
 - [ ] copy `frontend/src/pages/admin/GamesPage.tsx` → `frontend/src/pages/admin/MerchPage.tsx`; CRUD via the new api.ts functions
