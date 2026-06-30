@@ -33,6 +33,14 @@ This is a monorepo for "Crime Kickers Hub," a Go-based web application backed by
 * A Story may also carry a single optional audio track via the nullable `stories.audio_url` column (a full R2 URL, parallel to `cover_image_url`); it is not a StoryItem and never renders as a panel.
 * A Story may also carry an optional motto/slogan via the nullable `stories.motto` column (added in migration `010_add_story_motto.sql`, parallel to `audio_url`); when set it renders as a tagline on the public comic cards and reader page, when unset it serializes as JSON `null` and renders nothing.
 
+## Public Anonymous-Counter Endpoint Pattern
+Some features record anonymous user interest without collecting personal data (e.g. `POST /api/merch/{id}/want`). The pattern:
+* **Route:** public, no auth required. Registered in `publicRoutes()`.
+* **Backend:** single `UPDATE … SET counter = counter + 1 WHERE id = ? RETURNING counter`. Returns `{"want_count": N}`.
+* **Client dedup:** `localStorage` disables the button per item per device after one click. No server-side dedup or rate limiting — this is a rough demand signal only.
+* **Ceiling note:** if spam becomes real in production, add a per-IP or fingerprint throttle. The code comment marks this ceiling with `// ponytail: localStorage guard only`.
+* **No personal data:** no user identity, no session, no analytics payload — just the counter increment.
+
 ## Testing Conventions
 * DB-backed Go tests build their schema with `migrations.RunMigrations` (from `internal/migrations`), the same embedded migrations used by production and sqlc. There is no standalone `sql/schema/001_initial.sql` file.
 * The frontend has no unit-test framework; `npm run build` (tsc + vite) and `npm run lint` are the gate.

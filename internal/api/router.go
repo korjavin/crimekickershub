@@ -110,6 +110,10 @@ func (r *Router) publicRoutes() {
 	// Games (public - published game cards for the Games tab)
 	r.mux.HandleFunc("GET /api/games", r.handleListGames)
 
+	// Merch (public)
+	r.mux.HandleFunc("GET /api/merch", r.handleListMerch)
+	r.mux.HandleFunc("POST /api/merch/{id}/want", r.handleWantMerch)
+
 	// Auth endpoints (public - need to check session)
 	r.mux.HandleFunc("GET /api/auth/me", r.handleAuthMe)
 	r.mux.HandleFunc("POST /api/auth/logout", r.handleAuthLogout)
@@ -185,6 +189,12 @@ func (r *Router) adminRoutes() {
 	r.mux.Handle("POST /api/admin/games", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateGame)))
 	r.mux.Handle("PUT /api/admin/games/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateGame)))
 	r.mux.Handle("DELETE /api/admin/games/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteGame)))
+
+	// Merch management (admin only)
+	r.mux.Handle("GET /api/admin/merch", r.auth.RequireAdmin(http.HandlerFunc(r.handleListMerchAdmin)))
+	r.mux.Handle("POST /api/admin/merch", r.auth.RequireAdmin(http.HandlerFunc(r.handleCreateMerch)))
+	r.mux.Handle("PUT /api/admin/merch/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleUpdateMerch)))
+	r.mux.Handle("DELETE /api/admin/merch/{id}", r.auth.RequireAdmin(http.HandlerFunc(r.handleDeleteMerch)))
 
 	// Matrix view (admin only)
 	r.mux.Handle("GET /api/admin/matrix", r.auth.RequireAdmin(http.HandlerFunc(r.handleGetMatrix)))
@@ -2551,6 +2561,183 @@ func (r *Router) handleDeleteGame(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	respondJSON(w, map[string]bool{"success": true})
+}
+
+// MerchDTO is the public/admin shape for a Merch tile.
+type MerchDTO struct {
+	ID           int64  `json:"id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	ImageURL     string `json:"image_url"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	Tag          string `json:"tag"`
+	Color        string `json:"color"`
+	SortOrder    int64  `json:"sort_order"`
+	Published    bool   `json:"published"`
+	WantCount    int64  `json:"want_count"`
+}
+
+func toMerchDTO(m repository.Merch) MerchDTO {
+	return MerchDTO{
+		ID:           m.ID,
+		Title:        m.Title,
+		Description:  m.Description.String,
+		ImageURL:     m.ImageUrl.String,
+		ThumbnailURL: m.ThumbnailUrl.String,
+		Tag:          m.Tag.String,
+		Color:        m.Color.String,
+		SortOrder:    m.SortOrder,
+		Published:    m.Published,
+		WantCount:    m.WantCount,
+	}
+}
+
+func toMerchDTOs(items []repository.Merch) []MerchDTO {
+	dtos := make([]MerchDTO, len(items))
+	for i, m := range items {
+		dtos[i] = toMerchDTO(m)
+	}
+	return dtos
+}
+
+// merchInput is the request body for creating/updating a merch item.
+type merchInput struct {
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	ImageURL     string `json:"image_url"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	Tag          string `json:"tag"`
+	Color        string `json:"color"`
+	SortOrder    int64  `json:"sort_order"`
+	Published    *bool  `json:"published"`
+}
+
+func (r *Router) handleListMerch(w http.ResponseWriter, req *http.Request) {
+	items, err := r.repo.ListPublishedMerch(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list merch: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toMerchDTOs(items))
+}
+
+func (r *Router) handleListMerchAdmin(w http.ResponseWriter, req *http.Request) {
+	items, err := r.repo.ListMerch(req.Context())
+	if err != nil {
+		http.Error(w, "Failed to list merch: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toMerchDTOs(items))
+}
+
+func (r *Router) handleCreateMerch(w http.ResponseWriter, req *http.Request) {
+	var input merchInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	title := strings.TrimSpace(input.Title)
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
+	published := true
+	if input.Published != nil {
+		published = *input.Published
+	}
+
+	m, err := r.repo.CreateMerch(req.Context(), repository.CreateMerchParams{
+		Title:        title,
+		Description:  nullStr(input.Description),
+		ImageUrl:     nullStr(input.ImageURL),
+		ThumbnailUrl: nullStr(input.ThumbnailURL),
+		Tag:          nullStr(input.Tag),
+		Color:        nullStr(input.Color),
+		SortOrder:    input.SortOrder,
+		Published:    published,
+	})
+	if err != nil {
+		http.Error(w, "Failed to create merch: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toMerchDTO(m))
+}
+
+func (r *Router) handleUpdateMerch(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input merchInput
+	if err := json.NewDecoder(req.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	title := strings.TrimSpace(input.Title)
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
+	published := true
+	if input.Published != nil {
+		published = *input.Published
+	}
+
+	m, err := r.repo.UpdateMerch(req.Context(), repository.UpdateMerchParams{
+		Title:        title,
+		Description:  nullStr(input.Description),
+		ImageUrl:     nullStr(input.ImageURL),
+		ThumbnailUrl: nullStr(input.ThumbnailURL),
+		Tag:          nullStr(input.Tag),
+		Color:        nullStr(input.Color),
+		SortOrder:    input.SortOrder,
+		Published:    published,
+		ID:           id,
+	})
+	if err != nil {
+		http.Error(w, "Failed to update merch: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, toMerchDTO(m))
+}
+
+func (r *Router) handleDeleteMerch(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.repo.DeleteMerch(req.Context(), id); err != nil {
+		http.Error(w, "Failed to delete merch: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, map[string]bool{"success": true})
+}
+
+func (r *Router) handleWantMerch(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.ParseInt(req.PathValue("id"), 10, 64)
+	if id == 0 {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	count, err := r.repo.IncrementMerchWant(req.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Merch not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to record interest", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, map[string]int64{"want_count": count})
 }
 
 // Helper functions

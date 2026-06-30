@@ -36,6 +36,12 @@
     * **Images:** Uploaded directly to Cloudflare R2.
     * **Videos:** Manually uploaded to YouTube; links are stored in the system.
 
+#### 🛍 Merch Management
+* **Item CRUD:** Create, edit, and delete merch items with titles, descriptions, tags, colors, and sort order.
+* **Image Upload:** Upload item images directly to Cloudflare R2 (same presigned-URL flow as Heroes/Entities); both full-size and thumbnail are stored.
+* **Demand Tracking:** Each item displays its "I want it" click count so admins can gauge interest before committing to production runs.
+* **Publish Control:** Toggle visibility per item; unpublished items are hidden from the public page.
+
 #### 📖 Story Builder
 * **Mixed Media Episodes:** Create "Issues" or "Stories" that combine static images and video clips in a single sequence.
 * **Mobile-First Layout:** content is organized for seamless vertical scrolling (Webtoon style) or swipe-viewing.
@@ -47,6 +53,7 @@
 * [cite_start]**Hero Wiki:** Interactive cards for characters showing powers (Wind, Pho-soup, Gravity, Size-shifting) and origin stories [cite: 52-59].
 * **Comic Reader:** Optimized viewer for reading visual stories on mobile and desktop, with a Play control for comics that have an audio track.
 * **Cinema:** A tagged gallery of video clips and short films.
+* **Merch:** A public gallery of merchandise concepts (helmet, fan, glasses, beret, etc.) with an "I want it!" interest button. Clicking registers anonymous demand (no personal data collected, no checkout). Demand counts are visible to admins for production planning.
 
 ---
 

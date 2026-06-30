@@ -15,11 +15,6 @@ export function PromptStudioPage() {
   const [selectedTypeSlug, setSelectedTypeSlug] = useState<string>('');
   const [activeTab, setActiveTab] = useState('mixer');
 
-  // Load data on mount
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       const [entitiesData, typesData] = await Promise.all([
@@ -32,6 +27,12 @@ export function PromptStudioPage() {
       console.error('Failed to load prompt studio data:', error);
     }
   };
+
+  // Load data on mount
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData();
+  }, []);
 
   const handlePromptGenerated = (prompt: string, ids: number[], typeSlug: string) => {
     setGeneratedPrompt(prompt);
@@ -52,6 +53,7 @@ export function PromptStudioPage() {
     // Determine the type slug from the version object
     // The version object might have nested type object or just type_slug depending on API response structure
     // Based on PromptHistory code: const typeSlug = (version as any).type_slug || version.type?.slug;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const typeSlug = (version as any).type_slug || version.type?.slug || '';
 
     setGeneratedPrompt(version.prompt_text);

@@ -242,8 +242,10 @@ export function MediaPage() {
 
   // Get prompt version display name
   const getPromptVersionDisplay = (version: PromptVersion) => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const entityName = (version as any).entity_name || version.entity?.name || 'Unknown';
     const typeName = (version as any).type_slug || version.type?.slug || 'Unknown';
+    /* eslint-enable @typescript-eslint/no-explicit-any */
     const versionNum = version.version_number;
     return `${entityName} - ${typeName} (v${versionNum})`;
   };
@@ -273,6 +275,7 @@ export function MediaPage() {
       // Check prompt version binding (generated media)
       else if (asset.source_prompt_version_id) {
         const version = recentVersions.find(v => v.id === asset.source_prompt_version_id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (version && (version as any).entity_id !== entityId) {
           return false;
         }

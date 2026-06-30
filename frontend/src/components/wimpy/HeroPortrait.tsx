@@ -127,6 +127,7 @@ export function HeroPortrait({ id, size = 220 }: HeroPortraitProps) {
 }
 
 /** @deprecated Use pickHeroByName(name).id. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function pickHeroIdByName(name: string): string {
   return pickHeroByName(name).id;
 }

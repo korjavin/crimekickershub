@@ -1,4 +1,5 @@
 // API utility functions for Crime Kickers Hub
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const API_BASE = '/api';
 
@@ -201,6 +202,74 @@ export async function updateGame(id: number, data: GameInput) {
 export async function deleteGame(id: number) {
   const response = await fetch(`${API_BASE}/admin/games/${id}`, {
     method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// Merch APIs
+export interface Merch {
+  id: number;
+  title: string;
+  description: string;
+  image_url: string;
+  thumbnail_url: string;
+  tag: string;
+  color: string;
+  sort_order: number;
+  published: boolean;
+  want_count: number;
+}
+
+export type MerchInput = Omit<Merch, 'id' | 'want_count'>;
+
+export async function getMerch() {
+  return fetchApi<Merch[]>('/merch');
+}
+
+export async function getMerchAdmin() {
+  return fetchApi<Merch[]>('/admin/merch');
+}
+
+export async function createMerch(data: MerchInput) {
+  const response = await fetch(`${API_BASE}/admin/merch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updateMerch(id: number, data: MerchInput) {
+  const response = await fetch(`${API_BASE}/admin/merch/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteMerch(id: number) {
+  const response = await fetch(`${API_BASE}/admin/merch/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function wantMerch(id: number): Promise<{ want_count: number }> {
+  const response = await fetch(`${API_BASE}/merch/${id}/want`, {
+    method: 'POST',
   });
   if (!response.ok) {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);

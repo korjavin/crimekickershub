@@ -59,9 +59,11 @@ export function PromptHistory({ onCreateVersion }: PromptHistoryProps) {
 
         history.forEach(v => {
             // Handle flattened DTO structure from listPromptHistory
+            /* eslint-disable @typescript-eslint/no-explicit-any */
             const entityName = (v as any).entity_name || v.entity?.name;
             const typeSlug = (v as any).type_slug || v.type?.slug;
             const entityId = (v as any).entity_id || v.entity_id;
+            /* eslint-enable @typescript-eslint/no-explicit-any */
 
             if (entityName) {
                 entities.add(entityName);
@@ -80,8 +82,10 @@ export function PromptHistory({ onCreateVersion }: PromptHistoryProps) {
     // Filtered list
     const filteredHistory = useMemo(() => {
         return history.filter(item => {
+            /* eslint-disable @typescript-eslint/no-explicit-any */
             const entityName = (item as any).entity_name || item.entity?.name || '';
             const typeSlug = (item as any).type_slug || item.type?.slug || '';
+            /* eslint-enable @typescript-eslint/no-explicit-any */
             const promptText = item.prompt_text || '';
 
             // Search
@@ -258,8 +262,10 @@ export function PromptHistory({ onCreateVersion }: PromptHistoryProps) {
                     <div className="text-center py-12 text-muted-foreground">No history found matching filters.</div>
                 ) : (
                     filteredHistory.map((version) => {
+                        /* eslint-disable @typescript-eslint/no-explicit-any */
                         const entityName = (version as any).entity_name || version.entity?.name;
                         const typeSlug = (version as any).type_slug || version.type?.slug;
+                        /* eslint-enable @typescript-eslint/no-explicit-any */
                         const isSelected = selectedVersionA === version.id || selectedVersionB === version.id;
 
                         return (

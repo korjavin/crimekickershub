@@ -191,6 +191,51 @@ func (q *Queries) CreateMediaAsset(ctx context.Context, arg CreateMediaAssetPara
 	return i, err
 }
 
+const createMerch = `-- name: CreateMerch :one
+INSERT INTO merch (title, description, image_url, thumbnail_url, tag, color, sort_order, published)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, title, description, image_url, thumbnail_url, tag, color, sort_order, published, want_count, created_at
+`
+
+type CreateMerchParams struct {
+	Title        string         `json:"title"`
+	Description  sql.NullString `json:"description"`
+	ImageUrl     sql.NullString `json:"image_url"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+}
+
+func (q *Queries) CreateMerch(ctx context.Context, arg CreateMerchParams) (Merch, error) {
+	row := q.db.QueryRowContext(ctx, createMerch,
+		arg.Title,
+		arg.Description,
+		arg.ImageUrl,
+		arg.ThumbnailUrl,
+		arg.Tag,
+		arg.Color,
+		arg.SortOrder,
+		arg.Published,
+	)
+	var i Merch
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.ImageUrl,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.WantCount,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createPromptType = `-- name: CreatePromptType :one
 INSERT INTO prompt_types (slug, description, template_text)
 VALUES (?, ?, ?)
@@ -364,6 +409,15 @@ DELETE FROM media_assets WHERE id = ?
 
 func (q *Queries) DeleteMediaAsset(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteMediaAsset, id)
+	return err
+}
+
+const deleteMerch = `-- name: DeleteMerch :exec
+DELETE FROM merch WHERE id = ?
+`
+
+func (q *Queries) DeleteMerch(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteMerch, id)
 	return err
 }
 
@@ -638,6 +692,29 @@ func (q *Queries) GetMediaAsset(ctx context.Context, id int64) (MediaAsset, erro
 	return i, err
 }
 
+const getMerch = `-- name: GetMerch :one
+SELECT id, title, description, image_url, thumbnail_url, tag, color, sort_order, published, want_count, created_at FROM merch WHERE id = ?
+`
+
+func (q *Queries) GetMerch(ctx context.Context, id int64) (Merch, error) {
+	row := q.db.QueryRowContext(ctx, getMerch, id)
+	var i Merch
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.ImageUrl,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.WantCount,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getPromptTypeByID = `-- name: GetPromptTypeByID :one
 SELECT id, slug, description, template_text FROM prompt_types WHERE id = ?
 `
@@ -869,6 +946,17 @@ func (q *Queries) GetVideo(ctx context.Context, id int64) (Video, error) {
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const incrementMerchWant = `-- name: IncrementMerchWant :one
+UPDATE merch SET want_count = want_count + 1 WHERE id = ? RETURNING want_count
+`
+
+func (q *Queries) IncrementMerchWant(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, incrementMerchWant, id)
+	var want_count int64
+	err := row.Scan(&want_count)
+	return want_count, err
 }
 
 const listAllMediaAssets = `-- name: ListAllMediaAssets :many
@@ -1260,6 +1348,45 @@ func (q *Queries) ListMediaByStory(ctx context.Context, storyID int64) ([]MediaA
 	return items, nil
 }
 
+const listMerch = `-- name: ListMerch :many
+SELECT id, title, description, image_url, thumbnail_url, tag, color, sort_order, published, want_count, created_at FROM merch ORDER BY sort_order, id
+`
+
+func (q *Queries) ListMerch(ctx context.Context) ([]Merch, error) {
+	rows, err := q.db.QueryContext(ctx, listMerch)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Merch
+	for rows.Next() {
+		var i Merch
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.ImageUrl,
+			&i.ThumbnailUrl,
+			&i.Tag,
+			&i.Color,
+			&i.SortOrder,
+			&i.Published,
+			&i.WantCount,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPromptHistory = `-- name: ListPromptHistory :many
 SELECT pv.id, pv.entity_id, pv.type_id, pv.version_number, pv.prompt_text, pv.technical_params_json, pv.created_at, e.name as entity_name, pt.slug as type_slug, pt.description as type_description
 FROM prompt_versions pv
@@ -1447,6 +1574,45 @@ func (q *Queries) ListPublishedGames(ctx context.Context) ([]Game, error) {
 			&i.Color,
 			&i.SortOrder,
 			&i.Published,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedMerch = `-- name: ListPublishedMerch :many
+SELECT id, title, description, image_url, thumbnail_url, tag, color, sort_order, published, want_count, created_at FROM merch WHERE published = 1 ORDER BY sort_order, id
+`
+
+func (q *Queries) ListPublishedMerch(ctx context.Context) ([]Merch, error) {
+	rows, err := q.db.QueryContext(ctx, listPublishedMerch)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Merch
+	for rows.Next() {
+		var i Merch
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.ImageUrl,
+			&i.ThumbnailUrl,
+			&i.Tag,
+			&i.Color,
+			&i.SortOrder,
+			&i.Published,
+			&i.WantCount,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -1964,6 +2130,54 @@ func (q *Queries) UpdateMediaAsset(ctx context.Context, arg UpdateMediaAssetPara
 		&i.Description,
 		&i.TextContent,
 		&i.EntityID,
+	)
+	return i, err
+}
+
+const updateMerch = `-- name: UpdateMerch :one
+UPDATE merch
+SET title = ?, description = ?, image_url = ?, thumbnail_url = ?, tag = ?, color = ?, sort_order = ?, published = ?
+WHERE id = ?
+RETURNING id, title, description, image_url, thumbnail_url, tag, color, sort_order, published, want_count, created_at
+`
+
+type UpdateMerchParams struct {
+	Title        string         `json:"title"`
+	Description  sql.NullString `json:"description"`
+	ImageUrl     sql.NullString `json:"image_url"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+	ID           int64          `json:"id"`
+}
+
+func (q *Queries) UpdateMerch(ctx context.Context, arg UpdateMerchParams) (Merch, error) {
+	row := q.db.QueryRowContext(ctx, updateMerch,
+		arg.Title,
+		arg.Description,
+		arg.ImageUrl,
+		arg.ThumbnailUrl,
+		arg.Tag,
+		arg.Color,
+		arg.SortOrder,
+		arg.Published,
+		arg.ID,
+	)
+	var i Merch
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.ImageUrl,
+		&i.ThumbnailUrl,
+		&i.Tag,
+		&i.Color,
+		&i.SortOrder,
+		&i.Published,
+		&i.WantCount,
+		&i.CreatedAt,
 	)
 	return i, err
 }

@@ -13,6 +13,7 @@ const navItems = [
   { path: '/admin/stories', label: 'Story Builder', icon: '📚' },
   { path: '/admin/videos', label: 'Videos', icon: '🎬' },
   { path: '/admin/games', label: 'Games', icon: '🎮' },
+  { path: '/admin/merch', label: 'Merch', icon: '🛍️' },
   { path: '/admin/entities', label: 'Entities', icon: '👤' },
   { path: '/admin/entity-types', label: 'Entity Types', icon: '🏷️' },
 ];

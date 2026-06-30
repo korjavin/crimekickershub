@@ -1,13 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function LoginPage() {
-  const [isLocalhost, setIsLocalhost] = useState(false);
-
-  useEffect(() => {
-    // Check if running on localhost
-    setIsLocalhost(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  }, []);
+  const [isLocalhost] = useState(
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  );
 
   const handleGoogleLogin = () => {
     // Redirect to backend OAuth login endpoint
