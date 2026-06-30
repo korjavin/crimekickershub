@@ -41,11 +41,11 @@
 ## Implementation Steps
 
 ### Task 1: Merch table, seed data, and sqlc queries
-- [ ] create `internal/migrations/011_add_merch.sql` mirroring `008_add_games.sql`; table `merch` with columns: `id` (PK autoincrement), `title` TEXT NOT NULL, `description` TEXT, `image_url` TEXT, `thumbnail_url` TEXT, `tag` TEXT, `color` TEXT, `sort_order` INTEGER NOT NULL DEFAULT 0, `published` BOOLEAN NOT NULL DEFAULT 1, `want_count` INTEGER NOT NULL DEFAULT 0, `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
-- [ ] seed 4 placeholder published items (image NULL for now): Pho-boman helmet (`Шлем Фубобомена`), Windman fan (`Вентилятор Винмана`), Primm glasses (`Очки Прима`), Tiebe beret (`Берет Тайби`) — short kid-friendly descriptions, distinct riso colors, sort_order 1-4, want_count 0
-- [ ] append a Merch block to `sql/queries/queries.sql` (copy the Games block): `ListMerch` (all, admin), `ListPublishedMerch` (`WHERE published = 1` ordered by sort_order), `GetMerch`, `CreateMerch`, `UpdateMerch`, `DeleteMerch`, and `IncrementMerchWant` (`UPDATE merch SET want_count = want_count + 1 WHERE id = ? RETURNING want_count`)
-- [ ] run `sqlc generate` to regenerate `internal/repository/` (do not hand-edit)
-- [ ] `go build ./...` succeeds and migration applies on startup
+- [x] create `internal/migrations/011_add_merch.sql` mirroring `008_add_games.sql`; table `merch` with columns: `id` (PK autoincrement), `title` TEXT NOT NULL, `description` TEXT, `image_url` TEXT, `thumbnail_url` TEXT, `tag` TEXT, `color` TEXT, `sort_order` INTEGER NOT NULL DEFAULT 0, `published` BOOLEAN NOT NULL DEFAULT 1, `want_count` INTEGER NOT NULL DEFAULT 0, `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+- [x] seed 4 placeholder published items (image NULL for now): Pho-boman helmet (`Шлем Фубобомена`), Windman fan (`Вентилятор Винмана`), Primm glasses (`Очки Прима`), Tiebe beret (`Берет Тайби`) — short kid-friendly descriptions, distinct riso colors, sort_order 1-4, want_count 0
+- [x] append a Merch block to `sql/queries/queries.sql` (copy the Games block): `ListMerch` (all, admin), `ListPublishedMerch` (`WHERE published = 1` ordered by sort_order), `GetMerch`, `CreateMerch`, `UpdateMerch`, `DeleteMerch`, and `IncrementMerchWant` (`UPDATE merch SET want_count = want_count + 1 WHERE id = ? RETURNING want_count`)
+- [x] run `sqlc generate` to regenerate `internal/repository/` (do not hand-edit)
+- [x] `go build ./...` succeeds and migration applies on startup
 
 ### Task 2: Backend handlers and routes
 - [ ] in `internal/api/router.go`, add `MerchDTO` (include `want_count`, `image_url`, `thumbnail_url`) and `merchInput`, mirroring `GameDTO`/`gameInput`; reuse `nullStr`/`toGameDTOs` patterns

@@ -55,6 +55,20 @@ type MediaAsset struct {
 	EntityID              sql.NullInt64  `json:"entity_id"`
 }
 
+type Merch struct {
+	ID           int64          `json:"id"`
+	Title        string         `json:"title"`
+	Description  sql.NullString `json:"description"`
+	ImageUrl     sql.NullString `json:"image_url"`
+	ThumbnailUrl sql.NullString `json:"thumbnail_url"`
+	Tag          sql.NullString `json:"tag"`
+	Color        sql.NullString `json:"color"`
+	SortOrder    int64          `json:"sort_order"`
+	Published    bool           `json:"published"`
+	WantCount    int64          `json:"want_count"`
+	CreatedAt    sql.NullTime   `json:"created_at"`
+}
+
 type PromptType struct {
 	ID           int64          `json:"id"`
 	Slug         string         `json:"slug"`

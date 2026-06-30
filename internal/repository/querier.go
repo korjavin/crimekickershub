@@ -14,6 +14,7 @@ type Querier interface {
 	CreateEntityType(ctx context.Context, arg CreateEntityTypeParams) (EntityType, error)
 	CreateGame(ctx context.Context, arg CreateGameParams) (Game, error)
 	CreateMediaAsset(ctx context.Context, arg CreateMediaAssetParams) (MediaAsset, error)
+	CreateMerch(ctx context.Context, arg CreateMerchParams) (Merch, error)
 	CreatePromptType(ctx context.Context, arg CreatePromptTypeParams) (PromptType, error)
 	CreatePromptVersion(ctx context.Context, arg CreatePromptVersionParams) (PromptVersion, error)
 	CreateStory(ctx context.Context, arg CreateStoryParams) (Story, error)
@@ -22,6 +23,7 @@ type Querier interface {
 	DeleteEntityType(ctx context.Context, id int64) error
 	DeleteGame(ctx context.Context, id int64) error
 	DeleteMediaAsset(ctx context.Context, id int64) error
+	DeleteMerch(ctx context.Context, id int64) error
 	DeletePromptType(ctx context.Context, id int64) error
 	DeleteStory(ctx context.Context, id int64) error
 	DeleteStoryItem(ctx context.Context, id int64) error
@@ -34,6 +36,7 @@ type Querier interface {
 	GetLatestPromptVersion(ctx context.Context, arg GetLatestPromptVersionParams) (PromptVersion, error)
 	GetLatestPromptVersionForMatrix(ctx context.Context, arg GetLatestPromptVersionForMatrixParams) (GetLatestPromptVersionForMatrixRow, error)
 	GetMediaAsset(ctx context.Context, id int64) (MediaAsset, error)
+	GetMerch(ctx context.Context, id int64) (Merch, error)
 	GetPromptTypeByID(ctx context.Context, id int64) (PromptType, error)
 	GetPromptTypeBySlug(ctx context.Context, slug string) (PromptType, error)
 	GetPromptVersionByID(ctx context.Context, id int64) (PromptVersion, error)
@@ -44,6 +47,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByGoogleID(ctx context.Context, googleID string) (User, error)
 	GetVideo(ctx context.Context, id int64) (Video, error)
+	IncrementMerchWant(ctx context.Context, id int64) (int64, error)
 	ListAllMediaAssets(ctx context.Context) ([]MediaAsset, error)
 	ListAllPromptVersions(ctx context.Context) ([]PromptVersion, error)
 	ListAllStories(ctx context.Context) ([]Story, error)
@@ -53,11 +57,13 @@ type Querier interface {
 	ListGames(ctx context.Context) ([]Game, error)
 	ListLatestPromptVersionsMatrix(ctx context.Context) ([]ListLatestPromptVersionsMatrixRow, error)
 	ListMediaByStory(ctx context.Context, storyID int64) ([]MediaAsset, error)
+	ListMerch(ctx context.Context) ([]Merch, error)
 	ListPromptHistory(ctx context.Context) ([]ListPromptHistoryRow, error)
 	ListPromptTypes(ctx context.Context) ([]PromptType, error)
 	ListPromptVersionsForEntity(ctx context.Context, entityID int64) ([]PromptVersion, error)
 	ListPromptVersionsForEntityAndType(ctx context.Context, arg ListPromptVersionsForEntityAndTypeParams) ([]PromptVersion, error)
 	ListPublishedGames(ctx context.Context) ([]Game, error)
+	ListPublishedMerch(ctx context.Context) ([]Merch, error)
 	ListPublishedStories(ctx context.Context) ([]Story, error)
 	ListPublishedVideos(ctx context.Context) ([]Video, error)
 	ListRecentEntities(ctx context.Context) ([]ListRecentEntitiesRow, error)
@@ -70,6 +76,7 @@ type Querier interface {
 	UpdateEntityType(ctx context.Context, arg UpdateEntityTypeParams) (EntityType, error)
 	UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error)
 	UpdateMediaAsset(ctx context.Context, arg UpdateMediaAssetParams) (MediaAsset, error)
+	UpdateMerch(ctx context.Context, arg UpdateMerchParams) (Merch, error)
 	UpdatePromptType(ctx context.Context, arg UpdatePromptTypeParams) error
 	UpdateStory(ctx context.Context, arg UpdateStoryParams) (Story, error)
 	UpdateStoryItemSortOrder(ctx context.Context, arg UpdateStoryItemSortOrderParams) error

@@ -304,3 +304,29 @@ RETURNING *;
 
 -- name: DeleteGame :exec
 DELETE FROM games WHERE id = ?;
+
+-- name: ListPublishedMerch :many
+SELECT * FROM merch WHERE published = 1 ORDER BY sort_order, id;
+
+-- name: ListMerch :many
+SELECT * FROM merch ORDER BY sort_order, id;
+
+-- name: GetMerch :one
+SELECT * FROM merch WHERE id = ?;
+
+-- name: CreateMerch :one
+INSERT INTO merch (title, description, image_url, thumbnail_url, tag, color, sort_order, published)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING *;
+
+-- name: UpdateMerch :one
+UPDATE merch
+SET title = ?, description = ?, image_url = ?, thumbnail_url = ?, tag = ?, color = ?, sort_order = ?, published = ?
+WHERE id = ?
+RETURNING *;
+
+-- name: DeleteMerch :exec
+DELETE FROM merch WHERE id = ?;
+
+-- name: IncrementMerchWant :one
+UPDATE merch SET want_count = want_count + 1 WHERE id = ? RETURNING want_count;
