@@ -80,8 +80,8 @@
 - [x] run frontend lint (`npm run lint` in `frontend/`) and build (`npm run build`) — all issues fixed
 
 ### Task 7: [Final] Update documentation
-- [ ] update `README.md` (add Merch to Public Portal + Creative Studio feature lists)
-- [ ] update `Agents.md` if new patterns introduced (the `/want` public counter endpoint and its no-dedup ceiling)
+- [x] update `README.md` (add Merch to Public Portal + Creative Studio feature lists)
+- [x] update `Agents.md` if new patterns introduced (the `/want` public counter endpoint and its no-dedup ceiling)
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`.*
 
