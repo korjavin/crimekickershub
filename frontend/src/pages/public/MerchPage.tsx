@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { risoColorVar, risoFg } from '@/components/wimpy/data';
 import type { RisoColor } from '@/components/wimpy/data';
 import { getMerch, wantMerch, type Merch } from '@/lib/api';
@@ -80,13 +80,19 @@ export function MerchPage() {
   // ponytail: localStorage guard only, no server dedup — add per-IP/fingerprint throttle only if spam becomes real
   const [voted, setVoted] = useState<Set<number>>(() => {
     const s = new Set<number>();
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k?.startsWith('ck-merch-want-')) s.add(Number(k.slice(14)));
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith('ck-merch-want-')) s.add(Number(k.slice(14)));
+      }
+    } catch {
+      // storage blocked (private mode etc.) — votes just won't persist across reloads
     }
     return s;
   });
   const [counts, setCounts] = useState<Record<number, number>>({});
+  // synchronous in-flight guard: two rapid clicks share the same `voted` closure, so the ref closes the race the state can't
+  const inFlight = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     getMerch()
@@ -100,15 +106,22 @@ export function MerchPage() {
   }, []);
 
   const handleWant = async (id: number) => {
-    if (voted.has(id)) return;
+    if (voted.has(id) || inFlight.current.has(id)) return;
+    inFlight.current.add(id);
     try {
       const res = await wantMerch(id);
-      localStorage.setItem(LS_KEY(id), '1');
       setVoted((prev) => new Set(prev).add(id));
       setCounts((prev) => ({ ...prev, [id]: res.want_count }));
       setBannerVisible(true);
+      try {
+        localStorage.setItem(LS_KEY(id), '1');
+      } catch {
+        // storage blocked — in-memory voted still guards this session
+      }
     } catch (err) {
       console.error('Failed to record want:', err);
+    } finally {
+      inFlight.current.delete(id);
     }
   };
 

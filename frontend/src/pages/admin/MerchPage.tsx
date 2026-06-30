@@ -283,7 +283,7 @@ export function MerchPage() {
                 )}
             </Card>
 
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <Sheet open={sheetOpen} onOpenChange={(open) => { if (!uploadingImage) setSheetOpen(open); }}>
                 <SheetContent className="overflow-y-auto">
                     <SheetHeader>
                         <SheetTitle>{editingItem ? 'Edit Merch Item' : 'Add Merch Item'}</SheetTitle>
@@ -399,10 +399,10 @@ export function MerchPage() {
                     </div>
 
                     <SheetFooter>
-                        <Button variant="outline" onClick={() => setSheetOpen(false)} disabled={saving}>
+                        <Button variant="outline" onClick={() => setSheetOpen(false)} disabled={saving || uploadingImage}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave} disabled={saving}>
+                        <Button onClick={handleSave} disabled={saving || uploadingImage}>
                             {saving ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
