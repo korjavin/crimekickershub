@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   crimekickershub:
-    image: ghcr.io/korjavin/crimekickershub:test-dev
+    image: ghcr.io/korjavin/crimekickershub:89fccde4747cad976846be0b09266d366e2af99b
     container_name: crimekickershub-dev
     networks:
       - traefik_network
