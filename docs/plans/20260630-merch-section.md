@@ -48,13 +48,13 @@
 - [x] `go build ./...` succeeds and migration applies on startup
 
 ### Task 2: Backend handlers and routes
-- [ ] in `internal/api/router.go`, add `MerchDTO` (include `want_count`, `image_url`, `thumbnail_url`) and `merchInput`, mirroring `GameDTO`/`gameInput`; reuse `nullStr`/`toGameDTOs` patterns
-- [ ] add admin handlers `handleListMerchAdmin`, `handleCreateMerch`, `handleUpdateMerch`, `handleDeleteMerch` (trim/validate `title`, default `published=true`) mirroring the Game handlers
-- [ ] add public `handleListMerch` (published only) and `handleWantMerch` (calls `IncrementMerchWant`, returns the new count as JSON)
-- [ ] register public routes in `publicRoutes()`: `GET /api/merch` and `POST /api/merch/{id}/want` (no auth — public visitors are anonymous)
-- [ ] register admin routes in `adminRoutes()`: `GET/POST /api/admin/merch` and `PUT/DELETE /api/admin/merch/{id}`, each wrapped in `r.auth.RequireAdmin(...)`
-- [ ] `go build ./...` and existing test suite (`go test ./...`) pass
-- [ ] integration test: `POST /api/merch/{id}/want` increments and needs no auth — **only if** `router_test.go` already has a harness to mirror; otherwise omit
+- [x] in `internal/api/router.go`, add `MerchDTO` (include `want_count`, `image_url`, `thumbnail_url`) and `merchInput`, mirroring `GameDTO`/`gameInput`; reuse `nullStr`/`toGameDTOs` patterns
+- [x] add admin handlers `handleListMerchAdmin`, `handleCreateMerch`, `handleUpdateMerch`, `handleDeleteMerch` (trim/validate `title`, default `published=true`) mirroring the Game handlers
+- [x] add public `handleListMerch` (published only) and `handleWantMerch` (calls `IncrementMerchWant`, returns the new count as JSON)
+- [x] register public routes in `publicRoutes()`: `GET /api/merch` and `POST /api/merch/{id}/want` (no auth — public visitors are anonymous)
+- [x] register admin routes in `adminRoutes()`: `GET/POST /api/admin/merch` and `PUT/DELETE /api/admin/merch/{id}`, each wrapped in `r.auth.RequireAdmin(...)`
+- [x] `go build ./...` and existing test suite (`go test ./...`) pass
+- [x] integration test: `POST /api/merch/{id}/want` increments and needs no auth — **only if** `router_test.go` already has a harness to mirror; otherwise omit
 
 ### Task 3: Frontend API client for Merch
 - [ ] in `frontend/src/lib/api.ts`, add `Merch` + `MerchInput` types (with `want_count`, `image_url`, `thumbnail_url`) and `getMerch`, `getMerchAdmin`, `createMerch`, `updateMerch`, `deleteMerch`, `wantMerch(id)` — copy the Game block

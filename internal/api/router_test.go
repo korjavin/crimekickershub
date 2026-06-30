@@ -1482,3 +1482,50 @@ func devLoginCookie(t *testing.T, router *Router) *http.Cookie {
 	}
 	return cookies[0]
 }
+
+// TestWantMerch verifies the public POST /api/merch/{id}/want endpoint:
+// no auth required, increments want_count, returns updated count.
+func TestWantMerch(t *testing.T) {
+	router, cleanup := createTestRouter(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	item, err := router.repo.CreateMerch(ctx, repository.CreateMerchParams{
+		Title:     "Шлем Фубобомена",
+		Published: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateMerch failed: %v", err)
+	}
+
+	path := "/api/merch/" + strconv.FormatInt(item.ID, 10) + "/want"
+
+	req := httptest.NewRequest("POST", path, nil)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected 200, got %d. Body: %s", rr.Code, rr.Body.String())
+	}
+
+	var resp map[string]int64
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to decode response: %v. Body: %s", err, rr.Body.String())
+	}
+	if resp["want_count"] != 1 {
+		t.Errorf("Expected want_count=1, got %d", resp["want_count"])
+	}
+
+	// Second call increments again (server-side — client dedup is localStorage-only).
+	req2 := httptest.NewRequest("POST", path, nil)
+	rr2 := httptest.NewRecorder()
+	router.ServeHTTP(rr2, req2)
+
+	var resp2 map[string]int64
+	if err := json.Unmarshal(rr2.Body.Bytes(), &resp2); err != nil {
+		t.Fatalf("Failed to decode second response: %v", err)
+	}
+	if resp2["want_count"] != 2 {
+		t.Errorf("Expected want_count=2, got %d", resp2["want_count"])
+	}
+}
