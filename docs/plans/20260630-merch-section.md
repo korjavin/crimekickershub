@@ -61,10 +61,10 @@
 - [x] `wantMerch(id)` POSTs to `/api/merch/{id}/want` and returns the new count; reuse existing `uploadMedia()` for image uploads (no new helper)
 
 ### Task 4: Admin Merch page
-- [ ] copy `frontend/src/pages/admin/GamesPage.tsx` → `frontend/src/pages/admin/MerchPage.tsx`; CRUD via the new api.ts functions
-- [ ] replace the thumbnail-**URL** `<Input>` with the **file-upload** control from `EntitiesPage.tsx` (calls `uploadMedia`, stores returned `url`→`image_url` and `thumbnail_url`); drop the Games-only `url`/external-link field
-- [ ] show `want_count` as a read-only column in the table (so admins see demand per item)
-- [ ] add the admin route in `frontend/src/App.tsx` (admin group) and a nav entry in `components/layouts/AdminLayout.tsx`
+- [x] copy `frontend/src/pages/admin/GamesPage.tsx` → `frontend/src/pages/admin/MerchPage.tsx`; CRUD via the new api.ts functions
+- [x] replace the thumbnail-**URL** `<Input>` with the **file-upload** control from `EntitiesPage.tsx` (calls `uploadMedia`, stores returned `url`→`image_url` and `thumbnail_url`); drop the Games-only `url`/external-link field
+- [x] show `want_count` as a read-only column in the table (so admins see demand per item)
+- [x] add the admin route in `frontend/src/App.tsx` (admin group) and a nav entry in `components/layouts/AdminLayout.tsx`
 
 ### Task 5: Public Merch page with "I want it" button and promo banner
 - [ ] copy `frontend/src/pages/public/GamesPage.tsx` → `frontend/src/pages/public/MerchPage.tsx`; cards render `image_url`/`thumbnail_url`, tag, title, description
