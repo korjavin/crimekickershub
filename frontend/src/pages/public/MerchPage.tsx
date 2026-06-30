@@ -49,24 +49,24 @@ function PromoBanner({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="ck-eyebrow ck-eyebrow-strong" style={{ marginBottom: 12 }}>
-          § Мерч · в разработке
+          § Merch · in the works
         </div>
         <h2
           className="ck-dpy"
           style={{ fontSize: 'clamp(22px, 4vw, 32px)', lineHeight: 1.1, marginBottom: 16 }}
         >
-          Ваш голос учтён!
+          Your vote is in!
         </h2>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)', marginBottom: 8 }}>
-          Этот раздел пока в стадии изучения спроса. Мы не продаём — мы исследуем,
-          что хотят видеть фанаты Crime Kickers.
+          This section is still in the demand-research stage. We're not selling yet —
+          we're finding out what Crime Kickers fans want to see.
         </p>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)', marginBottom: 24 }}>
-          Спасибо — ваш голос поможет спланировать производство. Чем больше интереса,
-          тем быстрее это станет реальным.
+          Thanks — your vote helps us plan production. The more interest, the sooner
+          this becomes real.
         </p>
         <button className="ck-btn pink" onClick={onClose} style={{ width: '100%' }}>
-          Понятно · закрыть
+          Got it · close
         </button>
       </div>
     </div>
@@ -127,7 +127,7 @@ export function MerchPage() {
 
   const Header = (
     <div className="ck-page-x" style={{ padding: '32px clamp(16px, 5vw, 64px) 8px' }}>
-      <div className="ck-eyebrow ck-eyebrow-strong">§ 05 · Мерч</div>
+      <div className="ck-eyebrow ck-eyebrow-strong">§ 05 · Merch</div>
       <h1 className="ck-riso-h ck-h-section" data-shadow="Merch" style={{ margin: '8px 0' }}>
         Merch
       </h1>
@@ -142,7 +142,7 @@ export function MerchPage() {
           marginTop: 6,
         }}
       >
-        Раздел в разработке · голосуй за то, что хочешь увидеть
+        Section in the works · vote for what you want to see
       </p>
     </div>
   );
@@ -155,7 +155,7 @@ export function MerchPage() {
           className="ck-page-x ck-mono"
           style={{ fontSize: 13, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-3)', padding: '24px 4px' }}
         >
-          Загрузка…
+          Loading…
         </div>
       </div>
     );
@@ -171,7 +171,7 @@ export function MerchPage() {
           className="ck-page-x ck-mono"
           style={{ fontSize: 13, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-3)', padding: '24px 4px' }}
         >
-          Пока пусто. Заходи позже.
+          Nothing here yet. Check back soon.
         </div>
       ) : (
         <div
@@ -282,7 +282,7 @@ export function MerchPage() {
                       className="ck-pill"
                       style={{ position: 'absolute', bottom: 10, right: 10, background: 'var(--paper-bright)', color: 'var(--ink)' }}
                     >
-                      {count} хотят
+                      {count} want this
                     </span>
                   )}
                 </div>
@@ -302,7 +302,7 @@ export function MerchPage() {
                     disabled={hasVoted}
                     onClick={() => handleWant(m.id)}
                   >
-                    {hasVoted ? 'Уже проголосовал ✓' : 'Я хочу!'}
+                    {hasVoted ? 'Voted ✓' : 'I want it!'}
                   </button>
                 </div>
               </div>

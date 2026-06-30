@@ -2,7 +2,7 @@
 
 ## Overview
 - Add a **Merch** section: admin-managed merch items (image + title + description), shown on a public Merch page, mirroring how Games/Heroes work today.
-- Each public card has a **"Я хочу!" / "I want it"** button. Clicking it (1) increments an anonymous per-item interest counter and (2) shows a large promo banner explaining the section is still in progress, we're studying demand, and we'll plan production based on interest.
+- Each public card has an **"I want it!"** button. Clicking it (1) increments an anonymous per-item interest counter and (2) shows a large promo banner explaining the section is still in progress, we're studying demand, and we'll plan production based on interest.
 - Purpose for now is **promo + demand research**, not real sales. Admins see the interest counts per item to plan production. No personal data is collected, no checkout.
 - Integrates by copying the self-contained **Games** pattern (own table, sqlc queries, handlers, admin CRUD page, public list page) and borrowing the **real R2 image-upload flow** from Heroes/Entities (Games only stores a typed URL; Merch uploads actual image files).
 
@@ -42,7 +42,7 @@
 
 ### Task 1: Merch table, seed data, and sqlc queries
 - [x] create `internal/migrations/011_add_merch.sql` mirroring `008_add_games.sql`; table `merch` with columns: `id` (PK autoincrement), `title` TEXT NOT NULL, `description` TEXT, `image_url` TEXT, `thumbnail_url` TEXT, `tag` TEXT, `color` TEXT, `sort_order` INTEGER NOT NULL DEFAULT 0, `published` BOOLEAN NOT NULL DEFAULT 1, `want_count` INTEGER NOT NULL DEFAULT 0, `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
-- [x] seed 4 placeholder published items (image NULL for now): Pho-boman helmet (`Шлем Фубобомена`), Windman fan (`Вентилятор Винмана`), Primm glasses (`Очки Прима`), Tiebe beret (`Берет Тайби`) — short kid-friendly descriptions, distinct riso colors, sort_order 1-4, want_count 0
+- [x] seed 4 placeholder published items (image NULL for now): Pho-boman Helmet, Windman Fan, Primm Glasses, Tiebe Beret — short kid-friendly descriptions, distinct riso colors, sort_order 1-4, want_count 0
 - [x] append a Merch block to `sql/queries/queries.sql` (copy the Games block): `ListMerch` (all, admin), `ListPublishedMerch` (`WHERE published = 1` ordered by sort_order), `GetMerch`, `CreateMerch`, `UpdateMerch`, `DeleteMerch`, and `IncrementMerchWant` (`UPDATE merch SET want_count = want_count + 1 WHERE id = ? RETURNING want_count`)
 - [x] run `sqlc generate` to regenerate `internal/repository/` (do not hand-edit)
 - [x] `go build ./...` succeeds and migration applies on startup
@@ -68,14 +68,14 @@
 
 ### Task 5: Public Merch page with "I want it" button and promo banner
 - [x] copy `frontend/src/pages/public/GamesPage.tsx` → `frontend/src/pages/public/MerchPage.tsx`; cards render `image_url`/`thumbnail_url`, tag, title, description
-- [x] replace the external-link card with a **"Я хочу!"** button; on click call `wantMerch(id)`, then show a large promo banner/modal: section is in progress, we're studying demand, "спасибо — ваш голос учтён, это поможет спланировать производство"
+- [x] replace the external-link card with an **"I want it!"** button; on click call `wantMerch(id)`, then show a large promo banner/modal: section is in progress, we're studying demand, "thanks — your vote helps us plan production"
 - [x] guard double-counting per device with `localStorage` (disable/mark the button after a click for that item id). `// ponytail: localStorage guard only, no server dedup — add per-IP/fingerprint throttle only if spam becomes real`
-- [x] optionally show `want_count` on the card as social proof ("N хотят")
+- [x] optionally show `want_count` on the card as social proof ("N want this")
 - [x] add the public route in `frontend/src/App.tsx` (under `<PublicLayout>`) and a nav entry in `components/layouts/PublicLayout.tsx`
 
 ### Task 6: Verify acceptance criteria
-- [x] verify Overview requirements: admin can create/edit/delete merch with uploaded images + descriptions; published items appear on the public page; "Я хочу!" increments the counter and shows the promo banner; admin sees per-item counts [x] manual test (skipped - not automatable)
-- [x] verify edge cases: item with no image renders a placeholder; clicking "Я хочу!" twice on the same device counts once; unpublished items hidden publicly but visible in admin [x] manual test (skipped - not automatable)
+- [x] verify Overview requirements: admin can create/edit/delete merch with uploaded images + descriptions; published items appear on the public page; "I want it!" increments the counter and shows the promo banner; admin sees per-item counts [x] manual test (skipped - not automatable)
+- [x] verify edge cases: item with no image renders a placeholder; clicking "I want it!" twice on the same device counts once; unpublished items hidden publicly but visible in admin [x] manual test (skipped - not automatable)
 - [x] run existing backend tests (`go test ./...`) — must pass
 - [x] run frontend lint (`npm run lint` in `frontend/`) and build (`npm run build`) — all issues fixed
 
@@ -96,7 +96,7 @@
 
 **Manual verification:**
 - In the admin panel, create a merch item with an uploaded image, confirm it appears on the public Merch page.
-- On the public page, click "Я хочу!", confirm the promo banner shows and the admin count increments; reload and confirm the button stays disabled for that device.
+- On the public page, click "I want it!", confirm the promo banner shows and the admin count increments; reload and confirm the button stays disabled for that device.
 - Confirm unpublished items are hidden publicly.
 
 **Content / ops:**

@@ -337,7 +337,7 @@ export function MerchPage() {
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Title *</label>
                             <Input
-                                placeholder="e.g., Шлем Фубобомена"
+                                placeholder="e.g., Pho-boman Helmet"
                                 value={formData.title}
                                 onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
                             />

@@ -53,7 +53,7 @@
 * [cite_start]**Hero Wiki:** Interactive cards for characters showing powers (Wind, Pho-soup, Gravity, Size-shifting) and origin stories [cite: 52-59].
 * **Comic Reader:** Optimized viewer for reading visual stories on mobile and desktop, with a Play control for comics that have an audio track.
 * **Cinema:** A tagged gallery of video clips and short films.
-* **Merch:** A public gallery of merchandise concepts (helmet, fan, glasses, beret, etc.) with an "Я хочу!" interest button. Clicking registers anonymous demand (no personal data collected, no checkout). Demand counts are visible to admins for production planning.
+* **Merch:** A public gallery of merchandise concepts (helmet, fan, glasses, beret, etc.) with an "I want it!" interest button. Clicking registers anonymous demand (no personal data collected, no checkout). Demand counts are visible to admins for production planning.
 
 ---
 

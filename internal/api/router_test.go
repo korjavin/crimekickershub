@@ -1491,7 +1491,7 @@ func TestWantMerch(t *testing.T) {
 
 	ctx := context.Background()
 	item, err := router.repo.CreateMerch(ctx, repository.CreateMerchParams{
-		Title:     "Шлем Фубобомена",
+		Title:     "Pho-boman Helmet",
 		Published: true,
 	})
 	if err != nil {
