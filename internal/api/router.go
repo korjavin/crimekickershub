@@ -2730,7 +2730,11 @@ func (r *Router) handleWantMerch(w http.ResponseWriter, req *http.Request) {
 
 	count, err := r.repo.IncrementMerchWant(req.Context(), id)
 	if err != nil {
-		http.Error(w, "Failed to record interest: "+err.Error(), http.StatusInternalServerError)
+		if err == sql.ErrNoRows {
+			http.Error(w, "Merch not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to record interest", http.StatusInternalServerError)
 		return
 	}
 	respondJSON(w, map[string]int64{"want_count": count})

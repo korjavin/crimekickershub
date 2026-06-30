@@ -1528,4 +1528,12 @@ func TestWantMerch(t *testing.T) {
 	if resp2["want_count"] != 2 {
 		t.Errorf("Expected want_count=2, got %d", resp2["want_count"])
 	}
+
+	// A non-existent ID is a client error (404), not a 500 that leaks the SQL error.
+	req3 := httptest.NewRequest("POST", "/api/merch/999999/want", nil)
+	rr3 := httptest.NewRecorder()
+	router.ServeHTTP(rr3, req3)
+	if rr3.Code != http.StatusNotFound {
+		t.Errorf("Expected 404 for non-existent merch, got %d. Body: %s", rr3.Code, rr3.Body.String())
+	}
 }
