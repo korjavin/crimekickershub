@@ -67,11 +67,11 @@
 - [x] add the admin route in `frontend/src/App.tsx` (admin group) and a nav entry in `components/layouts/AdminLayout.tsx`
 
 ### Task 5: Public Merch page with "I want it" button and promo banner
-- [ ] copy `frontend/src/pages/public/GamesPage.tsx` → `frontend/src/pages/public/MerchPage.tsx`; cards render `image_url`/`thumbnail_url`, tag, title, description
-- [ ] replace the external-link card with a **"Я хочу!"** button; on click call `wantMerch(id)`, then show a large promo banner/modal: section is in progress, we're studying demand, "спасибо — ваш голос учтён, это поможет спланировать производство"
-- [ ] guard double-counting per device with `localStorage` (disable/mark the button after a click for that item id). `// ponytail: localStorage guard only, no server dedup — add per-IP/fingerprint throttle only if spam becomes real`
-- [ ] optionally show `want_count` on the card as social proof ("N хотят")
-- [ ] add the public route in `frontend/src/App.tsx` (under `<PublicLayout>`) and a nav entry in `components/layouts/PublicLayout.tsx`
+- [x] copy `frontend/src/pages/public/GamesPage.tsx` → `frontend/src/pages/public/MerchPage.tsx`; cards render `image_url`/`thumbnail_url`, tag, title, description
+- [x] replace the external-link card with a **"Я хочу!"** button; on click call `wantMerch(id)`, then show a large promo banner/modal: section is in progress, we're studying demand, "спасибо — ваш голос учтён, это поможет спланировать производство"
+- [x] guard double-counting per device with `localStorage` (disable/mark the button after a click for that item id). `// ponytail: localStorage guard only, no server dedup — add per-IP/fingerprint throttle only if spam becomes real`
+- [x] optionally show `want_count` on the card as social proof ("N хотят")
+- [x] add the public route in `frontend/src/App.tsx` (under `<PublicLayout>`) and a nav entry in `components/layouts/PublicLayout.tsx`
 
 ### Task 6: Verify acceptance criteria
 - [ ] verify Overview requirements: admin can create/edit/delete merch with uploaded images + descriptions; published items appear on the public page; "Я хочу!" increments the counter and shows the promo banner; admin sees per-item counts

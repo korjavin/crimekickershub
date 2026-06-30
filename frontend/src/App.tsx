@@ -20,6 +20,7 @@ import { VideosPage } from './pages/admin/VideosPage';
 import { GamesPage } from './pages/admin/GamesPage';
 import { MerchPage } from './pages/admin/MerchPage';
 import { GamesPage as PublicGamesPage } from './pages/public/GamesPage';
+import { MerchPage as PublicMerchPage } from './pages/public/MerchPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { Toaster } from './components/ui/toast';
 
@@ -37,6 +38,7 @@ function App() {
             <Route path="/comics/:slug" element={<ComicReaderPage />} />
             <Route path="/cinema" element={<CinemaPage />} />
             <Route path="/games" element={<PublicGamesPage />} />
+            <Route path="/merch" element={<PublicMerchPage />} />
           </Route>
 
           {/* Login Page */}
