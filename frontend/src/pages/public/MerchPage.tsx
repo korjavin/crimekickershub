@@ -73,10 +73,61 @@ function PromoBanner({ onClose }: { onClose: () => void }) {
   );
 }
 
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,.85)',
+        zIndex: 2000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        cursor: 'zoom-out',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--paper-bright)',
+          border: '4px solid var(--ink)',
+          boxShadow: '12px 12px 0 var(--riso-pink)',
+          padding: 12,
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          display: 'flex',
+        }}
+      >
+        <img
+          src={src}
+          alt="Enlarged merch view"
+          style={{
+            maxWidth: '100%',
+            maxHeight: 'calc(95vh - 24px)',
+            objectFit: 'contain',
+            border: '2px solid var(--ink)',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function MerchPage() {
   const [items, setItems] = useState<Merch[]>([]);
   const [loading, setLoading] = useState(true);
   const [bannerVisible, setBannerVisible] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   // ponytail: localStorage guard only, no server dedup — add per-IP/fingerprint throttle only if spam becomes real
   const [voted, setVoted] = useState<Set<number>>(() => {
     const s = new Set<number>();
@@ -163,6 +214,7 @@ export function MerchPage() {
 
   return (
     <div style={{ paddingBottom: 80 }}>
+      {previewImage && <ImageLightbox src={previewImage} onClose={() => setPreviewImage(null)} />}
       {bannerVisible && <PromoBanner onClose={() => setBannerVisible(false)} />}
       {Header}
 
@@ -240,12 +292,14 @@ export function MerchPage() {
                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                       <div
+                        onClick={() => setPreviewImage(m.thumbnail_url)}
                         style={{
                           position: 'absolute',
                           inset: 0,
                           background: accent,
                           opacity: 0.28,
                           mixBlendMode: 'multiply',
+                          cursor: 'zoom-in',
                         }}
                       />
                     </>
