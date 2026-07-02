@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getStories, getHeroes, getVideos, type Video } from '@/lib/api';
+import { getStories, getHeroes, getVideos, getMerch, type Video, type Merch } from '@/lib/api';
 import type { Story, Entity } from '@/lib/api-types';
 import { HeroStamp, CoverPlate } from '@/components/wimpy/HeroPortrait';
 import {
@@ -18,6 +18,7 @@ export function HomePage() {
   const [stories, setStories] = useState<Story[]>([]);
   const [heroes, setHeroes] = useState<Entity[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [merch, setMerch] = useState<Merch[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,11 +26,13 @@ export function HomePage() {
       getStories().catch(() => []),
       getHeroes().catch(() => []),
       getVideos().catch(() => []),
-    ]).then(([s, h, v]) => {
+      getMerch().catch(() => []),
+    ]).then(([s, h, v, m]) => {
       if (cancelled) return;
       setStories(s ?? []);
       setHeroes(h ?? []);
       setVideos(v ?? []);
+      setMerch(m ?? []);
     });
     return () => {
       cancelled = true;
@@ -139,11 +142,23 @@ export function HomePage() {
 
       {/* Reels */}
       <SectionHead num="03" title="Surveillance reels" cta="Watch all →" toCta="/cinema" />
-      <div className="ck-grid ck-grid-3 ck-page-x" style={{ paddingBottom: 40 }}>
+      <div className="ck-grid ck-grid-3 ck-page-x" style={{ paddingBottom: merch.length > 0 ? 0 : 40 }}>
         {(videos.length > 0 ? videos : VIDEOS).slice(0, 3).map((v) => (
           <ReelCard key={v.id} video={v} />
         ))}
       </div>
+
+      {/* Merch */}
+      {merch.length > 0 && (
+        <>
+          <SectionHead num="04" title="Merch" cta="Vote for more →" toCta="/merch" />
+          <div className="ck-grid ck-grid-4 ck-page-x" style={{ gap: 18, paddingBottom: 40 }}>
+            {merch.slice(0, 4).map((m) => (
+              <MerchPreviewCard key={m.id} item={m} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -441,6 +456,72 @@ function ReelCard({
       <div style={{ padding: 12 }}>
         <div className="ck-dpy" style={{ fontSize: 20 }}>
           {video.title}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function MerchPreviewCard({ item }: { item: Merch }) {
+  return (
+    <Link
+      to="/merch"
+      className="ck-card"
+      style={{ textDecoration: 'none', display: 'block', background: 'var(--paper-bright)', padding: 0 }}
+    >
+      <div
+        style={{
+          aspectRatio: '1 / 1',
+          background: 'var(--paper)',
+          borderBottom: '2px solid var(--ink)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {item.thumbnail_url ? (
+          <img
+            src={item.thumbnail_url}
+            alt={item.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: 'var(--font-display)',
+              textTransform: 'uppercase',
+              fontSize: '24px',
+              color: 'var(--ink)',
+              padding: 12,
+              textAlign: 'center',
+            }}
+          >
+            {item.title}
+          </div>
+        )}
+        {item.tag && (
+          <span className="ck-pill ink" style={{ position: 'absolute', top: 8, left: 8 }}>
+            {item.tag}
+          </span>
+        )}
+      </div>
+      <div style={{ padding: '12px' }}>
+        <div className="ck-dpy" style={{ fontSize: 18, lineHeight: 1.1 }}>
+          {item.title}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: 13,
+            color: 'var(--ink-2)',
+            marginTop: 6,
+          }}
+        >
+          {item.want_count > 0 ? `${item.want_count} want this` : 'Vote now'}
         </div>
       </div>
     </Link>
