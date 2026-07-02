@@ -3,7 +3,7 @@ version: "3.8"
 services:
   crimekickershub:
     # The image tag will be replaced by GitHub Actions workflow in the deploy branch
-    image: ghcr.io/korjavin/crimekickershub:latest
+    image: ghcr.io/korjavin/crimekickershub:34af704472dff181cd41875685d3f5588b68ef20
     container_name: crimekickershub
     networks:
       - traefik_network
