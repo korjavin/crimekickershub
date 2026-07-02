@@ -292,7 +292,7 @@ export function MerchPage() {
                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                       <div
-                        onClick={() => setPreviewImage(m.thumbnail_url)}
+                        onClick={() => setPreviewImage(m.image_url || m.thumbnail_url)}
                         style={{
                           position: 'absolute',
                           inset: 0,
